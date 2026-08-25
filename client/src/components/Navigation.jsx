@@ -14,7 +14,10 @@ export default function Navigation({
   crSelection,
   onSelectCustomResource,
   theme,
-  onToggleTheme
+  onToggleTheme,
+  argocdInstalled,
+  argoView,
+  onSelectArgoView
 }) {
   // Route context changes through the app-level switch so the new cluster's
   // namespaces + resources are re-fetched (a plain POST leaves the UI empty).
@@ -62,7 +65,22 @@ export default function Navigation({
   const otherSections = [
     { key: 'events', label: 'Events', icon: 'events' },
     { key: 'helm', label: 'Helm', icon: 'helm' },
-    { key: 'accessControl', label: 'Access Control', icon: 'accessControl' }
+    { key: 'accessControl', label: 'Access Control', icon: 'accessControl' },
+  ];
+
+  // ArgoCD sub-views — these mirror the tabs inside the ArgoCD view and only
+  // appear when Argo CD's CRDs are detected on the cluster. Repositories and
+  // Clusters live under a nested "Settings" group.
+  const argocdTypes = [
+    { key: 'dashboard', label: 'Dashboard', icon: 'overview' },
+    { key: 'applications', label: 'Applications', icon: 'argocd' },
+    { key: 'view', label: 'View', icon: 'topology' },
+    { key: 'appsets', label: 'Application Sets', icon: 'box' },
+    { key: 'projects', label: 'Projects', icon: 'accessControl' },
+  ];
+  const argocdSettingsTypes = [
+    { key: 'repositories', label: 'Repositories', icon: 'git' },
+    { key: 'clusters', label: 'Clusters', icon: 'cluster' },
   ];
 
   const renderTreeItem = (type) => (
@@ -94,7 +112,7 @@ export default function Navigation({
       <div className="nav-header">
         <div className="nav-brand">
           <div className="nav-brand-logo">
-            <Icon name="hexagon" size={18} strokeWidth={2} />
+            <Icon name="logo" size={19} strokeWidth={1.8} />
           </div>
           <div className="nav-brand-text">
             <span className="nav-brand-title">Kubernetes</span>
@@ -150,6 +168,57 @@ export default function Navigation({
             {section.label}
           </div>
         ))}
+
+        {argocdInstalled && (
+          <div className="nav-section">
+            <div className="nav-section-title" onClick={() => onToggleNav('argocd')}>
+              <span className={`nav-section-chevron ${navExpanded.argocd ? 'open' : ''}`}>
+                <Icon name="chevronRight" size={13} strokeWidth={2.2} />
+              </span>
+              <Icon name="argocd" size={15} className="nav-lead-icon" />
+              Argo CD
+            </div>
+            {navExpanded.argocd && (
+              <div className="nav-items">
+                {argocdTypes.map((type) => (
+                  <div
+                    key={type.key}
+                    className={`nav-item ${argoView === type.key ? 'active' : ''}`}
+                    onClick={() => onSelectArgoView(type.key)}
+                    title={type.label}
+                  >
+                    <Icon name={type.icon} size={15} className="nav-lead-icon" />
+                    {type.label}
+                  </div>
+                ))}
+
+                <div className="nav-subsection">
+                  <div className="nav-section-title nested" onClick={() => onToggleNav('argocdSettings')}>
+                    <span className={`nav-section-chevron ${navExpanded.argocdSettings ? 'open' : ''}`}>
+                      <Icon name="chevronRight" size={13} strokeWidth={2.2} />
+                    </span>
+                    Settings
+                  </div>
+                  {navExpanded.argocdSettings && (
+                    <div className="nav-items">
+                      {argocdSettingsTypes.map((type) => (
+                        <div
+                          key={type.key}
+                          className={`nav-item ${argoView === type.key ? 'active' : ''}`}
+                          onClick={() => onSelectArgoView(type.key)}
+                          title={type.label}
+                        >
+                          <Icon name={type.icon} size={15} className="nav-lead-icon" />
+                          {type.label}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <CustomResourceTree selection={crSelection} onSelect={onSelectCustomResource} />
       </div>

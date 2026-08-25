@@ -108,7 +108,7 @@ function Chips({ obj, max }) {
   );
 }
 
-export default function ResourceDrawer({ resource, namespace, resourceType, onClose, onOpenTab, onNavigate }) {
+export default function ResourceDrawer({ resource, namespace, resourceType, onClose, onOpenTab, onNavigate, onAction, canScale, canRestart }) {
   const [obj, setObj] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -229,8 +229,21 @@ export default function ResourceDrawer({ resource, namespace, resourceType, onCl
               </button>
             </>
           )}
-          <button className="drawer-action-btn" title="YAML" onClick={() => onOpenTab('configuration')}>
+          <button className="drawer-action-btn" title="Edit YAML" onClick={() => onOpenTab('configuration')}>
             <Icon name="configuration" size={16} />
+          </button>
+          {canScale && (
+            <button className="drawer-action-btn" title="Scale" onClick={() => onAction && onAction('scale')}>
+              <Icon name="scale" size={16} />
+            </button>
+          )}
+          {canRestart && (
+            <button className="drawer-action-btn" title="Rollout restart" onClick={() => onAction && onAction('restart')}>
+              <Icon name="refresh" size={16} />
+            </button>
+          )}
+          <button className="drawer-action-btn danger" title="Delete" onClick={() => onAction && onAction('delete')}>
+            <Icon name="delete" size={16} />
           </button>
           <button className="drawer-action-btn" title="Close" onClick={onClose}>
             <Icon name="close" size={17} />

@@ -57,6 +57,8 @@ COPY --from=server-deps /app/node_modules ./node_modules
 COPY package*.json ./
 COPY server.js ./
 COPY assistant.js ./
+COPY mcp.js ./
+COPY mcp-stdio.js ./
 COPY --from=client-build /app/client/dist ./client/dist
 
 ENV NODE_ENV=production
@@ -70,7 +72,7 @@ EXPOSE 3001
 # package "overview". The release workflow's docker/metadata-action overrides
 # source/revision/created automatically; set IMAGE_SOURCE for manual builds.
 # ------------------------------------------------------------------
-ARG APP_VERSION="1.2.1"
+ARG APP_VERSION="1.3.0"
 LABEL org.opencontainers.image.title="Kubernetes Manager UI" \
       org.opencontainers.image.description="Web UI to browse and operate Kubernetes clusters — workloads, nodes, events, logs, in-browser exec/terminal, service port-forwarding, Helm releases, RBAC and CRDs. Reads your kubeconfig and serves the UI + REST API on port 3001." \
       org.opencontainers.image.version="${APP_VERSION}" \
@@ -79,6 +81,14 @@ LABEL org.opencontainers.image.title="Kubernetes Manager UI" \
 # Drop root — run as the unprivileged `node` user shipped in the base image.
 # Its home (/home/node) is writable, so the default kubeconfig path becomes
 # /home/node/.kube/config and the assistant config lands in /home/node/.config.
+#
+# HOME is set explicitly because Docker does NOT derive it from USER — without
+# this it can be unset for the `node` user, so the app wouldn't know where to
+# look for the kubeconfig. KUBECONFIG pins the default lookup to the documented
+# mount point (`-v $HOME/.kube:/home/node/.kube`); a runtime `-e KUBECONFIG=…`
+# still overrides it.
+ENV HOME=/home/node \
+    KUBECONFIG=/home/node/.kube/config
 USER node
 
 CMD ["node", "server.js"]
