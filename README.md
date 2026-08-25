@@ -64,13 +64,15 @@ Open **http://localhost:3001**.
 
 ## Run — Docker
 
-The image bundles Node and `kubectl`, and serves the UI + API on port `3001`.
+The image bundles Node, `kubectl`, and the `kubelogin` OIDC plugin, and serves
+the UI + API on port `3001`. It runs as the unprivileged `node` user, so mount
+your kubeconfig under **`/home/node/.kube`**.
 
 **Run the published image** (from GitHub Container Registry):
 
 ```bash
 docker run --rm -p 8080:3001 \
-  -v "$HOME/.kube:/root/.kube:ro" \
+  -v "$HOME/.kube:/home/node/.kube:ro" \
   praveenraghav/k8s-manager-ui:latest
 ```
 
@@ -80,16 +82,37 @@ docker run --rm -p 8080:3001 \
 docker build -t k8s-manager .
 
 docker run --rm -p 8080:3001 \
-  -v "$HOME/.kube:/root/.kube:ro" \
+  -v "$HOME/.kube:/home/node/.kube:ro" \
   k8s-manager
 ```
 
 Open **http://localhost:8080**.
 
 Notes:
-- Mount your kubeconfig at `/root/.kube/config` (as above) or pass `-e KUBECONFIG=/path/inside/container`.
+- Mount your kubeconfig at `/home/node/.kube/config` (as above) or pass `-e KUBECONFIG=/path/inside/container`.
 - If your kubeconfig references cloud auth plugins (EKS/GKE/AKS exec credentials), those CLIs must be available inside the container too, or use a static-token kubeconfig.
 - The build auto-selects `amd64`/`arm64` via BuildKit's `TARGETARCH`.
+
+### OIDC clusters (`kubectl oidc-login` / kubelogin)
+
+The `kubelogin` plugin is bundled, so contexts that authenticate with
+`kubectl oidc-login` work — **but the container can't open a browser**, so it
+relies on a token that's already cached. Do this:
+
+1. **Log in on the host first** so a token is cached under `~/.kube/cache/oidc-login/`:
+   ```bash
+   kubectl get nodes            # triggers the browser login on your machine
+   ```
+2. **Mount `~/.kube` read-write** (drop the `:ro`) so kubelogin can refresh and
+   re-cache the token from inside the container:
+   ```bash
+   docker run --rm -p 8080:3001 \
+     -v "$HOME/.kube:/home/node/.kube" \
+     praveenraghav/k8s-manager-ui:latest
+   ```
+
+If the cached token has fully expired (refresh token gone), re-run step 1 on the
+host, then restart the container.
 
 ## Run — Mac app (Electron)
 

@@ -3,7 +3,7 @@
 # ============================================================
 # Stage 1 — build the React/Vite frontend
 # ============================================================
-FROM node:20-alpine AS client-build
+FROM node:22-alpine AS client-build
 WORKDIR /app/client
 COPY client/package*.json ./
 RUN npm ci
@@ -13,35 +13,50 @@ RUN npm run build
 # ============================================================
 # Stage 2 — install production backend dependencies
 # ============================================================
-FROM node:20-alpine AS server-deps
+FROM node:22-alpine AS server-deps
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 
 # ============================================================
-# Stage 3 — runtime image (Node + kubectl + helm)
+# Stage 3 — runtime image (Node + kubectl)
 # ============================================================
-FROM node:20-alpine AS runtime
+FROM node:22-alpine AS runtime
 WORKDIR /app
 
 # TARGETARCH is provided by BuildKit (amd64 / arm64); default to amd64
 ARG TARGETARCH=amd64
-ARG HELM_VERSION=v3.16.4
 
-# Install kubectl and helm (the app shells out to both)
-RUN apk add --no-cache bash curl ca-certificates \
+# Patch OS packages, then install kubectl (the app shells out to it) and the
+# kubelogin OIDC exec plugin.
+# NOTE: helm is intentionally NOT installed — Helm releases are read directly
+# via the Kubernetes API (see server.js), which also avoids the large cluster
+# of Go-module CVEs that ship inside the helm binary.
+# kubelogin is installed as `kubectl-oidc_login` so kubeconfigs that
+# authenticate via `kubectl oidc-login` work inside the container (statically
+# linked Go binary, so it runs fine on Alpine/musl).
+RUN apk upgrade --no-cache \
+  && apk add --no-cache bash curl ca-certificates \
+  && apk add --no-cache --virtual .build-deps unzip \
   && KUBECTL_VERSION="$(curl -fsSL https://dl.k8s.io/release/stable.txt)" \
   && curl -fsSL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl" -o /usr/local/bin/kubectl \
   && chmod +x /usr/local/bin/kubectl \
-  && curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-${TARGETARCH}.tar.gz" | tar -xz -C /tmp \
-  && mv "/tmp/linux-${TARGETARCH}/helm" /usr/local/bin/helm \
-  && chmod +x /usr/local/bin/helm \
-  && rm -rf "/tmp/linux-${TARGETARCH}"
+  && curl -fsSL "https://github.com/int128/kubelogin/releases/latest/download/kubelogin_linux_${TARGETARCH}.zip" -o /tmp/kubelogin.zip \
+  && unzip -o /tmp/kubelogin.zip -d /tmp/kubelogin \
+  && mv /tmp/kubelogin/kubelogin /usr/local/bin/kubectl-oidc_login \
+  && chmod +x /usr/local/bin/kubectl-oidc_login \
+  && rm -rf /tmp/kubelogin /tmp/kubelogin.zip \
+  && apk del .build-deps \
+  # npm/npx/corepack aren't used at runtime (the app runs `node server.js`);
+  # removing them drops the CVEs in npm's bundled dependencies.
+  && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx \
+            /usr/local/lib/node_modules/corepack /usr/local/bin/corepack
 
 # Backend deps + source, and the built frontend
 COPY --from=server-deps /app/node_modules ./node_modules
 COPY package*.json ./
 COPY server.js ./
+COPY assistant.js ./
 COPY --from=client-build /app/client/dist ./client/dist
 
 ENV NODE_ENV=production
@@ -55,10 +70,15 @@ EXPOSE 3001
 # package "overview". The release workflow's docker/metadata-action overrides
 # source/revision/created automatically; set IMAGE_SOURCE for manual builds.
 # ------------------------------------------------------------------
-ARG APP_VERSION="0.0.0"
+ARG APP_VERSION="1.2.1"
 LABEL org.opencontainers.image.title="Kubernetes Manager UI" \
       org.opencontainers.image.description="Web UI to browse and operate Kubernetes clusters — workloads, nodes, events, logs, in-browser exec/terminal, service port-forwarding, Helm releases, RBAC and CRDs. Reads your kubeconfig and serves the UI + REST API on port 3001." \
       org.opencontainers.image.version="${APP_VERSION}" \
       org.opencontainers.image.licenses="MIT"
+
+# Drop root — run as the unprivileged `node` user shipped in the base image.
+# Its home (/home/node) is writable, so the default kubeconfig path becomes
+# /home/node/.kube/config and the assistant config lands in /home/node/.config.
+USER node
 
 CMD ["node", "server.js"]
