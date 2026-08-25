@@ -3,26 +3,27 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Kubernetes Manager — a modern, Lens-style UI for your cluster</title>
-<meta name="description" content="A modern, Lens-style web UI to browse and operate your Kubernetes cluster from your local kubeconfig. Live dashboards, pod logs, interactive shells, topology, Helm, and an AI assistant. Download for macOS or run with Docker." />
+<title>Kubernetes Manager — a modern UI for your cluster</title>
+<meta name="description" content="A modern web UI to browse and operate your Kubernetes cluster from your local kubeconfig. Live dashboards, pod logs, interactive shells, topology, Helm, and an AI assistant. Download for macOS or run with Docker." />
 <meta property="og:title" content="Kubernetes Manager" />
-<meta property="og:description" content="A modern, Lens-style UI for browsing and operating your Kubernetes cluster." />
+<meta property="og:description" content="A modern UI for browsing and operating your Kubernetes cluster." />
 <meta property="og:type" content="website" />
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
 <style>
   :root {
-    --bg: #0a0d14;
-    --bg-2: #0e121c;
-    --panel: #11151f;
-    --panel-2: #151a26;
-    --border: #202634;
-    --border-2: #2a3242;
-    --text: #e6e9f0;
-    --text-dim: #9aa3b4;
-    --text-mute: #6b7385;
-    --brand: #326ce5;
-    --brand-light: #4a8cff;
-    --brand-dark: #1b4fc4;
+    --bg: #000000;
+    --bg-2: #0a0a0c;
+    --panel: #101013;
+    --panel-2: #17171b;
+    --border: #26262b;
+    --border-2: #34343a;
+    --text: #ededed;
+    --text-dim: #a1a1a8;
+    --text-mute: #6e6e76;
+    /* Monochrome accent — matches the app's true-black dark theme (no blue) */
+    --brand: #c9c9d1;
+    --brand-light: #ffffff;
+    --brand-dark: #8a8a92;
     --green: #3fb950;
     --amber: #d29922;
     --red: #f85149;
@@ -54,40 +55,40 @@
   .bg-glow {
     position: fixed; inset: 0; z-index: -1; pointer-events: none;
     background:
-      radial-gradient(700px 500px at 15% -5%, rgba(74,140,255,.16), transparent 60%),
+      radial-gradient(700px 500px at 15% -5%, rgba(255,255,255,.16), transparent 60%),
       radial-gradient(800px 600px at 100% 0%, rgba(163,113,247,.10), transparent 55%),
-      radial-gradient(900px 700px at 50% 120%, rgba(50,108,229,.10), transparent 60%);
+      radial-gradient(900px 700px at 50% 120%, rgba(255,255,255,.10), transparent 60%);
   }
 
   /* ---------- Nav ---------- */
   header {
     position: sticky; top: 0; z-index: 50;
     backdrop-filter: blur(14px);
-    background: rgba(10,13,20,.72);
+    background: rgba(0,0,0,.72);
     border-bottom: 1px solid var(--border);
   }
   nav { display: flex; align-items: center; justify-content: space-between; height: 64px; }
   .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; letter-spacing: -.01em; }
-  .brand .logo { width: 34px; height: 34px; border-radius: 9px; box-shadow: 0 6px 18px rgba(27,79,196,.4); }
+  .brand .logo { width: 34px; height: 34px; border-radius: 9px; box-shadow: 0 6px 18px rgba(0,0,0,.5); }
   .brand small { display: block; font-size: 10px; letter-spacing: .18em; color: var(--text-mute); font-weight: 600; }
   .nav-links { display: flex; align-items: center; gap: 28px; }
   .nav-links a { color: var(--text-dim); font-size: 14.5px; font-weight: 500; transition: color .15s; }
   .nav-links a:hover { color: var(--text); }
   .nav-cta {
     background: linear-gradient(135deg, var(--brand-light), var(--brand-dark));
-    color: #fff !important; padding: 9px 18px; border-radius: 10px; font-weight: 600;
-    box-shadow: 0 4px 16px rgba(50,108,229,.35);
+    color: #0a0a0c !important; padding: 9px 18px; border-radius: 10px; font-weight: 600;
+    box-shadow: 0 4px 16px rgba(255,255,255,.35);
     transition: transform .15s, box-shadow .15s;
   }
-  .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(50,108,229,.5); }
+  .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,255,255,.5); }
   .menu-btn { display: none; background: none; border: 0; color: var(--text); cursor: pointer; }
 
   /* ---------- Hero ---------- */
   .hero { padding: 90px 0 60px; text-align: center; }
   .badge {
     display: inline-flex; align-items: center; gap: 8px;
-    background: rgba(50,108,229,.12); border: 1px solid rgba(74,140,255,.28);
-    color: #bcd2ff; padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 500;
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.28);
+    color: #d8d8de; padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 500;
     margin-bottom: 26px;
   }
   .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); }
@@ -96,7 +97,7 @@
     margin: 0 auto 22px; max-width: 15ch;
   }
   h1 .grad {
-    background: linear-gradient(120deg, var(--brand-light), var(--purple));
+    background: linear-gradient(120deg, var(--brand-light), var(--brand-dark));
     -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
   }
   .hero p.sub { font-size: clamp(17px, 2.2vw, 20px); color: var(--text-dim); max-width: 60ch; margin: 0 auto 38px; }
@@ -109,10 +110,10 @@
   }
   .btn svg { width: 20px; height: 20px; }
   .btn-primary {
-    background: linear-gradient(135deg, var(--brand-light), var(--brand-dark)); color: #fff;
-    box-shadow: 0 8px 26px rgba(50,108,229,.4);
+    background: linear-gradient(135deg, var(--brand-light), var(--brand-dark)); color: #0a0a0c;
+    box-shadow: 0 8px 26px rgba(255,255,255,.14);
   }
-  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(50,108,229,.55); }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(255,255,255,.55); }
   .btn-ghost { background: var(--panel); color: var(--text); border-color: var(--border-2); }
   .btn-ghost:hover { transform: translateY(-2px); border-color: var(--brand-light); background: var(--panel-2); }
   .hero .fineprint { color: var(--text-mute); font-size: 13.5px; }
@@ -132,15 +133,15 @@
   .shot-bar .tl.r { background: #ff5f57; } .shot-bar .tl.y { background: #febc2e; } .shot-bar .tl.g { background: #28c840; }
   .shot-bar .addr { margin-left: 14px; font-family: var(--mono); font-size: 12px; color: var(--text-mute); }
   .shot-frame img { width: 100%; }
-  .shot-glow { position: absolute; inset: -40px -20px auto; height: 200px; background: radial-gradient(closest-side, rgba(74,140,255,.35), transparent); filter: blur(40px); z-index: -1; }
+  .shot-glow { position: absolute; inset: -40px -20px auto; height: 200px; background: radial-gradient(closest-side, rgba(255,255,255,.35), transparent); filter: blur(40px); z-index: -1; }
 
   /* ---------- Trust strip ---------- */
-  .strip { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-top: 80px; background: rgba(14,18,28,.5); }
+  .strip { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-top: 80px; background: rgba(12,12,14,.55); }
   .strip .wrap { display: flex; flex-wrap: wrap; gap: 40px 60px; justify-content: center; padding: 34px 24px; }
   .strip .stat { text-align: center; }
   .strip .stat b { display: block; font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
   .strip .stat span { font-size: 13px; color: var(--text-mute); }
-  .strip .stat b .grad { background: linear-gradient(120deg, var(--brand-light), var(--purple)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .strip .stat b .grad { background: linear-gradient(120deg, var(--brand-light), var(--brand-dark)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 
   /* ---------- Section head ---------- */
   .sec { padding: 96px 0; }
@@ -159,7 +160,7 @@
   .card:hover { transform: translateY(-4px); border-color: var(--border-2); box-shadow: 0 18px 40px rgba(0,0,0,.35); }
   .card .ico {
     width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; margin-bottom: 18px;
-    background: rgba(50,108,229,.12); border: 1px solid rgba(74,140,255,.2);
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
   }
   .card .ico svg { width: 24px; height: 24px; stroke: var(--brand-light); }
   .card h3 { font-size: 18px; margin-bottom: 8px; letter-spacing: -.01em; }
@@ -190,7 +191,7 @@
   .chat-head b { font-size: 14px; } .chat-head span { font-size: 12px; color: var(--text-mute); margin-left: auto; }
   .chat-body { padding: 20px; display: grid; gap: 14px; }
   .bubble { padding: 12px 15px; border-radius: 12px; font-size: 14px; max-width: 88%; }
-  .bubble.user { background: rgba(50,108,229,.16); border: 1px solid rgba(74,140,255,.25); margin-left: auto; border-bottom-right-radius: 4px; }
+  .bubble.user { background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.25); margin-left: auto; border-bottom-right-radius: 4px; }
   .bubble.ai { background: var(--panel-2); border: 1px solid var(--border); border-bottom-left-radius: 4px; color: var(--text-dim); }
   .bubble.ai code { font-family: var(--mono); font-size: 12.5px; color: var(--cyan); background: rgba(57,197,207,.08); padding: 2px 6px; border-radius: 5px; }
   .tool-pill { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11.5px; color: var(--text-mute); background: var(--bg); border: 1px solid var(--border); padding: 4px 9px; border-radius: 7px; margin: 0 4px 4px 0; }
@@ -202,7 +203,7 @@
     background: linear-gradient(180deg, var(--panel), var(--bg-2)); border: 1px solid var(--border);
     border-radius: 18px; padding: 34px; position: relative; overflow: hidden;
   }
-  .dl-card::before { content: ""; position: absolute; inset: 0 0 auto; height: 3px; background: linear-gradient(90deg, var(--brand-light), var(--purple)); opacity: .8; }
+  .dl-card::before { content: ""; position: absolute; inset: 0 0 auto; height: 3px; background: linear-gradient(90deg, var(--brand-light), var(--brand-dark)); opacity: .7; }
   .dl-card .head { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
   .dl-card .head .ico { width: 44px; height: 44px; border-radius: 11px; display: grid; place-items: center; background: var(--panel-2); border: 1px solid var(--border-2); }
   .dl-card .head .ico svg { width: 24px; height: 24px; fill: var(--text); }
@@ -218,7 +219,7 @@
   .code .code-head { display: flex; align-items: center; justify-content: space-between; padding: 9px 14px; border-bottom: 1px solid var(--border); color: var(--text-mute); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; }
   .code pre { padding: 16px; overflow-x: auto; line-height: 1.7; }
   .code .cmt { color: var(--text-mute); }
-  .code .flag { color: var(--brand-light); }
+  .code .flag { color: var(--cyan); }
   .code .img { color: var(--green); }
   .copy-btn {
     background: var(--panel-2); border: 1px solid var(--border-2); color: var(--text-dim);
@@ -288,6 +289,7 @@
       <div class="nav-links" id="navLinks">
         <a href="#features">Features</a>
         <a href="#assistant">AI Assistant</a>
+        <a href="#argocd">Argo CD</a>
         <a href="#download">Download</a>
         <a href="#docker">Docker</a>
         <a class="nav-cta" href="#download">Get the app</a>
@@ -302,11 +304,11 @@
 <!-- HERO -->
 <section class="hero" id="top">
   <div class="wrap">
-    <span class="badge"><span class="dot"></span> Version 1.2.1 · macOS &amp; Docker</span>
+    <span class="badge"><span class="dot"></span> Version 1.3.0 · macOS &amp; Docker</span>
     <h1>Operate your cluster with a <span class="grad">beautiful</span> Kubernetes UI</h1>
-    <p class="sub">A modern, Lens-style dashboard for browsing and operating any Kubernetes cluster using your local <code>kubeconfig</code> — live metrics, pod logs, interactive shells, topology, Helm, and a built-in AI debugging assistant.</p>
+    <p class="sub">A modern dashboard for browsing and operating any Kubernetes cluster using your local <code>kubeconfig</code> — live metrics, pod logs, interactive shells, topology, Helm, Argo CD, and a built-in AI debugging assistant.</p>
     <div class="cta-row">
-      <a class="btn btn-primary" href="https://github.com/praveenraghav01/k8s-manager-ui/releases/latest" target="_blank" rel="noopener">
+      <a class="btn btn-primary" href="https://github.com/praveenraghav01/k8s-manager-ui/releases/download/v1.3.0/Kubernetes.Manager-1.3.0-arm64.dmg">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.365 1.43c0 1.14-.42 2.2-1.12 3.02-.84.99-2.22 1.75-3.36 1.66-.14-1.12.43-2.3 1.08-3.04C13.78 2.05 15.3 1.4 16.365 1.43zM20.9 17.02c-.55 1.27-.82 1.84-1.53 2.96-1 1.56-2.4 3.5-4.15 3.51-1.55.02-1.95-1.02-4.05-1.01-2.1.01-2.54 1.03-4.1 1.02-1.74-.02-3.07-1.77-4.07-3.33C1.16 15.66.8 10.55 3.05 7.83c1.02-1.24 2.5-1.97 4.06-1.97 1.6 0 2.6 1.02 3.92 1.02 1.28 0 2.06-1.02 3.91-1.02 1.38 0 2.85.75 3.9 2.05-3.43 1.88-2.87 6.78.06 8.08z"/></svg>
         Download for macOS
       </a>
@@ -333,7 +335,7 @@
 <!-- STRIP -->
 <div class="strip reveal">
   <div class="wrap">
-    <div class="stat"><b><span class="grad">Lens-style</span></b><span>familiar, fast workflow</span></div>
+    <div class="stat"><b><span class="grad">Fast</span></b><span>keyboard-friendly workflow</span></div>
     <div class="stat"><b>15+</b><span>resource views</span></div>
     <div class="stat"><b>Live</b><span>CPU / memory metrics</span></div>
     <div class="stat"><b>Read-only</b><span>AI assistant, by design</span></div>
@@ -387,13 +389,23 @@
       </div>
       <div class="card i-cyan reveal">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></div>
-        <h3>Lens-style detail drawer</h3>
+        <h3>Slide-in detail drawer</h3>
         <p>A right-side panel with metadata, live metric graphs, conditions and containers — cross-linked namespace → node → pod → owner.</p>
       </div>
       <div class="card i-amber reveal">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></div>
         <h3>Light &amp; dark themes</h3>
-        <p>Switch themes with one click — token-driven styling that persists across sessions.</p>
+        <p>One-click theme switch — a crisp light mode and a redesigned true-black dark mode, token-driven and persisted across sessions.</p>
+      </div>
+      <div class="card i-purple reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="8.5" y="13" width="7" height="7" rx="1.5"/><path d="M6.5 10v1.5a1.5 1.5 0 0 0 1.5 1.5M17.5 10v1.5a1.5 1.5 0 0 1-1.5 1.5"/></svg></div>
+        <h3>Multi-cluster quick-switch</h3>
+        <p>Pin your favourite kubeconfig contexts to a left-hand rail and jump between dev, staging and prod clusters in a single click.</p>
+      </div>
+      <div class="card i-green reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></div>
+        <h3>MCP server built in</h3>
+        <p>Expose the same read-only tools to your own agents over the Model Context Protocol — via HTTP or stdio, with write tools off by default.</p>
       </div>
     </div>
   </div>
@@ -404,20 +416,24 @@
   <div class="wrap sec">
     <div class="split">
       <div class="reveal">
-        <span class="kicker">Powered by Claude</span>
+        <span class="kicker">Bring your own LLM</span>
         <h2>An AI assistant that actually reads your cluster</h2>
         <p>Click the ✨ button and ask in plain English — <em>“why is this pod not ready?”</em> or <em>“any warning events in kube-system?”</em>. It runs an agentic tool-use loop over read-only cluster data and streams the answer back token by token.</p>
         <ul class="checklist">
           <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Read-only by design</b> — it can never modify your cluster; it shows you the <code>kubectl</code> command when a change is needed.</span></li>
           <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Grounded in live data</b> — calls tools like logs, events and describe to base every answer on your real cluster.</span></li>
           <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Secrets redacted</b> — secret values are stripped from tool output before anything reaches the API.</span></li>
-          <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Context-aware</b> — knows your current view and bring-your-own Anthropic API key.</span></li>
+          <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Provider-agnostic</b> — connects to any OpenAI-compatible endpoint (TrueFoundry, OpenAI, Azure, LiteLLM…) and stays aware of your current view.</span></li>
         </ul>
+        <div class="ai-note" style="margin-top:24px; display:flex; gap:12px; align-items:flex-start; padding:16px 18px; border:1px solid var(--border-2); border-left:3px solid var(--amber); border-radius:12px; background:var(--panel-2);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" style="flex:0 0 auto; margin-top:1px;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+          <span style="color:var(--text-dim); font-size:14.5px; line-height:1.6;"><b style="color:var(--text);">Needs your own LLM subscription.</b> The assistant ships with no built-in model — you connect an OpenAI-compatible API (TrueFoundry, OpenAI, Azure OpenAI, LiteLLM, …), which usually requires a paid account and API key. Your key is stored locally in <code style="font-family:var(--mono); font-size:12.5px;">~/.config/k8s-manager/config.json</code>. Everything else in the app works without it.</span>
+        </div>
       </div>
       <div class="chat reveal">
         <div class="chat-head">
           <span class="spark"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span>
-          <b>Assistant</b><span>read-only · claude-opus</span>
+          <b>Assistant</b><span>read-only · your model</span>
         </div>
         <div class="chat-body">
           <div class="bubble user">Why is the checkout pod stuck in Pending?</div>
@@ -429,6 +445,86 @@
           <div class="bubble ai">The <code>checkout-7d9f</code> pod is <b>Pending</b> because no node can satisfy its request of <code>2 CPU</code> — all nodes are at capacity. Either scale the deployment down, add a node, or lower the CPU request. To inspect: <code>kubectl describe pod checkout-7d9f</code>.</div>
         </div>
       </div>
+    </div>
+    <div class="shot-wrap reveal" style="margin-top:52px;">
+      <div class="shot-glow"></div>
+      <div class="shot-frame">
+        <div class="shot-bar">
+          <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+          <span class="addr">localhost:3001 · AI Assistant — connect your LLM API</span>
+        </div>
+        <img src="assets/screenshot-ai.png" alt="Kubernetes Manager AI assistant panel showing the bring-your-own OpenAI-compatible API connection form with base URL, model and API key fields" />
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ARGOCD -->
+<section class="sec" id="argocd">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="kicker">GitOps, natively</span>
+      <h2>First-class Argo CD support</h2>
+      <p>Running Argo CD? The app auto-detects it and adds a full Argo CD workspace — no <code>argocd</code> CLI and no separate login. It reads the Application CRDs straight from your cluster using your kubeconfig&rsquo;s own RBAC.</p>
+    </div>
+
+    <div class="reveal" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:-32px auto 46px; max-width:820px;">
+      <span style="display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-dim); background:var(--panel); border:1px solid var(--border); padding:6px 12px; border-radius:999px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--green);"></span> Synced</span>
+      <span style="display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-dim); background:var(--panel); border:1px solid var(--border); padding:6px 12px; border-radius:999px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--amber);"></span> OutOfSync</span>
+      <span style="display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-dim); background:var(--panel); border:1px solid var(--border); padding:6px 12px; border-radius:999px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--green);"></span> Healthy</span>
+      <span style="display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-dim); background:var(--panel); border:1px solid var(--border); padding:6px 12px; border-radius:999px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--cyan);"></span> Progressing</span>
+      <span style="display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-dim); background:var(--panel); border:1px solid var(--border); padding:6px 12px; border-radius:999px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--red);"></span> Degraded</span>
+      <span style="display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-dim); background:var(--panel); border:1px solid var(--border); padding:6px 12px; border-radius:999px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--purple);"></span> Suspended</span>
+    </div>
+
+    <div class="shot-wrap reveal" style="margin-bottom:52px;">
+      <div class="shot-glow"></div>
+      <div class="shot-frame">
+        <div class="shot-bar">
+          <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+          <span class="addr">localhost:3001 · Argo CD — dashboard</span>
+        </div>
+        <img src="assets/screenshot-argocd.png" alt="Kubernetes Manager Argo CD dashboard showing sync and health status, application summary cards, a needs-attention row, and recent sync activity" />
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card i-cyan reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></div>
+        <h3>Applications dashboard</h3>
+        <p>Every Application with live sync and health status, quick filters, and a <em>needs-attention</em> view that surfaces whatever is drifting or unhealthy.</p>
+      </div>
+      <div class="card i-purple reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M12 7.5v3.5M12 11H6.4a1 1 0 0 0-1 1v4.5M12 11h5.6a1 1 0 0 1 1 1v4.5"/></svg></div>
+        <h3>Resource tree &amp; history</h3>
+        <p>Open an app for its managed resource tree, sync parameters, and full sync/rollout history — each resource with its own sync and health badge.</p>
+      </div>
+      <div class="card i-green reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-8-5M3 12a9 9 0 0 1 9-9 9 9 0 0 1 8 5"/><path d="M20 4v5h-5M4 20v-5h5"/></svg></div>
+        <h3>Sync, refresh &amp; prune</h3>
+        <p>Trigger a Sync with <code>prune</code>, <code>dry-run</code>, apply-only, force or replace — or a soft/hard Refresh — right from the drawer.</p>
+      </div>
+      <div class="card i-amber reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 12l10 5 10-5M2 17l10 5 10-5"/></svg></div>
+        <h3>App Sets, Projects &amp; repos</h3>
+        <p>Browse ApplicationSets, AppProjects, connected Git/Helm repositories and destination clusters — the whole Argo CD picture.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M10 6h10M10 12h10M10 18h10"/><path d="M3.5 6 5 7.5 7.5 5M3.5 12 5 13.5 7.5 11M3.5 18 5 19.5 7.5 17"/></svg></div>
+        <h3>Bulk operations</h3>
+        <p>Select many Applications and sync or refresh them together — with an opt-in multi-select so you always choose exactly what runs.</p>
+      </div>
+      <div class="card i-red reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></div>
+        <h3>AI-assisted triage</h3>
+        <p>One click hands an app&rsquo;s sync/health condition and failing resources to the assistant for a root-cause read <span style="color:var(--text-mute)">(needs your own LLM subscription)</span>.</p>
+      </div>
+    </div>
+
+    <div class="prereq reveal">
+      <span class="tag">🧭 Auto-detected when the <code>argocd</code> namespace exists</span>
+      <span class="tag">🔗 Opens your external Argo CD UI when configured</span>
+      <span class="tag">🔒 Uses your kubeconfig RBAC — no extra credentials</span>
     </div>
   </div>
 </section>
@@ -448,13 +544,13 @@
           <div class="ico"><svg viewBox="0 0 24 24"><path d="M16.365 1.43c0 1.14-.42 2.2-1.12 3.02-.84.99-2.22 1.75-3.36 1.66-.14-1.12.43-2.3 1.08-3.04C13.78 2.05 15.3 1.4 16.365 1.43zM20.9 17.02c-.55 1.27-.82 1.84-1.53 2.96-1 1.56-2.4 3.5-4.15 3.51-1.55.02-1.95-1.02-4.05-1.01-2.1.01-2.54 1.03-4.1 1.02-1.74-.02-3.07-1.77-4.07-3.33C1.16 15.66.8 10.55 3.05 7.83c1.02-1.24 2.5-1.97 4.06-1.97 1.6 0 2.6 1.02 3.92 1.02 1.28 0 2.06-1.02 3.91-1.02 1.38 0 2.85.75 3.9 2.05-3.43 1.88-2.87 6.78.06 8.08z"/></svg></div>
           <div>
             <h3>macOS App</h3>
-            <div class="meta">Apple Silicon (arm64) · .dmg · v1.2.1</div>
+            <div class="meta">Apple Silicon (arm64) · .dmg · v1.3.0</div>
           </div>
         </div>
         <p>A native <code>Kubernetes Manager.app</code> that starts the server and opens the UI in its own window. It reconstructs your shell <code>PATH</code> so <code>kubectl</code> is found automatically.</p>
-        <a class="btn btn-primary" href="https://github.com/praveenraghav01/k8s-manager-ui/releases/latest" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.05-.02-2.06-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5.99.11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.8 5.63-5.48 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.9-.01 3.29 0 .32.22.7.83.58C20.56 22.29 24 17.79 24 12.5 24 5.87 18.63.5 12 .5z"/></svg>
-          Get it on GitHub
+        <a class="btn btn-primary" href="https://github.com/praveenraghav01/k8s-manager-ui/releases/download/v1.3.0/Kubernetes.Manager-1.3.0-arm64.dmg">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.365 1.43c0 1.14-.42 2.2-1.12 3.02-.84.99-2.22 1.75-3.36 1.66-.14-1.12.43-2.3 1.08-3.04C13.78 2.05 15.3 1.4 16.365 1.43zM20.9 17.02c-.55 1.27-.82 1.84-1.53 2.96-1 1.56-2.4 3.5-4.15 3.51-1.55.02-1.95-1.02-4.05-1.01-2.1.01-2.54 1.03-4.1 1.02-1.74-.02-3.07-1.77-4.07-3.33C1.16 15.66.8 10.55 3.05 7.83c1.02-1.24 2.5-1.97 4.06-1.97 1.6 0 2.6 1.02 3.92 1.02 1.28 0 2.06-1.02 3.91-1.02 1.38 0 2.85.75 3.9 2.05-3.43 1.88-2.87 6.78.06 8.08z"/></svg>
+          Download for macOS
         </a>
         <ol class="steps" style="margin-top:18px">
           <li>Open the <code>.dmg</code> and drag the app to Applications.</li>
@@ -477,7 +573,7 @@
           <div class="code-head"><span>Terminal</span><button class="copy-btn" data-copy="run"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div>
 <pre id="run"><span class="cmt"># pull &amp; run — UI on http://localhost:8080</span>
 docker run --rm <span class="flag">-p</span> 8080:3001 \
-  <span class="flag">-v</span> "$HOME/.kube:/root/.kube:ro" \
+  <span class="flag">-v</span> "$HOME/.kube:/home/node/.kube:ro" \
   <span class="img">praveenraghav/k8s-manager-ui:latest</span></pre>
         </div>
         <div class="code">
@@ -485,7 +581,7 @@ docker run --rm <span class="flag">-p</span> 8080:3001 \
 <pre id="pull">docker pull <span class="img">praveenraghav/k8s-manager-ui:latest</span></pre>
         </div>
         <ol class="steps">
-          <li>Optionally add <code>-e ANTHROPIC_API_KEY=sk-ant-…</code> to enable the AI assistant.</li>
+          <li>Optionally enable the AI assistant with your own OpenAI-compatible endpoint — <code>-e LLM_BASE_URL=…</code> <code>-e LLM_API_KEY=…</code> <code>-e LLM_MODEL=…</code> (needs a paid LLM subscription).</li>
           <li>For EKS/GKE/AKS, ensure the cloud auth CLI is available or use a static-token kubeconfig.</li>
         </ol>
       </div>
@@ -493,7 +589,7 @@ docker run --rm <span class="flag">-p</span> 8080:3001 \
 
     <div class="prereq reveal">
       <span class="tag">🧩 Requires <code>kubectl</code> on your PATH</span>
-      <span class="tag">⎈ <code>helm</code> v3 for the Helm view</span>
+      <span class="tag">⎈ Helm releases read via the API — no <code>helm</code> CLI needed</span>
       <span class="tag">📄 A working <code>kubeconfig</code></span>
       <span class="tag">📊 metrics-server for live CPU/memory</span>
     </div>
@@ -506,7 +602,7 @@ docker run --rm <span class="flag">-p</span> 8080:3001 \
     <h2>Ready to see your cluster clearly?</h2>
     <p>Install the macOS app or pull the container — you'll be exploring workloads in under a minute.</p>
     <div class="cta-row">
-      <a class="btn btn-primary" href="https://github.com/praveenraghav01/k8s-manager-ui/releases/latest" target="_blank" rel="noopener">
+      <a class="btn btn-primary" href="https://github.com/praveenraghav01/k8s-manager-ui/releases/download/v1.3.0/Kubernetes.Manager-1.3.0-arm64.dmg">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.365 1.43c0 1.14-.42 2.2-1.12 3.02-.84.99-2.22 1.75-3.36 1.66-.14-1.12.43-2.3 1.08-3.04C13.78 2.05 15.3 1.4 16.365 1.43zM20.9 17.02c-.55 1.27-.82 1.84-1.53 2.96-1 1.56-2.4 3.5-4.15 3.51-1.55.02-1.95-1.02-4.05-1.01-2.1.01-2.54 1.03-4.1 1.02-1.74-.02-3.07-1.77-4.07-3.33C1.16 15.66.8 10.55 3.05 7.83c1.02-1.24 2.5-1.97 4.06-1.97 1.6 0 2.6 1.02 3.92 1.02 1.28 0 2.06-1.02 3.91-1.02 1.38 0 2.85.75 3.9 2.05-3.43 1.88-2.87 6.78.06 8.08z"/></svg>
         Download for macOS
       </a>

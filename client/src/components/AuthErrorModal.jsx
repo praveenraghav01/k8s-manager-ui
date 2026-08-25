@@ -1,5 +1,6 @@
 import React from 'react';
 import Icon from './Icons';
+import ContextSelector from './ContextSelector';
 
 // Blocking popup shown before the app loads when the kubeconfig parses but the
 // cluster credentials don't actually work (expired token, unreachable API
@@ -21,7 +22,7 @@ const HINTS = {
   'exec-plugin': 'Install the auth helper CLI referenced by your kubeconfig and make sure it is on PATH, then retry.',
 };
 
-export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying }) {
+export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying, contexts = [], currentContext, onSwitchContext }) {
   const reason = auth?.reason || 'error';
   const title = TITLES[reason] || TITLES.error;
   const hint = HINTS[reason];
@@ -52,6 +53,17 @@ export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying
             </div>
           )}
         </div>
+
+        {onSwitchContext && contexts.length > 1 && (
+          <div className="auth-switch">
+            <span className="auth-switch-label">Switch to another cluster</span>
+            <ContextSelector
+              contexts={contexts}
+              currentContext={currentContext || auth?.currentContext}
+              onChange={onSwitchContext}
+            />
+          </div>
+        )}
 
         <div className="modal-actions" style={{ gap: 10 }}>
           {onChangeConfig && (

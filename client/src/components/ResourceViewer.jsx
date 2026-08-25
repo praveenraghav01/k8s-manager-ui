@@ -9,6 +9,11 @@ import ResourceDrawer from './ResourceDrawer';
 import ContextMenu from './ContextMenu';
 import Loader from './Loader';
 import Icon from './Icons';
+import { useToast } from './Toast';
+
+// workloads whose replica count can be scaled / rolled out
+const SCALABLE = new Set(['deployment', 'statefulSet', 'replicaSet', 'replicationController']);
+const RESTARTABLE = new Set(['deployment', 'statefulSet', 'daemonSet']);
 
 const TAB_META = {
   logs: { icon: 'logs', label: 'Logs' },
@@ -64,8 +69,11 @@ export default function ResourceViewer({
   onSearchChange,
   totalCount,
   onResourceTypeChange,
-  onNavigate
+  onNavigate,
+  onRefresh
 }) {
+  const toast = useToast();
+  const [actionModal, setActionModal] = useState(null); // { type, resource, replicas, busy }
   const namespace = selectedNamespaces.includes('all') || selectedNamespaces.length !== 1
     ? 'all'
     : selectedNamespaces[0];
@@ -128,7 +136,70 @@ export default function ResourceViewer({
       items.push({ icon: 'terminal', label: 'Terminal', onClick: () => openTab('terminal', res) });
     }
     items.push({ icon: 'configuration', label: 'Edit YAML', onClick: () => openTab('configuration', res) });
+    if (SCALABLE.has(resourceType)) {
+      items.push({ icon: 'scale', label: 'Scale', onClick: () => setActionModal({ type: 'scale', resource: res, replicas: res.replicas ?? 1 }) });
+    }
+    if (RESTARTABLE.has(resourceType)) {
+      items.push({ icon: 'refresh', label: 'Restart', onClick: () => setActionModal({ type: 'restart', resource: res }) });
+    }
+    items.push({ icon: 'delete', label: 'Delete', danger: true, onClick: () => setActionModal({ type: 'delete', resource: res }) });
     return items;
+  };
+
+  // resolve the namespace path segment for a resource's write endpoint
+  const nsOf = (res) => res.namespace || (namespace !== 'all' ? namespace : '-');
+
+  const runAction = async () => {
+    if (!actionModal || actionModal.busy) return;
+    const { type, resource: res } = actionModal;
+    setActionModal(m => ({ ...m, busy: true }));
+    try {
+      const base = `/${nsOf(res)}/${resourceType}/${res.name}`;
+      if (type === 'delete') {
+        await axios.delete(`/api/resource${base}`);
+        toast.success(`${res.name} deleted`, { title: 'Delete' });
+        if (selectedResource && rowKey(selectedResource) === rowKey(res)) onSelectResource(null);
+      } else if (type === 'scale') {
+        await axios.post(`/api/scale${base}`, { replicas: Number(actionModal.replicas) });
+        toast.success(`Scaled ${res.name} to ${actionModal.replicas}`, { title: 'Scale' });
+      } else if (type === 'restart') {
+        await axios.post(`/api/restart${base}`);
+        toast.success(`Restart triggered for ${res.name}`, { title: 'Restart' });
+      }
+      setActionModal(null);
+      onRefresh && onRefresh();
+    } catch (err) {
+      toast.error(err.response?.data?.error || err.message || 'Action failed', { title: 'Error' });
+      setActionModal(m => ({ ...m, busy: false }));
+    }
+  };
+
+  // Resources currently checkbox-selected (actual objects, for bulk ops).
+  const selectedResources = () => resources.filter(r => selectedRows.has(rowKey(r)));
+
+  const runBulk = async () => {
+    if (!actionModal || actionModal.busy) return;
+    const { type } = actionModal;
+    const targets = actionModal.targets || [];
+    setActionModal(m => ({ ...m, busy: true }));
+    let ok = 0, failed = 0, lastErr = '';
+    for (const res of targets) {
+      try {
+        const base = `/${nsOf(res)}/${resourceType}/${res.name}`;
+        if (type === 'bulkDelete') await axios.delete(`/api/resource${base}`);
+        else if (type === 'bulkRestart') await axios.post(`/api/restart${base}`);
+        ok++;
+      } catch (err) {
+        failed++; lastErr = err.response?.data?.error || err.message || 'failed';
+      }
+    }
+    const verb = type === 'bulkDelete' ? 'Deleted' : 'Restarted';
+    if (failed === 0) toast.success(`${verb} ${ok} item${ok === 1 ? '' : 's'}`, { title: 'Bulk action' });
+    else toast.error(`${verb} ${ok}, ${failed} failed — ${lastErr}`, { title: 'Bulk action' });
+    setActionModal(null);
+    setSelectedRows(new Set());
+    onSelectResource(null);
+    onRefresh && onRefresh();
   };
 
   // Live pod metrics for the table CPU/Memory columns
@@ -457,7 +528,7 @@ export default function ResourceViewer({
                   <TerminalViewer resource={t.resource} namespace={t.resource.namespace} />
                 )}
                 {t.type === 'configuration' && (
-                  <YamlViewer resource={t.resource} namespace={t.resource.namespace} resourceType={t.resourceType} />
+                  <YamlViewer resource={t.resource} namespace={t.resource.namespace} resourceType={t.resourceType} onApplied={onRefresh} />
                 )}
               </div>
             ))}
@@ -473,7 +544,27 @@ export default function ResourceViewer({
           onClose={() => onSelectResource(null)}
           onOpenTab={(type) => openTab(type, selectedResource)}
           onNavigate={onNavigate}
+          canScale={SCALABLE.has(resourceType)}
+          canRestart={RESTARTABLE.has(resourceType)}
+          onAction={(type) => setActionModal({ type, resource: selectedResource, replicas: selectedResource.replicas ?? 1 })}
         />
+      )}
+
+      {someSelected && (
+        <div className="bulk-bar">
+          <span className="bulk-count">{selectedRows.size} selected</span>
+          {RESTARTABLE.has(resourceType) && (
+            <button className="bulk-btn" onClick={() => setActionModal({ type: 'bulkRestart', targets: selectedResources() })}>
+              <Icon name="refresh" size={14} /> Restart
+            </button>
+          )}
+          <button className="bulk-btn danger" onClick={() => setActionModal({ type: 'bulkDelete', targets: selectedResources() })}>
+            <Icon name="delete" size={14} /> Delete
+          </button>
+          <button className="bulk-btn ghost" onClick={() => setSelectedRows(new Set())} title="Clear selection">
+            <Icon name="close" size={14} />
+          </button>
+        </div>
       )}
 
       {menu && (
@@ -483,6 +574,91 @@ export default function ResourceViewer({
           items={menuItems(menu.resource)}
           onClose={() => setMenu(null)}
         />
+      )}
+
+      {actionModal && (
+        <div className="action-modal-backdrop" onClick={() => !actionModal.busy && setActionModal(null)}>
+          <div className="action-modal" onClick={(e) => e.stopPropagation()}>
+            {actionModal.type === 'delete' && (
+              <>
+                <h3 className="action-modal-title danger"><Icon name="delete" size={16} /> Delete {resourceType}</h3>
+                {actionModal.confirmStep === 2 ? (
+                  <p className="action-modal-body">
+                    <b>Are you absolutely sure?</b> This permanently deletes <b>{actionModal.resource.name}</b>
+                    {actionModal.resource.namespace ? <> in <b>{actionModal.resource.namespace}</b></> : null} and cannot be undone.
+                  </p>
+                ) : (
+                  <p className="action-modal-body">
+                    Delete <b>{actionModal.resource.name}</b>
+                    {actionModal.resource.namespace ? <> in <b>{actionModal.resource.namespace}</b></> : null}? This cannot be undone.
+                  </p>
+                )}
+              </>
+            )}
+            {actionModal.type === 'restart' && (
+              <>
+                <h3 className="action-modal-title"><Icon name="refresh" size={16} /> Rollout restart</h3>
+                <p className="action-modal-body">Trigger a rolling restart of <b>{actionModal.resource.name}</b>?</p>
+              </>
+            )}
+            {actionModal.type === 'scale' && (
+              <>
+                <h3 className="action-modal-title"><Icon name="scale" size={16} /> Scale {actionModal.resource.name}</h3>
+                <label className="action-modal-label">Replicas</label>
+                <input
+                  className="action-modal-input"
+                  type="number" min="0" autoFocus
+                  value={actionModal.replicas}
+                  onChange={(e) => setActionModal(m => ({ ...m, replicas: e.target.value }))}
+                  onKeyDown={(e) => e.key === 'Enter' && runAction()}
+                />
+              </>
+            )}
+            {actionModal.type === 'bulkDelete' && (
+              <>
+                <h3 className="action-modal-title danger"><Icon name="delete" size={16} /> Delete {actionModal.targets.length} {resourceType}{actionModal.targets.length === 1 ? '' : 's'}</h3>
+                {actionModal.confirmStep === 2 ? (
+                  <p className="action-modal-body"><b>Are you absolutely sure?</b> This permanently deletes <b>{actionModal.targets.length}</b> item{actionModal.targets.length === 1 ? '' : 's'} and cannot be undone.</p>
+                ) : (
+                  <p className="action-modal-body">Delete <b>{actionModal.targets.length}</b> selected item{actionModal.targets.length === 1 ? '' : 's'}? This cannot be undone.</p>
+                )}
+              </>
+            )}
+            {actionModal.type === 'bulkRestart' && (
+              <>
+                <h3 className="action-modal-title"><Icon name="refresh" size={16} /> Restart {actionModal.targets.length} {resourceType}{actionModal.targets.length === 1 ? '' : 's'}</h3>
+                <p className="action-modal-body">Trigger a rolling restart of <b>{actionModal.targets.length}</b> selected item{actionModal.targets.length === 1 ? '' : 's'}?</p>
+              </>
+            )}
+            {(() => {
+              const isDelete = actionModal.type === 'delete' || actionModal.type === 'bulkDelete';
+              // deletes require a second confirmation before the action runs
+              const needsSecond = isDelete && actionModal.confirmStep !== 2;
+              const perform = () => (actionModal.type.startsWith('bulk') ? runBulk : runAction)();
+              return (
+                <div className="action-modal-actions">
+                  <button
+                    className="action-modal-btn"
+                    onClick={() => (needsSecond ? setActionModal(null) : isDelete ? setActionModal(m => ({ ...m, confirmStep: 1 })) : setActionModal(null))}
+                    disabled={actionModal.busy}
+                  >
+                    {actionModal.confirmStep === 2 ? 'Back' : 'Cancel'}
+                  </button>
+                  <button
+                    className={`action-modal-btn primary ${isDelete ? 'danger' : ''}`}
+                    onClick={() => { if (needsSecond) setActionModal(m => ({ ...m, confirmStep: 2 })); else perform(); }}
+                    disabled={actionModal.busy || (actionModal.type === 'scale' && (actionModal.replicas === '' || Number(actionModal.replicas) < 0))}
+                  >
+                    {actionModal.busy ? 'Working…'
+                      : needsSecond ? 'Delete'
+                      : isDelete ? 'Yes, delete'
+                      : actionModal.type === 'scale' ? 'Scale' : 'Restart'}
+                  </button>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
       )}
     </div>
   );

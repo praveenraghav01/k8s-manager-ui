@@ -3,6 +3,7 @@ import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import os from 'os';
 import { execSync, spawnSync, spawn, execFile } from 'child_process';
 import { promisify } from 'util';
 
@@ -15,6 +16,10 @@ import * as k8s from '@kubernetes/client-node';
 import yaml from 'js-yaml';
 import compression from 'compression';
 import { registerAssistant } from './assistant.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
+import { randomUUID } from 'crypto';
+import { createMcpServer } from './mcp.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -59,10 +64,20 @@ if (fs.existsSync(CLIENT_DIST)) {
 let currentContext = null;
 let kubeConfig = null;
 
+// The app switches context in-memory (kubeConfig.setCurrentContext); the on-disk
+// kubeconfig that `kubectl` reads does NOT reflect that. So every kubectl
+// shell-out must be told which context to use, or it silently targets a
+// different cluster after the user switches. kctl() = args form; kctlStr() =
+// string form for the few execSync string commands.
+const kctl = (...args) => (currentContext ? ['--context', currentContext, ...args] : args);
+const kctlStr = () => (currentContext ? `--context ${currentContext} ` : '');
+
 const getKubeConfigPath = () => {
   const envPath = process.env.KUBECONFIG;
   if (envPath) return envPath;
-  return path.join(process.env.HOME, '.kube', 'config');
+  // HOME may be unset for a non-root container user; fall back to os.homedir().
+  const home = process.env.HOME || os.homedir();
+  return path.join(home, '.kube', 'config');
 };
 
 const loadKubeConfig = (configPath) => {
@@ -189,9 +204,12 @@ const currentServerUrl = () => {
 };
 
 const classifyClusterError = (error) => {
-  const httpStatus = error?.statusCode ?? error?.response?.statusCode ?? error?.body?.code;
-  const code = error?.code || error?.cause?.code;
-  const msg = error?.body?.message || error?.message || String(error);
+  // client-node 2.0 throws ApiException with a numeric `.code` (HTTP status)
+  // and a parsed `.body`; fetch network failures carry a string `.cause.code`.
+  const num = (v) => (typeof v === 'number' ? v : undefined);
+  const httpStatus = num(error?.code) ?? error?.statusCode ?? error?.response?.statusCode ?? num(error?.body?.code);
+  const code = error?.cause?.code || (typeof error?.code === 'string' ? error.code : undefined);
+  const msg = error?.body?.message || error?.body?.reason || error?.message || String(error);
 
   if (httpStatus === 401) {
     return {
@@ -228,7 +246,7 @@ const checkClusterAuth = async () => {
   try {
     const core = kubeConfig.makeApiClient(k8s.CoreV1Api);
     // Lightweight authenticated request (limit=1). 200 ⇒ authenticated + reachable.
-    await core.listNamespace(undefined, undefined, undefined, undefined, undefined, 1);
+    await core.listNamespace({ limit: 1 });
     return { ok: true, authenticated: true, reachable: true, currentContext, server };
   } catch (error) {
     return { ...classifyClusterError(error), currentContext, server };
@@ -258,7 +276,7 @@ app.get('/api/namespaces', async (req, res) => {
 
     const api = kubeConfig.makeApiClient(k8s.CoreV1Api);
     const response = await api.listNamespace();
-    const items = response.body.items;
+    const items = response.items;
     const namespaces = items.map(ns => ns.metadata.name);
     const details = items.map(ns => ({
       name: ns.metadata.name,
@@ -294,35 +312,35 @@ app.get('/api/resources/:namespace', async (req, res) => {
     const appsApi = kubeConfig.makeApiClient(k8s.AppsV1Api);
     const netApi = kubeConfig.makeApiClient(k8s.NetworkingV1Api);
 
-    const empty = () => ({ body: { items: [] } });
+    const empty = () => ({ items: [] });
 
     // All in-process API calls (no kubectl process spawn), fetched in parallel
     const [pods, services, deployments, statefulSets, daemonSets, configMaps, secrets, serviceAccounts, ingresses, networkPolicies, pvcs] = await Promise.all([
-      coreApi.listNamespacedPod(namespace).catch(empty),
-      coreApi.listNamespacedService(namespace).catch(empty),
-      appsApi.listNamespacedDeployment(namespace).catch(empty),
-      appsApi.listNamespacedStatefulSet(namespace).catch(empty),
-      appsApi.listNamespacedDaemonSet(namespace).catch(empty),
-      coreApi.listNamespacedConfigMap(namespace).catch(empty),
-      coreApi.listNamespacedSecret(namespace).catch(empty),
-      coreApi.listNamespacedServiceAccount(namespace).catch(empty),
-      netApi.listNamespacedIngress(namespace).catch(empty),
-      netApi.listNamespacedNetworkPolicy(namespace).catch(empty),
-      coreApi.listNamespacedPersistentVolumeClaim(namespace).catch(empty)
+      coreApi.listNamespacedPod({ namespace }).catch(empty),
+      coreApi.listNamespacedService({ namespace }).catch(empty),
+      appsApi.listNamespacedDeployment({ namespace }).catch(empty),
+      appsApi.listNamespacedStatefulSet({ namespace }).catch(empty),
+      appsApi.listNamespacedDaemonSet({ namespace }).catch(empty),
+      coreApi.listNamespacedConfigMap({ namespace }).catch(empty),
+      coreApi.listNamespacedSecret({ namespace }).catch(empty),
+      coreApi.listNamespacedServiceAccount({ namespace }).catch(empty),
+      netApi.listNamespacedIngress({ namespace }).catch(empty),
+      netApi.listNamespacedNetworkPolicy({ namespace }).catch(empty),
+      coreApi.listNamespacedPersistentVolumeClaim({ namespace }).catch(empty)
     ]);
 
     const resources = {
-      pods: pods.body.items.map(item => formatResource(item, 'Pod')),
-      services: services.body.items.map(item => formatResource(item, 'Service')),
-      deployments: deployments.body.items.map(item => formatResource(item, 'Deployment')),
-      statefulSets: statefulSets.body.items.map(item => formatResource(item, 'StatefulSet')),
-      daemonSets: daemonSets.body.items.map(item => formatResource(item, 'DaemonSet')),
-      configMaps: configMaps.body.items.map(item => formatResource(item, 'ConfigMap')),
-      secrets: secrets.body.items.map(item => formatResource(item, 'Secret')),
-      serviceAccounts: serviceAccounts.body.items.map(item => formatResource(item, 'ServiceAccount')),
-      ingresses: ingresses.body.items.map(item => formatResource(item, 'Ingress')),
-      networkPolicies: networkPolicies.body.items.map(item => formatResource(item, 'NetworkPolicy')),
-      persistentVolumeClaims: pvcs.body.items.map(item => formatResource(item, 'PersistentVolumeClaim'))
+      pods: pods.items.map(item => formatResource(item, 'Pod')),
+      services: services.items.map(item => formatResource(item, 'Service')),
+      deployments: deployments.items.map(item => formatResource(item, 'Deployment')),
+      statefulSets: statefulSets.items.map(item => formatResource(item, 'StatefulSet')),
+      daemonSets: daemonSets.items.map(item => formatResource(item, 'DaemonSet')),
+      configMaps: configMaps.items.map(item => formatResource(item, 'ConfigMap')),
+      secrets: secrets.items.map(item => formatResource(item, 'Secret')),
+      serviceAccounts: serviceAccounts.items.map(item => formatResource(item, 'ServiceAccount')),
+      ingresses: ingresses.items.map(item => formatResource(item, 'Ingress')),
+      networkPolicies: networkPolicies.items.map(item => formatResource(item, 'NetworkPolicy')),
+      persistentVolumeClaims: pvcs.items.map(item => formatResource(item, 'PersistentVolumeClaim'))
     };
 
     // Cache the response
@@ -348,7 +366,7 @@ app.get('/api/storage', async (req, res) => {
 
     const coreApi = kubeConfig.makeApiClient(k8s.CoreV1Api);
     const storageApi = kubeConfig.makeApiClient(k8s.StorageV1Api);
-    const empty = () => ({ body: { items: [] } });
+    const empty = () => ({ items: [] });
 
     const [pvs, scs] = await Promise.all([
       coreApi.listPersistentVolume().catch(empty),
@@ -356,8 +374,8 @@ app.get('/api/storage', async (req, res) => {
     ]);
 
     const result = {
-      persistentVolumes: pvs.body.items.map(item => formatResource(item, 'PersistentVolume')),
-      storageClasses: scs.body.items.map(item => formatResource(item, 'StorageClass'))
+      persistentVolumes: pvs.items.map(item => formatResource(item, 'PersistentVolume')),
+      storageClasses: scs.items.map(item => formatResource(item, 'StorageClass'))
     };
 
     setCache(cacheKey, result, CACHE_TTL.resources);
@@ -382,7 +400,7 @@ app.get('/api/rbac', async (req, res) => {
 
     const rbac = kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api);
     const core = kubeConfig.makeApiClient(k8s.CoreV1Api);
-    const empty = () => ({ body: { items: [] } });
+    const empty = () => ({ items: [] });
 
     const [roles, roleBindings, clusterRoles, clusterRoleBindings, sas] = await Promise.all([
       rbac.listRoleForAllNamespaces().catch(empty),
@@ -404,11 +422,11 @@ app.get('/api/rbac', async (req, res) => {
     });
 
     const result = {
-      serviceAccounts: sas.body.items.map(i => ({ ...base(i), secrets: (i.secrets || []).length })),
-      roles: roles.body.items.map(i => ({ ...base(i), rules: (i.rules || []).length })),
-      roleBindings: roleBindings.body.items.map(binding),
-      clusterRoles: clusterRoles.body.items.map(i => ({ ...base(i), rules: (i.rules || []).length })),
-      clusterRoleBindings: clusterRoleBindings.body.items.map(binding)
+      serviceAccounts: sas.items.map(i => ({ ...base(i), secrets: (i.secrets || []).length })),
+      roles: roles.items.map(i => ({ ...base(i), rules: (i.rules || []).length })),
+      roleBindings: roleBindings.items.map(binding),
+      clusterRoles: clusterRoles.items.map(i => ({ ...base(i), rules: (i.rules || []).length })),
+      clusterRoleBindings: clusterRoleBindings.items.map(binding)
     };
 
     setCache(cacheKey, result, CACHE_TTL.resources);
@@ -429,55 +447,55 @@ app.get('/api/resource/:namespace/:kind/:name', async (req, res) => {
     try {
       switch(kind) {
         case 'Pod':
-          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedPod(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedPod({ name, namespace });
           break;
         case 'Service':
-          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedService(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedService({ name, namespace });
           break;
         case 'Deployment':
-          resource = await kubeConfig.makeApiClient(k8s.AppsV1Api).readNamespacedDeployment(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.AppsV1Api).readNamespacedDeployment({ name, namespace });
           break;
         case 'StatefulSet':
-          resource = await kubeConfig.makeApiClient(k8s.AppsV1Api).readNamespacedStatefulSet(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.AppsV1Api).readNamespacedStatefulSet({ name, namespace });
           break;
         case 'DaemonSet':
-          resource = await kubeConfig.makeApiClient(k8s.AppsV1Api).readNamespacedDaemonSet(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.AppsV1Api).readNamespacedDaemonSet({ name, namespace });
           break;
         case 'ConfigMap':
-          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedConfigMap(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedConfigMap({ name, namespace });
           break;
         case 'Secret':
-          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedSecret(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedSecret({ name, namespace });
           break;
         case 'ServiceAccount':
-          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedServiceAccount(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedServiceAccount({ name, namespace });
           break;
         case 'Role':
-          resource = await kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api).readNamespacedRole(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api).readNamespacedRole({ name, namespace });
           break;
         case 'RoleBinding':
-          resource = await kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api).readNamespacedRoleBinding(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api).readNamespacedRoleBinding({ name, namespace });
           break;
         case 'ClusterRole':
-          resource = await kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api).readClusterRole(name);
+          resource = await kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api).readClusterRole({ name });
           break;
         case 'ClusterRoleBinding':
-          resource = await kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api).readClusterRoleBinding(name);
+          resource = await kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api).readClusterRoleBinding({ name });
           break;
         case 'Ingress':
-          resource = await kubeConfig.makeApiClient(k8s.NetworkingV1Api).readNamespacedIngress(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.NetworkingV1Api).readNamespacedIngress({ name, namespace });
           break;
         case 'NetworkPolicy':
-          resource = await kubeConfig.makeApiClient(k8s.NetworkingV1Api).readNamespacedNetworkPolicy(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.NetworkingV1Api).readNamespacedNetworkPolicy({ name, namespace });
           break;
         case 'PersistentVolumeClaim':
-          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedPersistentVolumeClaim(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedPersistentVolumeClaim({ name, namespace });
           break;
         case 'PersistentVolume':
-          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readPersistentVolume(name);
+          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readPersistentVolume({ name });
           break;
         case 'StorageClass':
-          resource = await kubeConfig.makeApiClient(k8s.StorageV1Api).readStorageClass(name);
+          resource = await kubeConfig.makeApiClient(k8s.StorageV1Api).readStorageClass({ name });
           break;
         default:
           return res.status(400).json({ error: 'Unsupported resource kind' });
@@ -486,7 +504,7 @@ app.get('/api/resource/:namespace/:kind/:name', async (req, res) => {
       return res.status(404).json({ error: `Resource not found: ${apiError.message}` });
     }
 
-    res.json(resource.body);
+    res.json(resource);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -509,16 +527,9 @@ app.get('/api/logs/:namespace/:pod', async (req, res) => {
     }
 
     const api = kubeConfig.makeApiClient(k8s.CoreV1Api);
-    let logs = await api.readNamespacedPodLog(pod, namespace, container, tail, true);
+    // client-node 2.0 returns the log body as a string directly.
+    let logs = await api.readNamespacedPodLog({ name: pod, namespace, container, tailLines: tail });
 
-    // Handle different response formats from Kubernetes API
-    if (logs && typeof logs === 'object' && logs.response) {
-      logs = logs.response.body || logs.response || '';
-    } else if (logs && typeof logs === 'object' && logs.body) {
-      logs = logs.body;
-    }
-
-    // Convert buffer to string if needed
     if (Buffer.isBuffer(logs)) {
       logs = logs.toString('utf8');
     }
@@ -547,7 +558,7 @@ app.post('/api/exec', async (req, res) => {
 
     // Pass the command as a single argument to `sh -c` (no shell interpolation),
     // so quotes, pipes, redirects and special chars are handled safely.
-    const args = ['exec', '-n', namespace, pod];
+    const args = kctl('exec', '-n', namespace, pod);
     if (container) args.push('-c', container);
     args.push('--', 'sh', '-c', command);
 
@@ -584,7 +595,7 @@ app.post('/api/portforward', (req, res) => {
 
   // No local port -> ":remote" lets kubectl pick a random free local port
   const portArg = localPort ? `${localPort}:${remotePort}` : `:${remotePort}`;
-  const proc = spawn('kubectl', ['port-forward', '-n', namespace, `svc/${name}`, portArg]);
+  const proc = spawn('kubectl', kctl('port-forward', '-n', namespace, `svc/${name}`, portArg));
 
   const id = `pf-${++pfCounter}`;
   const entry = { id, namespace, name, remotePort, localPort, proc, status: 'starting', startedAt: Date.now(), error: '' };
@@ -657,55 +668,55 @@ app.get('/api/yaml/:namespace/:kind/:name', async (req, res) => {
     try {
       switch(kind) {
         case 'pod':
-          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedPod(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedPod({ name, namespace });
           break;
         case 'service':
-          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedService(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedService({ name, namespace });
           break;
         case 'deployment':
-          resource = await kubeConfig.makeApiClient(k8s.AppsV1Api).readNamespacedDeployment(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.AppsV1Api).readNamespacedDeployment({ name, namespace });
           break;
         case 'statefulSet':
-          resource = await kubeConfig.makeApiClient(k8s.AppsV1Api).readNamespacedStatefulSet(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.AppsV1Api).readNamespacedStatefulSet({ name, namespace });
           break;
         case 'daemonSet':
-          resource = await kubeConfig.makeApiClient(k8s.AppsV1Api).readNamespacedDaemonSet(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.AppsV1Api).readNamespacedDaemonSet({ name, namespace });
           break;
         case 'configMap':
-          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedConfigMap(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedConfigMap({ name, namespace });
           break;
         case 'secret':
-          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedSecret(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedSecret({ name, namespace });
           break;
         case 'serviceAccount':
-          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedServiceAccount(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedServiceAccount({ name, namespace });
           break;
         case 'role':
-          resource = await kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api).readNamespacedRole(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api).readNamespacedRole({ name, namespace });
           break;
         case 'roleBinding':
-          resource = await kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api).readNamespacedRoleBinding(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api).readNamespacedRoleBinding({ name, namespace });
           break;
         case 'clusterRole':
-          resource = await kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api).readClusterRole(name);
+          resource = await kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api).readClusterRole({ name });
           break;
         case 'clusterRoleBinding':
-          resource = await kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api).readClusterRoleBinding(name);
+          resource = await kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api).readClusterRoleBinding({ name });
           break;
         case 'ingress':
-          resource = await kubeConfig.makeApiClient(k8s.NetworkingV1Api).readNamespacedIngress(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.NetworkingV1Api).readNamespacedIngress({ name, namespace });
           break;
         case 'networkPolicy':
-          resource = await kubeConfig.makeApiClient(k8s.NetworkingV1Api).readNamespacedNetworkPolicy(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.NetworkingV1Api).readNamespacedNetworkPolicy({ name, namespace });
           break;
         case 'persistentVolumeClaim':
-          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedPersistentVolumeClaim(name, namespace);
+          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readNamespacedPersistentVolumeClaim({ name, namespace });
           break;
         case 'persistentVolume':
-          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readPersistentVolume(name);
+          resource = await kubeConfig.makeApiClient(k8s.CoreV1Api).readPersistentVolume({ name });
           break;
         case 'storageClass':
-          resource = await kubeConfig.makeApiClient(k8s.StorageV1Api).readStorageClass(name);
+          resource = await kubeConfig.makeApiClient(k8s.StorageV1Api).readStorageClass({ name });
           break;
         default:
           return res.status(400).json({ error: 'Unsupported resource kind' });
@@ -714,8 +725,119 @@ app.get('/api/yaml/:namespace/:kind/:name', async (req, res) => {
       return res.status(404).json({ error: `Resource not found: ${apiError.message}` });
     }
 
-    const yamlString = yaml.dump(resource.body, { indent: 2 });
+    const yamlString = yaml.dump(resource, { indent: 2 });
     res.json({ yaml: yamlString });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ------------------------------------------------------------------
+// Resource write operations (edit/apply, delete, scale, rollout restart).
+// These shell out to kubectl so a single code path works for every kind.
+// The camelCase resourceType lowercases to a valid kubectl resource name
+// (statefulSet → statefulset, configMap → configmap, …).
+// ------------------------------------------------------------------
+const CLUSTER_SCOPED_KINDS = new Set([
+  'persistentvolume', 'storageclass', 'clusterrole', 'clusterrolebinding',
+  'node', 'namespace', 'customresourcedefinition',
+]);
+
+// Run kubectl, optionally piping `input` to stdin (for `apply -f -`).
+// Always target the app's *selected* context — the app switches context
+// in-memory (kubeConfig.setCurrentContext), which the on-disk kubeconfig
+// kubectl reads by default does NOT reflect. Without --context, kubectl would
+// operate on whatever context is current on disk (a different cluster).
+const runKubectl = (args, input) => new Promise((resolve, reject) => {
+  const ctxArgs = currentContext ? ['--context', currentContext] : [];
+  const child = spawn('kubectl', [...ctxArgs, ...args], { stdio: ['pipe', 'pipe', 'pipe'] });
+  let out = '', err = '';
+  const timer = setTimeout(() => { child.kill('SIGKILL'); reject(new Error('kubectl timed out')); }, 25000);
+  child.stdout.on('data', d => { out += d; });
+  child.stderr.on('data', d => { err += d; });
+  child.on('error', reject);
+  child.on('close', (code) => {
+    clearTimeout(timer);
+    if (code === 0) resolve(out.trim());
+    else reject(new Error((err || out || `kubectl exited ${code}`).trim()));
+  });
+  if (input != null) { child.stdin.write(input); child.stdin.end(); }
+});
+
+const nsArgs = (kind, namespace) =>
+  (!namespace || namespace === '-' || CLUSTER_SCOPED_KINDS.has(kind)) ? [] : ['-n', namespace];
+
+// Apply edited YAML (create-or-update). Body: { yaml }
+app.put('/api/yaml/:namespace/:kind/:name', async (req, res) => {
+  try {
+    if (!kubeConfig) return res.status(400).json({ error: 'No kubeconfig loaded' });
+    const { yaml: yamlText } = req.body || {};
+    if (!yamlText || !yamlText.trim()) return res.status(400).json({ error: 'Empty YAML' });
+    // validate it parses before sending to the cluster
+    try { yaml.load(yamlText); } catch (e) { return res.status(400).json({ error: `Invalid YAML: ${e.message}` }); }
+    const out = await runKubectl(['apply', '-f', '-'], yamlText);
+    cache.clear();
+    res.json({ success: true, message: out || 'Applied' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Apply arbitrary YAML by content (no resource in the path). Used by the MCP
+// apply_yaml tool. Body: { yaml }
+app.post('/api/apply', async (req, res) => {
+  try {
+    if (!kubeConfig) return res.status(400).json({ error: 'No kubeconfig loaded' });
+    const { yaml: yamlText } = req.body || {};
+    if (!yamlText || !yamlText.trim()) return res.status(400).json({ error: 'Empty YAML' });
+    try { yaml.load(yamlText); } catch (e) { return res.status(400).json({ error: `Invalid YAML: ${e.message}` }); }
+    const out = await runKubectl(['apply', '-f', '-'], yamlText);
+    cache.clear();
+    res.json({ success: true, message: out || 'Applied' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete a resource
+app.delete('/api/resource/:namespace/:kind/:name', async (req, res) => {
+  try {
+    if (!kubeConfig) return res.status(400).json({ error: 'No kubeconfig loaded' });
+    const { namespace, kind, name } = req.params;
+    const k = kind.toLowerCase();
+    const out = await runKubectl(['delete', k, name, ...nsArgs(k, namespace)]);
+    cache.clear();
+    res.json({ success: true, message: out || `${name} deleted` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Scale a workload. Body: { replicas }
+app.post('/api/scale/:namespace/:kind/:name', async (req, res) => {
+  try {
+    if (!kubeConfig) return res.status(400).json({ error: 'No kubeconfig loaded' });
+    const { namespace, kind, name } = req.params;
+    const replicas = parseInt(req.body?.replicas, 10);
+    if (Number.isNaN(replicas) || replicas < 0) return res.status(400).json({ error: 'Invalid replicas' });
+    const k = kind.toLowerCase();
+    const out = await runKubectl(['scale', k, name, `--replicas=${replicas}`, ...nsArgs(k, namespace)]);
+    cache.clear();
+    res.json({ success: true, message: out || `Scaled to ${replicas}` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Rollout-restart a workload
+app.post('/api/restart/:namespace/:kind/:name', async (req, res) => {
+  try {
+    if (!kubeConfig) return res.status(400).json({ error: 'No kubeconfig loaded' });
+    const { namespace, kind, name } = req.params;
+    const k = kind.toLowerCase();
+    const out = await runKubectl(['rollout', 'restart', k, name, ...nsArgs(k, namespace)]);
+    cache.clear();
+    res.json({ success: true, message: out || 'Restart triggered' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -742,12 +864,12 @@ app.get('/api/events/:namespace?', async (req, res) => {
     try {
       let response;
       if (namespace && namespace !== 'all') {
-        response = await coreApi.listNamespacedEvent(namespace);
+        response = await coreApi.listNamespacedEvent({ namespace });
       } else {
         response = await coreApi.listEventForAllNamespaces();
       }
 
-      const events = response.body.items.map(event => ({
+      const events = response.items.map(event => ({
         message: event.message,
         namespace: event.metadata.namespace,
         type: event.type,
@@ -791,7 +913,7 @@ app.get('/api/events/:namespace?', async (req, res) => {
 
 const fetchNodesWithKubectl = () => {
   try {
-    const output = execSync('kubectl get nodes -o json', {
+    const output = execSync(`kubectl ${kctlStr()}get nodes -o json`, {
       encoding: 'utf-8',
       maxBuffer: 10 * 1024 * 1024,
       timeout: 5000
@@ -962,9 +1084,9 @@ const listHelmReleaseSecrets = async (namespace) => {
   const core = kubeConfig.makeApiClient(k8s.CoreV1Api);
   const labelSelector = 'owner=helm';
   const resp = namespace
-    ? await core.listNamespacedSecret(namespace, undefined, undefined, undefined, undefined, labelSelector)
-    : await core.listSecretForAllNamespaces(undefined, undefined, undefined, labelSelector);
-  return resp.body.items || [];
+    ? await core.listNamespacedSecret({ namespace, labelSelector })
+    : await core.listSecretForAllNamespaces({ labelSelector });
+  return resp.items || [];
 };
 
 // Decode + keep only the latest revision per (namespace, name).
@@ -1064,7 +1186,7 @@ const fetchCrdsWithKubectl = async () => {
     // execFile (no shell) + async so we never block the event loop
     const { stdout: output } = await execFileAsync(
       'kubectl',
-      ['get', 'crds', '-o', `jsonpath=${CRD_JSONPATH}`],
+      kctl('get', 'crds', '-o', `jsonpath=${CRD_JSONPATH}`),
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 15000 }
     );
     return output
@@ -1114,7 +1236,7 @@ app.get('/api/customresources/:group/:version/:plural', async (req, res) => {
     // execFile (no shell) + async so a slow/large CR list never blocks the event loop
     const { stdout: output } = await execFileAsync(
       'kubectl',
-      ['get', `${plural}.${version}.${group}`, '-A', '-o', 'json'],
+      kctl('get', `${plural}.${version}.${group}`, '-A', '-o', 'json'),
       { encoding: 'utf-8', maxBuffer: 20 * 1024 * 1024, timeout: 20000 }
     );
     const data = JSON.parse(output);
@@ -1140,7 +1262,7 @@ app.get('/api/customresource/:group/:version/:plural/:name', async (req, res) =>
     const { group, version, plural, name } = req.params;
     const namespace = req.query.namespace;
 
-    const args = ['get', `${plural}.${version}.${group}`, name];
+    const args = kctl('get', `${plural}.${version}.${group}`, name);
     if (namespace && namespace !== '-') args.push('-n', namespace);
     args.push('-o', 'yaml');
 
@@ -1152,6 +1274,414 @@ app.get('/api/customresource/:group/:version/:plural/:name', async (req, res) =>
   } catch (error) {
     const msg = (error.stderr || error.message || 'Failed to get resource').trim();
     res.status(500).json({ error: msg });
+  }
+});
+
+// ------------------------------------------------------------------
+// ArgoCD (GitOps). Detected via the applications.argoproj.io CRD; if present the
+// UI shows an ArgoCD view. Applications are plain CRs, so we read them with
+// kubectl (context-aware) and parse the sync/health/source/destination fields.
+// ------------------------------------------------------------------
+const argoSource = (spec) => spec.source || (Array.isArray(spec.sources) ? spec.sources[0] : {}) || {};
+const parseArgoApp = (a) => {
+  const spec = a.spec || {}, st = a.status || {};
+  const src = argoSource(spec);
+  return {
+    name: a.metadata?.name,
+    namespace: a.metadata?.namespace,
+    project: spec.project || 'default',
+    syncStatus: st.sync?.status || 'Unknown',
+    healthStatus: st.health?.status || 'Unknown',
+    healthMessage: st.health?.message || '',
+    repoURL: src.repoURL || '',
+    path: src.path || src.chart || '',
+    targetRevision: src.targetRevision || '',
+    revision: (st.sync?.revision || '').slice(0, 7),
+    multiSource: Array.isArray(spec.sources) && spec.sources.length > 1,
+    destName: spec.destination?.name || '',
+    destServer: spec.destination?.server || '',
+    destNamespace: spec.destination?.namespace || '',
+    resourceCount: (st.resources || []).length,
+    operationPhase: st.operationState?.phase || '',
+    autoSync: !!spec.syncPolicy?.automated,
+    createdAt: a.metadata?.creationTimestamp,
+    // extras for the properties panel + dashboard "recent activity"
+    reconciledAt: st.reconciledAt || '',
+    images: st.summary?.images || [],
+    finalizers: a.metadata?.finalizers || [],
+    controlledBy: (a.metadata?.ownerReferences || []).find(o => o.kind === 'ApplicationSet')?.name || '',
+    lastOperation: st.operationState
+      ? { phase: st.operationState.phase || '', message: st.operationState.message || '', finishedAt: st.operationState.finishedAt || st.operationState.startedAt || '' }
+      : null,
+  };
+};
+
+// Applications that aren't fully Synced+Healthy — the "Needs attention" panel.
+const needsAttention = (a) => a.syncStatus !== 'Synced' || (a.healthStatus !== 'Healthy' && a.healthStatus !== 'Unknown');
+
+// Is ArgoCD installed on the current cluster? (cached briefly)
+app.get('/api/argocd/status', async (req, res) => {
+  try {
+    if (!kubeConfig) return res.status(400).json({ error: 'No kubeconfig loaded' });
+    const cacheKey = getCacheKey('argocd-status', { ctx: currentContext });
+    const cached = getCache(cacheKey);
+    if (cached) { res.set('X-Cache', 'HIT'); return res.json(cached); }
+    let installed = false;
+    try {
+      const { stdout } = await execFileAsync('kubectl', kctl('get', 'crd', 'applications.argoproj.io', '-o', 'name'),
+        { encoding: 'utf-8', timeout: 12000 });
+      installed = stdout.trim().length > 0;
+    } catch { installed = false; }
+    // Best-effort: the external Argo CD UI URL (from the argocd-cm configmap).
+    let url = '';
+    if (installed) {
+      try {
+        const { stdout } = await execFileAsync('kubectl', kctl('get', 'configmap', 'argocd-cm', '-n', 'argocd', '-o', 'jsonpath={.data.url}'),
+          { encoding: 'utf-8', timeout: 8000 });
+        url = (stdout || '').trim();
+      } catch { /* no argocd-cm / different namespace — button just hidden */ }
+    }
+    const result = { installed, url };
+    setCache(cacheKey, result, CACHE_TTL.namespaces);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// List all ArgoCD Applications (parsed summary)
+app.get('/api/argocd/applications', async (req, res) => {
+  try {
+    if (!kubeConfig) return res.status(400).json({ error: 'No kubeconfig loaded' });
+    const cacheKey = getCacheKey('argocd-apps', { ctx: currentContext });
+    const cached = getCache(cacheKey);
+    if (cached) { res.set('X-Cache', 'HIT'); return res.json(cached); }
+    const { stdout } = await execFileAsync('kubectl', kctl('get', 'applications.argoproj.io', '-A', '-o', 'json'),
+      { encoding: 'utf-8', maxBuffer: 100 * 1024 * 1024, timeout: 25000 });
+    const items = (JSON.parse(stdout).items || []).map(parseArgoApp);
+    items.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    const result = { applications: items };
+    setCache(cacheKey, result, CACHE_TTL.resources);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: (error.stderr || error.message || 'Failed to list applications').trim(), applications: [] });
+  }
+});
+
+// Best-effort health for a live child resource (Argo CD computes these too).
+function liveChildHealth(kind, item) {
+  if (kind === 'Pod') {
+    const phase = item.status?.phase;
+    if (phase === 'Succeeded') return { status: 'Healthy' };
+    if (phase === 'Failed') return { status: 'Degraded', message: item.status?.reason || '' };
+    const cs = item.status?.containerStatuses || [];
+    const bad = cs.map(c => c.state?.waiting?.reason).find(r => /CrashLoopBackOff|Error|ImagePullBackOff|ErrImagePull|CreateContainerError|RunContainerError/.test(r || ''));
+    if (bad) return { status: 'Degraded', message: bad };
+    const ready = (item.status?.conditions || []).find(c => c.type === 'Ready')?.status === 'True';
+    if (phase === 'Running' && ready) return { status: 'Healthy' };
+    return { status: 'Progressing' };
+  }
+  if (kind === 'ReplicaSet') {
+    const desired = item.spec?.replicas || 0, ready = item.status?.readyReplicas || 0;
+    return { status: ready >= desired ? 'Healthy' : 'Progressing' };
+  }
+  if (kind === 'Job') {
+    if (item.status?.succeeded) return { status: 'Healthy' };
+    if (item.status?.failed) return { status: 'Degraded' };
+    return { status: 'Progressing' };
+  }
+  return { status: 'Healthy' };
+}
+
+// One Application in full (summary + managed resources + conditions + last op)
+app.get('/api/argocd/application/:namespace/:name', async (req, res) => {
+  try {
+    if (!kubeConfig) return res.status(400).json({ error: 'No kubeconfig loaded' });
+    const { namespace, name } = req.params;
+    const { stdout } = await execFileAsync('kubectl',
+      kctl('get', 'applications.argoproj.io', name, '-n', namespace, '-o', 'json'),
+      { encoding: 'utf-8', maxBuffer: 40 * 1024 * 1024, timeout: 15000 });
+    const a = JSON.parse(stdout);
+    const spec = a.spec || {}, st = a.status || {};
+    const keyOf = (kind, ns, nm) => `${kind}|${ns || ''}|${nm}`;
+    const resources = (st.resources || []).map(r => ({
+      group: r.group || '', version: r.version || '', kind: r.kind,
+      namespace: r.namespace || '', name: r.name,
+      syncStatus: r.status || 'Unknown',
+      healthStatus: r.health?.status || '',
+      healthMessage: r.health?.message || '',
+      parentKey: null, managed: true, createdAt: '',
+    }));
+
+    // ---- augment with live descendants (Deployment→RS→Pod, Service→EndpointSlice,
+    // CronJob→Job→Pod) by walking ownerReferences, so the tree matches Argo CD ----
+    try {
+      const nsSet = new Set(resources.map(r => r.namespace).filter(Boolean));
+      if (spec.destination?.namespace) nsSet.add(spec.destination.namespace);
+      const namespaces = [...nsSet].slice(0, 12);
+      const kindMap = { pods: 'Pod', replicasets: 'ReplicaSet', endpointslices: 'EndpointSlice', jobs: 'Job' };
+      const live = [];
+      await Promise.all(namespaces.flatMap(ns => Object.keys(kindMap).map(async plural => {
+        try {
+          const { stdout: out } = await execFileAsync('kubectl',
+            kctl('get', plural, '-n', ns, '-o', 'json'),
+            { encoding: 'utf-8', maxBuffer: 80 * 1024 * 1024, timeout: 15000 });
+          for (const it of (JSON.parse(out).items || [])) live.push({ item: it, kind: kindMap[plural], ns });
+        } catch { /* best-effort per kind/namespace (RBAC etc.) */ }
+      })));
+
+      const nodeByKey = new Map();
+      resources.forEach(r => nodeByKey.set(keyOf(r.kind, r.namespace, r.name), r));
+      const remaining = live.slice();
+      let added = true, pass = 0;
+      while (added && pass < 5) {
+        added = false; pass++;
+        for (let i = remaining.length - 1; i >= 0; i--) {
+          const { item, kind, ns } = remaining[i];
+          const nm = item.metadata?.name;
+          if (!nm) { remaining.splice(i, 1); continue; }
+          const key = keyOf(kind, ns, nm);
+          if (nodeByKey.has(key)) { remaining.splice(i, 1); continue; }
+          if (kind === 'ReplicaSet' && !(item.spec?.replicas || item.status?.replicas)) { remaining.splice(i, 1); continue; } // drop scaled-down history
+          let parentKey = null;
+          for (const o of (item.metadata?.ownerReferences || [])) {
+            const k = keyOf(o.kind, ns, o.name);
+            if (nodeByKey.has(k)) { parentKey = k; break; }
+          }
+          if (!parentKey && kind === 'EndpointSlice') {
+            const svc = item.metadata?.labels?.['kubernetes.io/service-name'];
+            if (svc && nodeByKey.has(keyOf('Service', ns, svc))) parentKey = keyOf('Service', ns, svc);
+          }
+          if (!parentKey) continue;
+          const h = liveChildHealth(kind, item);
+          const node = {
+            group: (item.apiVersion || '').includes('/') ? item.apiVersion.split('/')[0] : '',
+            version: '', kind, namespace: ns, name: nm,
+            syncStatus: '', healthStatus: h.status, healthMessage: h.message || '',
+            parentKey, managed: false, createdAt: item.metadata?.creationTimestamp || '',
+          };
+          nodeByKey.set(key, node); resources.push(node); remaining.splice(i, 1); added = true;
+        }
+      }
+    } catch { /* live-tree augmentation is best-effort */ }
+    // events on the Application object (sync started/completed, health changes, …)
+    let events = [];
+    try {
+      const { stdout: ev } = await execFileAsync('kubectl',
+        kctl('get', 'events', '-n', namespace, '--field-selector', `involvedObject.name=${name},involvedObject.kind=Application`, '-o', 'json'),
+        { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 10000 });
+      events = (JSON.parse(ev).items || [])
+        .map(e => ({ type: e.type, reason: e.reason, message: e.message, count: e.count, lastTimestamp: e.lastTimestamp || e.eventTime }))
+        .sort((x, y) => new Date(y.lastTimestamp) - new Date(x.lastTimestamp))
+        .slice(0, 20);
+    } catch { /* events are best-effort */ }
+    res.json({
+      app: parseArgoApp(a),
+      sources: spec.sources || (spec.source ? [spec.source] : []),
+      destination: spec.destination || {},
+      syncPolicy: spec.syncPolicy || {},
+      resources,
+      conditions: st.conditions || [],
+      operationState: st.operationState
+        ? { phase: st.operationState.phase, message: st.operationState.message, startedAt: st.operationState.startedAt, finishedAt: st.operationState.finishedAt, revision: (st.operationState.syncResult?.revision || '').slice(0, 7) }
+        : null,
+      history: (st.history || []).map(h => ({ id: h.id, revision: h.revision, deployedAt: h.deployedAt })).reverse(),
+      events,
+    });
+  } catch (error) {
+    res.status(500).json({ error: (error.stderr || error.message || 'Failed to get application').trim() });
+  }
+});
+
+// Trigger a sync of an Application. Body accepts options:
+// { prune, dryRun, applyOnly, force, replace, revision }
+app.post('/api/argocd/application/:namespace/:name/sync', async (req, res) => {
+  try {
+    if (!kubeConfig) return res.status(400).json({ error: 'No kubeconfig loaded' });
+    const { namespace, name } = req.params;
+    const o = req.body || {};
+    const sync = {};
+    if (o.prune) sync.prune = true;
+    if (o.dryRun) sync.dryRun = true;
+    if (o.revision) sync.revision = String(o.revision);
+    const syncOptions = [];
+    if (o.applyOnly) syncOptions.push('ApplyOutOfSyncOnly=true');
+    if (o.replace) syncOptions.push('Replace=true');
+    if (o.force) syncOptions.push('Force=true');
+    if (syncOptions.length) sync.syncOptions = syncOptions;
+    const patch = JSON.stringify({ operation: { initiatedBy: { username: 'k8s-manager-ui' }, sync } });
+    const out = await runKubectl(['patch', 'applications.argoproj.io', name, '-n', namespace, '--type', 'merge', '-p', patch]);
+    cache.clear();
+    res.json({ success: true, message: out || 'Sync triggered' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete an Application. ?cascade=false removes the argocd finalizer first so
+// the managed resources are left in place (orphan); default cascades.
+app.delete('/api/argocd/application/:namespace/:name', async (req, res) => {
+  try {
+    if (!kubeConfig) return res.status(400).json({ error: 'No kubeconfig loaded' });
+    const { namespace, name } = req.params;
+    const cascade = req.query.cascade !== 'false';
+    if (!cascade) {
+      // drop the finalizer so deletion doesn't cascade to the managed resources
+      await runKubectl(['patch', 'applications.argoproj.io', name, '-n', namespace, '--type', 'merge', '-p', JSON.stringify({ metadata: { finalizers: null } })]);
+    }
+    const out = await runKubectl(['delete', 'applications.argoproj.io', name, '-n', namespace]);
+    cache.clear();
+    res.json({ success: true, message: out || `${name} deleted` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// List AppProjects
+app.get('/api/argocd/projects', async (req, res) => {
+  try {
+    if (!kubeConfig) return res.status(400).json({ error: 'No kubeconfig loaded' });
+    const cacheKey = getCacheKey('argocd-projects', { ctx: currentContext });
+    const cached = getCache(cacheKey);
+    if (cached) { res.set('X-Cache', 'HIT'); return res.json(cached); }
+    const { stdout } = await execFileAsync('kubectl', kctl('get', 'appprojects.argoproj.io', '-A', '-o', 'json'),
+      { encoding: 'utf-8', maxBuffer: 40 * 1024 * 1024, timeout: 20000 });
+    const projects = (JSON.parse(stdout).items || []).map(p => {
+      const s = p.spec || {};
+      return {
+        name: p.metadata?.name, namespace: p.metadata?.namespace,
+        description: s.description || '',
+        sourceRepos: s.sourceRepos || [],
+        destinations: (s.destinations || []).map(d => `${d.server || d.name || '*'}/${d.namespace || '*'}`),
+        clusterResourceWhitelist: (s.clusterResourceWhitelist || []).length,
+        roles: (s.roles || []).map(r => r.name),
+        createdAt: p.metadata?.creationTimestamp,
+      };
+    }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    const result = { projects };
+    setCache(cacheKey, result, CACHE_TTL.resources);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: (error.stderr || error.message || 'Failed to list projects').trim(), projects: [] });
+  }
+});
+
+// List ApplicationSets (may be absent — controller not installed)
+app.get('/api/argocd/applicationsets', async (req, res) => {
+  try {
+    if (!kubeConfig) return res.status(400).json({ error: 'No kubeconfig loaded' });
+    const cacheKey = getCacheKey('argocd-appsets', { ctx: currentContext });
+    const cached = getCache(cacheKey);
+    if (cached) { res.set('X-Cache', 'HIT'); return res.json(cached); }
+    let available = true, appSets = [];
+    try {
+      const { stdout } = await execFileAsync('kubectl', kctl('get', 'applicationsets.argoproj.io', '-A', '-o', 'json'),
+        { encoding: 'utf-8', maxBuffer: 40 * 1024 * 1024, timeout: 20000 });
+      appSets = (JSON.parse(stdout).items || []).map(as => {
+        const s = as.spec || {}, st = as.status || {};
+        return {
+          name: as.metadata?.name, namespace: as.metadata?.namespace,
+          generators: (s.generators || []).map(g => Object.keys(g)[0]).filter(Boolean),
+          destinationNamespace: s.template?.spec?.destination?.namespace || '',
+          project: s.template?.spec?.project || '',
+          conditions: (st.conditions || []).map(c => ({ type: c.type, status: c.status, message: c.message })),
+          createdAt: as.metadata?.creationTimestamp,
+        };
+      }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    } catch (e) {
+      if (/NotFound|doesn't have a resource type|the server doesn't have/i.test(e.stderr || e.message || '')) available = false;
+      else throw e;
+    }
+    const result = { available, applicationSets: appSets };
+    setCache(cacheKey, result, CACHE_TTL.resources);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: (error.stderr || error.message || 'Failed to list application sets').trim(), applicationSets: [] });
+  }
+});
+
+const b64 = (v) => { try { return Buffer.from(v || '', 'base64').toString('utf-8'); } catch { return ''; } };
+
+// Repositories ArgoCD is wired to. Repos may be stored as secrets, or configured
+// inline in Applications — so we merge repo secrets with the distinct repoURLs
+// actually referenced by Applications.
+app.get('/api/argocd/repositories', async (req, res) => {
+  try {
+    if (!kubeConfig) return res.status(400).json({ error: 'No kubeconfig loaded' });
+    const cacheKey = getCacheKey('argocd-repos', { ctx: currentContext });
+    const cached = getCache(cacheKey);
+    if (cached) { res.set('X-Cache', 'HIT'); return res.json(cached); }
+    const byUrl = new Map();
+    try {
+      const { stdout } = await execFileAsync('kubectl', kctl('get', 'secrets', '-A', '-l', 'argocd.argoproj.io/secret-type=repository', '-o', 'json'),
+        { encoding: 'utf-8', maxBuffer: 40 * 1024 * 1024, timeout: 15000 });
+      for (const s of JSON.parse(stdout).items || []) {
+        const d = s.data || {};
+        const url = b64(d.url);
+        if (url) byUrl.set(url, { url, name: b64(d.name), type: b64(d.type) || 'git', project: b64(d.project) || '', source: 'secret' });
+      }
+    } catch { /* fall through to app-derived */ }
+    // derive from applications
+    try {
+      const { stdout } = await execFileAsync('kubectl', kctl('get', 'applications.argoproj.io', '-A', '-o', 'json'),
+        { encoding: 'utf-8', maxBuffer: 100 * 1024 * 1024, timeout: 25000 });
+      for (const a of JSON.parse(stdout).items || []) {
+        const spec = a.spec || {};
+        const srcs = spec.sources || (spec.source ? [spec.source] : []);
+        for (const s of srcs) {
+          const url = s.repoURL;
+          if (!url) continue;
+          if (!byUrl.has(url)) byUrl.set(url, { url, name: '', type: s.chart ? 'helm' : 'git', project: '', source: 'application', appCount: 0 });
+          const r = byUrl.get(url); r.appCount = (r.appCount || 0) + 1;
+        }
+      }
+    } catch { /* best-effort */ }
+    const repositories = [...byUrl.values()].sort((a, b) => (a.url || '').localeCompare(b.url || ''));
+    const result = { repositories };
+    setCache(cacheKey, result, CACHE_TTL.resources);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: (error.stderr || error.message || 'Failed to list repositories').trim(), repositories: [] });
+  }
+});
+
+// Clusters ArgoCD manages (stored as secrets; plus the implicit in-cluster).
+app.get('/api/argocd/clusters', async (req, res) => {
+  try {
+    if (!kubeConfig) return res.status(400).json({ error: 'No kubeconfig loaded' });
+    const cacheKey = getCacheKey('argocd-clusters', { ctx: currentContext });
+    const cached = getCache(cacheKey);
+    if (cached) { res.set('X-Cache', 'HIT'); return res.json(cached); }
+    const clusters = [];
+    try {
+      const { stdout } = await execFileAsync('kubectl', kctl('get', 'secrets', '-A', '-l', 'argocd.argoproj.io/secret-type=cluster', '-o', 'json'),
+        { encoding: 'utf-8', maxBuffer: 40 * 1024 * 1024, timeout: 15000 });
+      for (const s of JSON.parse(stdout).items || []) {
+        const d = s.data || {};
+        clusters.push({ name: b64(d.name), server: b64(d.server) });
+      }
+    } catch { /* best-effort */ }
+    clusters.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    const result = { clusters };
+    setCache(cacheKey, result, CACHE_TTL.resources);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: (error.stderr || error.message || 'Failed to list clusters').trim(), clusters: [] });
+  }
+});
+
+// Refresh an Application (re-compares against git without syncing)
+app.post('/api/argocd/application/:namespace/:name/refresh', async (req, res) => {
+  try {
+    if (!kubeConfig) return res.status(400).json({ error: 'No kubeconfig loaded' });
+    const { namespace, name } = req.params;
+    const hard = req.body?.hard ? 'hard' : 'normal';
+    const out = await runKubectl(['annotate', 'applications.argoproj.io', name, '-n', namespace,
+      `argocd.argoproj.io/refresh=${hard}`, '--overwrite']);
+    cache.clear();
+    res.json({ success: true, message: out || 'Refresh requested' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -1187,7 +1717,7 @@ app.get('/api/cluster/summary', async (req, res) => {
     let serverVersion = 'unknown';
     let platform = '';
     try {
-      const v = JSON.parse(execSync('kubectl version -o json', { encoding: 'utf-8', maxBuffer: 4 * 1024 * 1024, timeout: 8000 }));
+      const v = JSON.parse(execSync(`kubectl ${kctlStr()}version -o json`, { encoding: 'utf-8', maxBuffer: 4 * 1024 * 1024, timeout: 8000 }));
       serverVersion = v.serverVersion?.gitVersion || 'unknown';
       platform = v.serverVersion?.platform || '';
     } catch (e) { /* ignore */ }
@@ -1278,7 +1808,7 @@ const parseCpuMilli = (s) => {
 };
 
 const fetchMetricsRaw = (path) => {
-  const out = execSync(`kubectl get --raw "${path}"`, {
+  const out = execSync(`kubectl ${kctlStr()}get --raw "${path}"`, {
     encoding: 'utf-8',
     maxBuffer: 30 * 1024 * 1024,
     timeout: 10000
@@ -1417,13 +1947,13 @@ app.get('/api/topology/:namespace', async (req, res) => {
     // async execFile (no shell) so a big fetch never blocks the event loop.
     let data;
     try {
-      const { stdout } = await execFileAsync('kubectl', [
+      const { stdout } = await execFileAsync('kubectl', kctl(
         'get',
         'deployments,replicasets,statefulsets,daemonsets,jobs,cronjobs,pods,' +
         'services,ingresses,networkpolicies,configmaps,secrets,serviceaccounts,' +
         'persistentvolumeclaims,roles,rolebindings',
         '-n', namespace, '-o', 'json'
-      ], { encoding: 'utf-8', maxBuffer: 100 * 1024 * 1024, timeout: 25000 });
+      ), { encoding: 'utf-8', maxBuffer: 100 * 1024 * 1024, timeout: 25000 });
       data = JSON.parse(stdout);
     } catch (err) {
       return res.status(500).json({ error: `Failed to build topology: ${(err.stderr || err.message).trim()}`, nodes: [], edges: [] });
@@ -1627,7 +2157,7 @@ app.get('/api/topology/:namespace', async (req, res) => {
     // ---- cluster-scoped storage (PVs + StorageClasses) bound to this namespace ----
     if (pvNames.size || scNames.size) {
       try {
-        const { stdout } = await execFileAsync('kubectl', ['get', 'pv,storageclass', '-o', 'json'],
+        const { stdout } = await execFileAsync('kubectl', kctl('get', 'pv,storageclass', '-o', 'json'),
           { encoding: 'utf-8', maxBuffer: 40 * 1024 * 1024, timeout: 15000 });
         const cluster = JSON.parse(stdout).items || [];
         for (const it of cluster) {
@@ -1773,6 +2303,48 @@ function getResourceStatus(item, kind) {
   }
   return 'Unknown';
 }
+
+// ------------------------------------------------------------------
+// MCP endpoint (Streamable HTTP). Any MCP-compatible AI agent can connect to
+// /mcp to drive the cluster this app is attached to. Stateful: an initialize
+// request mints a session id; later requests reuse the same server via the
+// Mcp-Session-Id header.
+// ------------------------------------------------------------------
+const mcpTransports = {}; // sessionId -> transport
+
+app.post('/mcp', async (req, res) => {
+  try {
+    const sid = req.headers['mcp-session-id'];
+    let transport;
+    if (sid && mcpTransports[sid]) {
+      transport = mcpTransports[sid];
+    } else if (!sid && isInitializeRequest(req.body)) {
+      transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+        onsessioninitialized: (id) => { mcpTransports[id] = transport; },
+      });
+      transport.onclose = () => { if (transport.sessionId) delete mcpTransports[transport.sessionId]; };
+      const mcp = createMcpServer({ version: getAppVersion() });
+      await mcp.connect(transport);
+    } else {
+      return res.status(400).json({ jsonrpc: '2.0', error: { code: -32000, message: 'Bad Request: no valid session id (send an initialize request first)' }, id: null });
+    }
+    await transport.handleRequest(req, res, req.body);
+  } catch (error) {
+    if (!res.headersSent) {
+      res.status(500).json({ jsonrpc: '2.0', error: { code: -32603, message: error.message }, id: null });
+    }
+  }
+});
+
+// GET (server→client notification stream) and DELETE (end session) reuse the session.
+const mcpSession = async (req, res) => {
+  const sid = req.headers['mcp-session-id'];
+  if (!sid || !mcpTransports[sid]) return res.status(400).send('Invalid or missing Mcp-Session-Id');
+  await mcpTransports[sid].handleRequest(req, res);
+};
+app.get('/mcp', mcpSession);
+app.delete('/mcp', mcpSession);
 
 // SPA fallback: serve index.html for non-API routes (production build)
 app.get('*', (req, res, next) => {

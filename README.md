@@ -1,6 +1,6 @@
 # Kubernetes Manager UI
 
-A modern, Lens-style web UI for browsing and operating a Kubernetes cluster using your local `kubeconfig`.
+A modern web UI for browsing and operating a Kubernetes cluster using your local `kubeconfig`.
 
 ![Kubernetes Manager — cluster dashboard](docs/screenshot-dashboard.png)
 
@@ -12,8 +12,11 @@ A modern, Lens-style web UI for browsing and operating a Kubernetes cluster usin
 - **Namespaces** — searchable list; click a namespace to filter its workloads
 - **Topology** — interactive pan/zoom graph of Deployment → ReplicaSet → Pod → Service relationships
 - **Custom Resources** — lazy-loaded sidebar tree (group → kind → instance) with YAML details
+- **ArgoCD** — auto-detected when its CRDs are present. A GitOps dashboard (fleet-health status bar, summary cards, "Needs attention", recent activity) plus **Applications / View / ApplicationSets / Projects / Settings → Repositories / Clusters** views and an "Open Argo CD UI" link. The **View** tab is a Topology-style, pan/zoom resource graph: pick a namespace + application to see the Application and all of its managed resources as an interactive tree (Deployment → ReplicaSet → Pod inferred), colour-coded by sync/health — a single view for tracking one app. The dashboard's Applications card and the Applications-tab selection both open a **Sync / Refresh** dialog with per-app checkboxes, all / out-of-sync / none presets, prune, and normal/hard refresh. Application drawer shows properties, source (clickable repo), destination, sync policy, last operation, a resource tree, deploy history, and events; actions include Sync (prune/dry-run/force/replace, two-step confirm), Refresh (normal or hard), roll-back-to-revision, and Delete (cascade or orphan, two-step confirm)
+- **Ask AI → Summarize** — right-click any ArgoCD Application (or use the drawer) to hand the resource to the built-in assistant, which analyzes its sync/health condition using cluster context and suggests fixes
+- **Edit & apply** — edit any resource's YAML and apply it; per-row and drawer actions for Scale, Rollout restart, and Delete (two-step confirm)
 - **Helm** — releases with values and rendered manifest
-- **Detail drawer** — Lens-style right-side panel with metadata, live metric graphs, conditions, containers
+- **Detail drawer** — slide-in right-side panel with metadata, live metric graphs, conditions, containers
 - **Pod logs** — search, tail, formatting, and per-container selection
 - **Interactive shell** — a real TTY into pods (`kubectl exec -it` streamed over WebSocket to xterm.js)
 - **Port forwarding** — forward a Service port to `localhost` (choose a port or get a random one)
@@ -91,6 +94,7 @@ Open **http://localhost:8080**.
 Notes:
 - Mount your kubeconfig at `/home/node/.kube/config` (as above) or pass `-e KUBECONFIG=/path/inside/container`.
 - If your kubeconfig references cloud auth plugins (EKS/GKE/AKS exec credentials), those CLIs must be available inside the container too, or use a static-token kubeconfig.
+- **Local clusters (Docker Desktop / kind / minikube):** their API server listens on `127.0.0.1`, which inside a container points at the container itself — so the config loads but the connection fails. Reach the host instead: add `--add-host=host.docker.internal:host-gateway` and set the context's `server:` to `https://host.docker.internal:<port>` with `insecure-skip-tls-verify: true` — or simply use the native macOS app / `npm start` for local clusters.
 - The build auto-selects `amd64`/`arm64` via BuildKit's `TARGETARCH`.
 
 ### OIDC clusters (`kubectl oidc-login` / kubelogin)
@@ -159,11 +163,58 @@ Notes:
 5. **Port-forward** — open a Service's drawer → Port Forwarding → Forward.
 6. **Toggle theme** — the sun/moon button in the sidebar header.
 
+## Connect AI agents (MCP)
+
+The app doubles as an [MCP](https://modelcontextprotocol.io) server, so any
+MCP-compatible AI agent (Claude Desktop, Claude Code, Cursor, …) can inspect and
+operate the cluster it's connected to. It exposes the same capabilities as the
+UI: `list_contexts`, `switch_context`, `list_namespaces`, `list_resources`,
+`get_resource_yaml`, `get_pod_logs`, `get_events`, `get_topology`,
+`list_argocd_apps`, `get_argocd_app`, plus **write** tools (`apply_yaml`,
+`delete_resource`, `scale_workload`, `rollout_restart`, `sync_argocd_app`,
+`refresh_argocd_app`).
+
+Write tools are **off by default** — start the server with `MCP_ALLOW_WRITE=1`
+to let agents mutate the cluster.
+
+**HTTP transport** (recommended) — while the app is running, agents connect to:
+
+```
+http://localhost:3001/mcp
+```
+
+Example Claude Code registration:
+
+```bash
+claude mcp add --transport http k8s-manager http://localhost:3001/mcp
+```
+
+**Stdio transport** — for agents launched by command (e.g. Claude Desktop).
+The app must be running; this bridge talks to its API:
+
+```jsonc
+// claude_desktop_config.json
+{
+  "mcpServers": {
+    "k8s-manager": {
+      "command": "node",
+      "args": ["/absolute/path/to/k8s-manager-ui/mcp-stdio.js"],
+      "env": { "MCP_API_BASE": "http://127.0.0.1:3001", "MCP_ALLOW_WRITE": "0" }
+    }
+  }
+}
+```
+
+Run it standalone with `npm run mcp`. All tools act on the **currently selected
+context** — switch clusters from the UI, the `switch_context` tool, or a pin.
+
 ## Configuration
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
 | `KUBECONFIG` | Path to kubeconfig | `~/.kube/config` |
+| `MCP_ALLOW_WRITE` | Enable MCP write/destructive tools (`apply_yaml`, `delete_resource`, `scale_workload`, `rollout_restart`) | `0` (read-only) |
+| `MCP_API_BASE` | API base URL the stdio MCP bridge targets | `http://127.0.0.1:3001` |
 
 The backend always listens on port **3001**; map it to any host port with Docker (`-p <host>:3001`).
 

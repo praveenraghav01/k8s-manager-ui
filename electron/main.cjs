@@ -10,7 +10,7 @@
 //   4. Tear the server down on quit (which triggers its port-forward cleanup).
 'use strict';
 
-const { app, BrowserWindow, shell, dialog, Menu } = require('electron');
+const { app, BrowserWindow, shell, dialog, Menu, utilityProcess } = require('electron');
 const path = require('path');
 const os = require('os');
 const http = require('http');
@@ -60,58 +60,66 @@ function resolveUserPath() {
 }
 
 // --- 2. Start the backend -------------------------------------------------
-// In a packaged app (asar disabled) the server lives next to this file under
-// Contents/Resources/app; in dev it's the project root.
+// The server ships inside the asar archive (app.asar). We launch it with
+// Electron's utilityProcess.fork() rather than spawning `node server.js`:
+// utilityProcess runs a Node child that IS asar-aware, so server.js and all of
+// node_modules can stay packed in app.asar (a single file) instead of being
+// unpacked — which is what lets `asar` be enabled and keeps the build fast.
+// server.js resolves everything (client/dist, VERSION, node_modules) via
+// import.meta.url, so it works transparently from inside the archive.
 function serverRoot() {
-  return app.getAppPath();
+  return app.getAppPath(); // .../Contents/Resources/app.asar (packaged) or project root (dev)
 }
 
 function startServer(fixedPath) {
   const root = serverRoot();
   const serverEntry = path.join(root, 'server.js');
 
-  serverProcess = spawn(process.execPath, [serverEntry], {
-    cwd: root,
-    env: {
-      ...process.env,
-      ELECTRON_RUN_AS_NODE: '1', // run the bundled Electron binary as plain Node
-      PATH: fixedPath,
-      NODE_ENV: 'production',
-    },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-
   let stderrTail = '';
-  serverProcess.stdout.on('data', (d) => process.stdout.write(`[server] ${d}`));
-  serverProcess.stderr.on('data', (d) => {
+  try {
+    serverProcess = utilityProcess.fork(serverEntry, [], {
+      // Don't set cwd to an asar path (it isn't a real dir) — server.js uses
+      // import.meta.url, not cwd, so the default working directory is fine.
+      env: {
+        ...process.env,
+        PATH: fixedPath,
+        NODE_ENV: 'production',
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+  } catch (err) {
+    dialog.showErrorBox('Kubernetes Manager', `Failed to start the backend:\n${err.message}`);
+    app.quit();
+    return;
+  }
+
+  serverProcess.stdout?.on('data', (d) => process.stdout.write(`[server] ${d}`));
+  serverProcess.stderr?.on('data', (d) => {
     stderrTail = (stderrTail + d).slice(-2000);
     process.stderr.write(`[server] ${d}`);
   });
 
-  serverProcess.on('exit', (code, signal) => {
+  // utilityProcess 'exit' reports the exit code only (no signal argument).
+  serverProcess.on('exit', (code) => {
     serverProcess = null;
     // If the server dies unexpectedly while the app is up, surface it.
     if (!app.isQuitting && code !== 0 && code !== null) {
       const portTaken = /EADDRINUSE|already in use/i.test(stderrTail);
       const detail = portTaken
         ? `Port ${BACKEND_PORT} is already in use — another copy of the app or a process on that port is running. Quit it and relaunch.`
-        : `The backend exited unexpectedly (code ${code}${signal ? `, signal ${signal}` : ''}).` +
+        : `The backend exited unexpectedly (code ${code}).` +
           (stderrTail.trim() ? `\n\n${stderrTail.trim().split('\n').slice(-4).join('\n')}` : '');
       dialog.showErrorBox('Kubernetes Manager', detail);
       app.quit();
     }
   });
-
-  serverProcess.on('error', (err) => {
-    dialog.showErrorBox('Kubernetes Manager', `Failed to start the backend:\n${err.message}`);
-    app.quit();
-  });
 }
 
 function stopServer() {
   if (serverProcess) {
-    // SIGTERM lets server.js run its killAllForwards() cleanup handler.
-    serverProcess.kill('SIGTERM');
+    // utilityProcess.kill() sends SIGTERM, letting server.js run its
+    // killAllForwards() cleanup handler.
+    serverProcess.kill();
     serverProcess = null;
   }
 }
@@ -147,12 +155,25 @@ function createWindow() {
     minWidth: 960,
     minHeight: 600,
     title: 'Kubernetes Manager',
-    backgroundColor: '#0f172a',
+    // Match the app's dark surface — no separate gray macOS title bar. On
+    // macOS `hiddenInset` floats the traffic lights over the (black) content;
+    // the frontend adds a draggable top strip via the `is-electron` class.
+    backgroundColor: '#000000',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    trafficLightPosition: { x: 16, y: 8 },
     show: false,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  // Tag the document so the frontend can offset content below the traffic
+  // lights and expose a draggable region (CSS `.is-electron` rules).
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents
+      .executeJavaScript("document.documentElement.classList.add('is-electron')")
+      .catch(() => {});
   });
 
   // Show a lightweight loading page immediately.

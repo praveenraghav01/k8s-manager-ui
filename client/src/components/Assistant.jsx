@@ -13,6 +13,7 @@ const SUGGESTIONS = [
 
 export default function Assistant({ context }) {
   const [open, setOpen] = useState(false);
+  const [minimized, setMinimized] = useState(false);
   const [enabled, setEnabled] = useState(null); // null = unknown, false = no key
   const [model, setModel] = useState('');
   const [source, setSource] = useState(null); // 'env' | 'stored' | null
@@ -138,6 +139,21 @@ export default function Assistant({ context }) {
 
   const stop = () => { abortRef.current?.abort(); };
 
+  // Other views (e.g. the ArgoCD "Summarize" action) can ask the assistant a
+  // question by dispatching a window `assistant:ask` event with { prompt }.
+  useEffect(() => {
+    const onAsk = (e) => {
+      const prompt = e.detail?.prompt;
+      if (!prompt) return;
+      setOpen(true);
+      setMinimized(false);
+      if (enabled) send(prompt);
+      else setInput(prompt);
+    };
+    window.addEventListener('assistant:ask', onAsk);
+    return () => window.removeEventListener('assistant:ask', onAsk);
+  }); // no deps: always use the latest send/enabled closures
+
   const toolLabel = (t) => {
     const i = t.input || {};
     const detail = i.pod ? `${i.namespace}/${i.pod}` : i.name ? `${i.namespace ? i.namespace + '/' : ''}${i.name}` : i.kind ? `${i.kind} in ${i.namespace}` : i.namespace || '';
@@ -151,11 +167,24 @@ export default function Assistant({ context }) {
       </button>
 
       {open && (
-        <div className="assistant-panel">
-          <div className="assistant-header">
+        <div className={`assistant-panel ${minimized ? 'minimized' : ''}`}>
+          <div
+            className="assistant-header"
+            onClick={() => minimized && setMinimized(false)}
+            style={minimized ? { cursor: 'pointer' } : undefined}
+            title={minimized ? 'Click to expand' : undefined}
+          >
             <span className="assistant-title"><Icon name="sparkles" size={16} /> AI Assistant</span>
             {model && <span className="assistant-model">{model}</span>}
-            <button className="assistant-x" onClick={() => setOpen(false)} aria-label="Close"><Icon name="close" size={15} /></button>
+            <button
+              className="assistant-x"
+              onClick={(e) => { e.stopPropagation(); setMinimized((m) => !m); }}
+              aria-label={minimized ? 'Expand' : 'Minimize'}
+              title={minimized ? 'Expand' : 'Minimize'}
+            >
+              <Icon name={minimized ? 'chevronUp' : 'minus'} size={15} />
+            </button>
+            <button className="assistant-x" onClick={(e) => { e.stopPropagation(); setOpen(false); }} aria-label="Close"><Icon name="close" size={15} /></button>
           </div>
 
           <div className="assistant-body" ref={scrollRef}>

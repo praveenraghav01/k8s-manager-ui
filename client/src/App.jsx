@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import './App.css';
 import Navigation from './components/Navigation';
-import RefreshControl, { REFRESH_OPTIONS } from './components/RefreshControl';
+import { REFRESH_OPTIONS } from './components/RefreshControl';
 import ResourceViewer, { TAB_KEYS } from './components/ResourceViewer';
 import Overview from './components/Overview';
 import Cluster from './components/Cluster';
@@ -15,13 +15,14 @@ import Namespaces from './components/Namespaces';
 import KubeConfigModal from './components/KubeConfigModal';
 import AuthErrorModal from './components/AuthErrorModal';
 import AccessControl from './components/AccessControl';
+import ArgoCD from './components/ArgoCD';
 import Assistant from './components/Assistant';
 import ClusterRail from './components/ClusterRail';
 import { useToast } from './components/Toast';
 
 // Views that load their own data and should NOT trigger the shared resource fetch.
 // (Overview is intentionally excluded — its dashboard is built from the shared fetch.)
-const STANDALONE_RESOURCE_TYPES = ['cluster', 'nodes', 'namespaces', 'helm', 'customResources', 'accessControl', 'topology'];
+const STANDALONE_RESOURCE_TYPES = ['cluster', 'nodes', 'namespaces', 'helm', 'customResources', 'accessControl', 'topology', 'argocd'];
 
 // Maps a resourceType to the key it lives under in allResources.
 // Naive `type + 's'` breaks for a few types.
@@ -55,6 +56,7 @@ function App() {
   const [refreshing, setRefreshing] = useState(false);
   // Auto-refresh cadence (key into REFRESH_OPTIONS). Defaults to 'auto' (= 1 min).
   const [refreshInterval, setRefreshInterval] = useState(() => localStorage.getItem('refreshInterval') || 'auto');
+  const [argocdInstalled, setArgocdInstalled] = useState(false);
   const handleRefreshRef = useRef(() => {});
 
   useEffect(() => { localStorage.setItem('refreshInterval', refreshInterval); }, [refreshInterval]);
@@ -68,8 +70,12 @@ function App() {
     workloads: true,
     network: false,
     storage: false,
-    config: false
+    config: false,
+    argocd: false,
+    argocdSettings: false
   });
+  // Which ArgoCD sub-view the sidebar is pointing at (dashboard/applications/…).
+  const [argoView, setArgoView] = useState('dashboard');
 
   const authOk = authState.ok;
 
@@ -86,6 +92,17 @@ function App() {
   useEffect(() => {
     if (authOk) fetchNamespaces();
   }, [authOk]);
+
+  // Detect optional integrations (ArgoCD) on the active cluster.
+  useEffect(() => {
+    if (!authOk) { setArgocdInstalled(false); return; }
+    let live = true;
+    setArgocdInstalled(false);
+    axios.get('/api/argocd/status')
+      .then(({ data }) => { if (live) setArgocdInstalled(!!data.installed); })
+      .catch(() => { if (live) setArgocdInstalled(false); });
+    return () => { live = false; };
+  }, [authOk, configStatus.currentContext]);
 
   useEffect(() => {
     if (authOk && !STANDALONE_RESOURCE_TYPES.includes(resourceType)) {
@@ -150,8 +167,14 @@ function App() {
       // `authOk` was already true, so the effect that fetches namespaces won't
       // re-fire on its own — repopulate the new cluster's data explicitly, or the
       // whole app shows empty (0 pods/deployments/…) after a pin switch.
-      if (ok) await fetchNamespaces();
-      toast.success(`Switched to ${ctx}`, { title: 'Cluster' });
+      if (ok) {
+        await fetchNamespaces();
+        toast.success(`Switched to ${ctx}`, { title: 'Cluster' });
+      } else {
+        // switched, but the new context can't authenticate — the auth-error
+        // screen will explain; don't show a misleading success toast.
+        toast.info(`Switched to ${ctx} — cluster not reachable`, { title: 'Cluster' });
+      }
     } catch (err) {
       toast.error(`Failed to switch to ${ctx}`, { title: 'Cluster' });
     }
@@ -330,7 +353,7 @@ function App() {
   const showAuthError = configStatus.loaded && !forceConfigModal && authState.checked && !authState.ok;
 
   return (
-    <div className="app-lens">
+    <div className="app-shell">
       {serverUnreachable && configChecked && (
         <AuthErrorModal
           auth={{ reason: 'error', message: 'Cannot reach the backend server on port 3001. Is it running?' }}
@@ -353,6 +376,9 @@ function App() {
           onRetry={retryAuth}
           onChangeConfig={() => setForceConfigModal(true)}
           retrying={authRetrying}
+          contexts={configStatus.contexts || []}
+          currentContext={configStatus.currentContext}
+          onSwitchContext={switchContext}
         />
       )}
 
@@ -369,14 +395,7 @@ function App() {
       )}
 
       {authOk ? (
-        <div className="layout-lens">
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            refreshInterval={refreshInterval}
-            onSetRefreshInterval={setRefreshInterval}
-            row2={(TAB_KEYS.includes(resourceType) && resourceType !== 'overview') || resourceType === 'accessControl'}
-          />
+        <div className="layout-main">
           <ClusterRail
             contexts={configStatus.contexts || []}
             currentContext={configStatus.currentContext}
@@ -394,6 +413,9 @@ function App() {
             onSelectCustomResource={(sel) => { setResourceType('customResources'); setCrSelection(sel); }}
             theme={theme}
             onToggleTheme={() => setTheme(t => (t === 'dark' ? 'light' : 'dark'))}
+            argocdInstalled={argocdInstalled}
+            argoView={resourceType === 'argocd' ? argoView : null}
+            onSelectArgoView={(v) => { setArgoView(v); setResourceType('argocd'); }}
           />
 
           {resourceType === 'overview' ? (
@@ -419,6 +441,8 @@ function App() {
             <CustomResourceDetail key={`cr-${refreshNonce}`} selection={crSelection} onSelect={setCrSelection} />
           ) : resourceType === 'accessControl' ? (
             <AccessControl key={`ac-${refreshNonce}`} onNavigate={nav} />
+          ) : resourceType === 'argocd' ? (
+            <ArgoCD onNavigate={nav} refreshSignal={refreshNonce} view={argoView} onViewChange={setArgoView} />
           ) : (
             <ResourceViewer
               resourceType={resourceType}
@@ -434,6 +458,7 @@ function App() {
               totalCount={getTotalCount()}
               onResourceTypeChange={setResourceType}
               onNavigate={nav}
+              onRefresh={handleRefresh}
             />
           )}
         </div>

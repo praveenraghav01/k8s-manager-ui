@@ -14,7 +14,7 @@ const formatAge = (createdAt) => {
   return `${Math.floor(seconds / 86400)}d`;
 };
 
-function InstanceView({ sel }) {
+function InstanceView({ sel, onSelect }) {
   const [yaml, setYaml] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -46,6 +46,11 @@ function InstanceView({ sel }) {
             {sel.namespace && sel.namespace !== '-' && <span className="drawer-dim">ns: {sel.namespace}</span>}
           </div>
         </div>
+        {onSelect && (
+          <button className="cr-detail-close" title="Close" onClick={() => onSelect(null)}>
+            <Icon name="close" size={17} />
+          </button>
+        )}
       </div>
       <div className="cr-detail-body">
         {loading ? <Loader label="Loading resource…" inline /> : error ? (
@@ -85,6 +90,11 @@ function KindView({ sel, onSelect }) {
             <span className="resource-count">{items.length} instances</span>
           </div>
         </div>
+        {onSelect && (
+          <button className="cr-detail-close" title="Close" onClick={() => onSelect(null)}>
+            <Icon name="close" size={17} />
+          </button>
+        )}
       </div>
       <div className="resource-table-wrapper">
         {loading ? <Loader label="Loading instances…" /> : error ? (
@@ -131,7 +141,7 @@ export default function CustomResourceDetail({ selection, onSelect }) {
   return (
     <div className="resource-viewer">
       {selection.level === 'instance'
-        ? <InstanceView sel={selection} />
+        ? <InstanceView sel={selection} onSelect={onSelect} />
         : <KindView sel={selection} onSelect={onSelect} />}
     </div>
   );

@@ -80,7 +80,7 @@ export function registerAssistant(app, deps) {
   // ---- read-only tool implementations ---------------------------------
   const impls = {
     async list_namespaces() {
-      const { body } = await core().listNamespace();
+      const body = await core().listNamespace();
       return body.items.map((n) => ({ name: n.metadata.name, status: n.status?.phase }));
     },
 
@@ -89,26 +89,26 @@ export function registerAssistant(app, deps) {
       const k = String(kind || '').toLowerCase();
       const items = async () => {
         switch (k) {
-          case 'pod': case 'pods': return (await core().listNamespacedPod(ns)).body.items.map((p) => ({
+          case 'pod': case 'pods': return (await core().listNamespacedPod({ namespace: ns })).items.map((p) => ({
             name: p.metadata.name, phase: p.status?.phase,
             ready: `${(p.status?.containerStatuses || []).filter((c) => c.ready).length}/${(p.status?.containerStatuses || []).length}`,
             restarts: (p.status?.containerStatuses || []).reduce((a, c) => a + (c.restartCount || 0), 0),
             node: p.spec?.nodeName,
             reason: p.status?.reason || (p.status?.containerStatuses || []).map((c) => c.state?.waiting?.reason).find(Boolean),
           }));
-          case 'deployment': case 'deployments': return (await apps().listNamespacedDeployment(ns)).body.items.map((d) => ({
+          case 'deployment': case 'deployments': return (await apps().listNamespacedDeployment({ namespace: ns })).items.map((d) => ({
             name: d.metadata.name, ready: `${d.status?.readyReplicas || 0}/${d.status?.replicas || 0}`, available: d.status?.availableReplicas || 0,
           }));
-          case 'statefulset': case 'statefulsets': return (await apps().listNamespacedStatefulSet(ns)).body.items.map((d) => ({ name: d.metadata.name, ready: `${d.status?.readyReplicas || 0}/${d.status?.replicas || 0}` }));
-          case 'daemonset': case 'daemonsets': return (await apps().listNamespacedDaemonSet(ns)).body.items.map((d) => ({ name: d.metadata.name, ready: `${d.status?.numberReady || 0}/${d.status?.desiredNumberScheduled || 0}` }));
-          case 'replicaset': case 'replicasets': return (await apps().listNamespacedReplicaSet(ns)).body.items.map((d) => ({ name: d.metadata.name, ready: `${d.status?.readyReplicas || 0}/${d.status?.replicas || 0}` }));
-          case 'service': case 'services': return (await core().listNamespacedService(ns)).body.items.map((s) => ({ name: s.metadata.name, type: s.spec?.type, clusterIP: s.spec?.clusterIP, ports: (s.spec?.ports || []).map((p) => `${p.port}/${p.protocol}`) }));
-          case 'job': case 'jobs': return (await batch().listNamespacedJob(ns)).body.items.map((j) => ({ name: j.metadata.name, succeeded: j.status?.succeeded || 0, failed: j.status?.failed || 0, active: j.status?.active || 0 }));
-          case 'cronjob': case 'cronjobs': return (await batch().listNamespacedCronJob(ns)).body.items.map((j) => ({ name: j.metadata.name, schedule: j.spec?.schedule, suspend: j.spec?.suspend, lastSchedule: j.status?.lastScheduleTime }));
-          case 'configmap': case 'configmaps': return (await core().listNamespacedConfigMap(ns)).body.items.map((c) => ({ name: c.metadata.name, keys: Object.keys(c.data || {}) }));
-          case 'secret': case 'secrets': return (await core().listNamespacedSecret(ns)).body.items.map((s) => ({ name: s.metadata.name, type: s.type, keys: Object.keys(s.data || {}) })); // values never returned
-          case 'ingress': case 'ingresses': return (await net().listNamespacedIngress(ns)).body.items.map((i) => ({ name: i.metadata.name, hosts: (i.spec?.rules || []).map((r) => r.host) }));
-          case 'pvc': case 'persistentvolumeclaim': case 'persistentvolumeclaims': return (await core().listNamespacedPersistentVolumeClaim(ns)).body.items.map((p) => ({ name: p.metadata.name, status: p.status?.phase, capacity: p.status?.capacity?.storage, storageClass: p.spec?.storageClassName }));
+          case 'statefulset': case 'statefulsets': return (await apps().listNamespacedStatefulSet({ namespace: ns })).items.map((d) => ({ name: d.metadata.name, ready: `${d.status?.readyReplicas || 0}/${d.status?.replicas || 0}` }));
+          case 'daemonset': case 'daemonsets': return (await apps().listNamespacedDaemonSet({ namespace: ns })).items.map((d) => ({ name: d.metadata.name, ready: `${d.status?.numberReady || 0}/${d.status?.desiredNumberScheduled || 0}` }));
+          case 'replicaset': case 'replicasets': return (await apps().listNamespacedReplicaSet({ namespace: ns })).items.map((d) => ({ name: d.metadata.name, ready: `${d.status?.readyReplicas || 0}/${d.status?.replicas || 0}` }));
+          case 'service': case 'services': return (await core().listNamespacedService({ namespace: ns })).items.map((s) => ({ name: s.metadata.name, type: s.spec?.type, clusterIP: s.spec?.clusterIP, ports: (s.spec?.ports || []).map((p) => `${p.port}/${p.protocol}`) }));
+          case 'job': case 'jobs': return (await batch().listNamespacedJob({ namespace: ns })).items.map((j) => ({ name: j.metadata.name, succeeded: j.status?.succeeded || 0, failed: j.status?.failed || 0, active: j.status?.active || 0 }));
+          case 'cronjob': case 'cronjobs': return (await batch().listNamespacedCronJob({ namespace: ns })).items.map((j) => ({ name: j.metadata.name, schedule: j.spec?.schedule, suspend: j.spec?.suspend, lastSchedule: j.status?.lastScheduleTime }));
+          case 'configmap': case 'configmaps': return (await core().listNamespacedConfigMap({ namespace: ns })).items.map((c) => ({ name: c.metadata.name, keys: Object.keys(c.data || {}) }));
+          case 'secret': case 'secrets': return (await core().listNamespacedSecret({ namespace: ns })).items.map((s) => ({ name: s.metadata.name, type: s.type, keys: Object.keys(s.data || {}) })); // values never returned
+          case 'ingress': case 'ingresses': return (await net().listNamespacedIngress({ namespace: ns })).items.map((i) => ({ name: i.metadata.name, hosts: (i.spec?.rules || []).map((r) => r.host) }));
+          case 'pvc': case 'persistentvolumeclaim': case 'persistentvolumeclaims': return (await core().listNamespacedPersistentVolumeClaim({ namespace: ns })).items.map((p) => ({ name: p.metadata.name, status: p.status?.phase, capacity: p.status?.capacity?.storage, storageClass: p.spec?.storageClassName }));
           default: throw new Error(`Unsupported kind "${kind}". Supported: pod, deployment, statefulset, daemonset, replicaset, service, job, cronjob, configmap, secret, ingress, pvc.`);
         }
       };
@@ -118,13 +118,13 @@ export function registerAssistant(app, deps) {
 
     async get_pod_logs({ namespace, pod, container, tailLines }) {
       const tl = Math.min(Number(tailLines) || 200, 1000);
-      const { body } = await core().readNamespacedPodLog(pod, namespace, container || undefined, undefined, undefined, undefined, undefined, undefined, undefined, tl);
+      const body = await core().readNamespacedPodLog({ name: pod, namespace, container: container || undefined, tailLines: tl });
       return truncate(body || '(no logs)');
     },
 
     async get_events({ namespace }) {
-      const resp = namespace ? await core().listNamespacedEvent(namespace) : await core().listEventForAllNamespaces();
-      const events = resp.body.items
+      const resp = namespace ? await core().listNamespacedEvent({ namespace }) : await core().listEventForAllNamespaces();
+      const events = resp.items
         .map((e) => ({
           ns: e.metadata?.namespace, type: e.type, reason: e.reason,
           object: `${e.involvedObject?.kind}/${e.involvedObject?.name}`,
@@ -141,20 +141,20 @@ export function registerAssistant(app, deps) {
       const k = String(kind || '').toLowerCase();
       const read = async () => {
         switch (k) {
-          case 'pod': return (await core().readNamespacedPod(name, ns)).body;
-          case 'deployment': return (await apps().readNamespacedDeployment(name, ns)).body;
-          case 'statefulset': return (await apps().readNamespacedStatefulSet(name, ns)).body;
-          case 'daemonset': return (await apps().readNamespacedDaemonSet(name, ns)).body;
-          case 'replicaset': return (await apps().readNamespacedReplicaSet(name, ns)).body;
-          case 'service': return (await core().readNamespacedService(name, ns)).body;
-          case 'job': return (await batch().readNamespacedJob(name, ns)).body;
-          case 'cronjob': return (await batch().readNamespacedCronJob(name, ns)).body;
-          case 'configmap': return (await core().readNamespacedConfigMap(name, ns)).body;
-          case 'secret': return (await core().readNamespacedSecret(name, ns)).body;
-          case 'ingress': return (await net().readNamespacedIngress(name, ns)).body;
-          case 'pvc': case 'persistentvolumeclaim': return (await core().readNamespacedPersistentVolumeClaim(name, ns)).body;
-          case 'node': return (await core().readNode(name)).body;
-          case 'namespace': return (await core().readNamespace(name)).body;
+          case 'pod': return (await core().readNamespacedPod({ name, namespace: ns }));
+          case 'deployment': return (await apps().readNamespacedDeployment({ name, namespace: ns }));
+          case 'statefulset': return (await apps().readNamespacedStatefulSet({ name, namespace: ns }));
+          case 'daemonset': return (await apps().readNamespacedDaemonSet({ name, namespace: ns }));
+          case 'replicaset': return (await apps().readNamespacedReplicaSet({ name, namespace: ns }));
+          case 'service': return (await core().readNamespacedService({ name, namespace: ns }));
+          case 'job': return (await batch().readNamespacedJob({ name, namespace: ns }));
+          case 'cronjob': return (await batch().readNamespacedCronJob({ name, namespace: ns }));
+          case 'configmap': return (await core().readNamespacedConfigMap({ name, namespace: ns }));
+          case 'secret': return (await core().readNamespacedSecret({ name, namespace: ns }));
+          case 'ingress': return (await net().readNamespacedIngress({ name, namespace: ns }));
+          case 'pvc': case 'persistentvolumeclaim': return (await core().readNamespacedPersistentVolumeClaim({ name, namespace: ns }));
+          case 'node': return (await core().readNode({ name }));
+          case 'namespace': return (await core().readNamespace({ name }));
           default: throw new Error(`Unsupported kind "${kind}".`);
         }
       };
@@ -163,7 +163,7 @@ export function registerAssistant(app, deps) {
     },
 
     async list_nodes() {
-      const { body } = await core().listNode();
+      const body = await core().listNode();
       return body.items.map((n) => ({
         name: n.metadata.name,
         ready: (n.status?.conditions || []).find((c) => c.type === 'Ready')?.status,

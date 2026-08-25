@@ -5,12 +5,12 @@ import '@xterm/xterm/css/xterm.css';
 import Icon from './Icons';
 
 const THEME_DARK = {
-  background: '#0a0e14',
+  background: '#0a0a0a',
   foreground: '#cdd6e4',
   cursor: '#3fb950',
-  cursorAccent: '#0a0e14',
-  selectionBackground: 'rgba(88,166,255,0.3)',
-  black: '#0a0e14',
+  cursorAccent: '#0a0a0a',
+  selectionBackground: 'rgba(180,180,190,0.3)',
+  black: '#0a0a0a',
   red: '#f85149',
   green: '#3fb950',
   yellow: '#d29922',
