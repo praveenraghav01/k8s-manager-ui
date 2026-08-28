@@ -151,20 +151,20 @@
   .sec-head p { color: var(--text-dim); font-size: 17px; }
 
   /* ---------- Features grid ---------- */
-  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
   .card {
     background: linear-gradient(180deg, var(--panel), var(--bg-2));
-    border: 1px solid var(--border); border-radius: var(--radius); padding: 26px;
+    border: 1px solid var(--border); border-radius: 12px; padding: 18px;
     transition: transform .18s, border-color .18s, box-shadow .18s;
   }
   .card:hover { transform: translateY(-4px); border-color: var(--border-2); box-shadow: 0 18px 40px rgba(0,0,0,.35); }
   .card .ico {
-    width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; margin-bottom: 18px;
+    width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; margin-bottom: 13px;
     background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
   }
-  .card .ico svg { width: 24px; height: 24px; stroke: var(--brand-light); }
-  .card h3 { font-size: 18px; margin-bottom: 8px; letter-spacing: -.01em; }
-  .card p { color: var(--text-dim); font-size: 14.5px; }
+  .card .ico svg { width: 20px; height: 20px; stroke: var(--brand-light); }
+  .card h3 { font-size: 15.5px; margin-bottom: 6px; letter-spacing: -.01em; }
+  .card p { color: var(--text-dim); font-size: 13px; line-height: 1.5; }
   .card.i-green .ico { background: rgba(63,185,80,.1); border-color: rgba(63,185,80,.22); } .card.i-green .ico svg { stroke: var(--green); }
   .card.i-purple .ico { background: rgba(163,113,247,.1); border-color: rgba(163,113,247,.22); } .card.i-purple .ico svg { stroke: var(--purple); }
   .card.i-cyan .ico { background: rgba(57,197,207,.1); border-color: rgba(57,197,207,.22); } .card.i-cyan .ico svg { stroke: var(--cyan); }
@@ -230,8 +230,9 @@
   .copy-btn.ok { color: var(--green); border-color: var(--green); }
 
   .steps { list-style: none; counter-reset: s; display: grid; gap: 10px; margin-top: 6px; }
-  .steps li { counter-increment: s; display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: var(--text-dim); }
-  .steps li::before { content: counter(s); flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--panel-2); border: 1px solid var(--border-2); display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--brand-light); }
+  .steps li { counter-increment: s; position: relative; padding-left: 34px; font-size: 14px; line-height: 1.6; color: var(--text-dim); }
+  .steps li code { white-space: nowrap; }
+  .steps li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--panel-2); border: 1px solid var(--border-2); display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--brand-light); }
 
   /* ---------- Prereq ---------- */
   .prereq { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 40px; }
@@ -288,10 +289,8 @@
       </a>
       <div class="nav-links" id="navLinks">
         <a href="#features">Features</a>
-        <a href="#assistant">AI Assistant</a>
         <a href="#argocd">Argo CD</a>
-        <a href="#download">Download</a>
-        <a href="#docker">Docker</a>
+        <a href="#assistant">AI Assistant</a>
         <a class="nav-cta" href="#download">Get the app</a>
       </div>
       <button class="menu-btn" id="menuBtn" aria-label="Menu">
@@ -335,7 +334,7 @@
 <!-- STRIP -->
 <div class="strip reveal">
   <div class="wrap">
-    <div class="stat"><b><span class="grad">Fast</span></b><span>keyboard-friendly workflow</span></div>
+    <div class="stat"><b>Fast</b><span>keyboard-driven UI</span></div>
     <div class="stat"><b>15+</b><span>resource views</span></div>
     <div class="stat"><b>Live</b><span>CPU / memory metrics</span></div>
     <div class="stat"><b>Read-only</b><span>AI assistant, by design</span></div>
@@ -411,54 +410,6 @@
   </div>
 </section>
 
-<!-- AI ASSISTANT -->
-<section class="band" id="assistant">
-  <div class="wrap sec">
-    <div class="split">
-      <div class="reveal">
-        <span class="kicker">Bring your own LLM</span>
-        <h2>An AI assistant that actually reads your cluster</h2>
-        <p>Click the ✨ button and ask in plain English — <em>“why is this pod not ready?”</em> or <em>“any warning events in kube-system?”</em>. It runs an agentic tool-use loop over read-only cluster data and streams the answer back token by token.</p>
-        <ul class="checklist">
-          <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Read-only by design</b> — it can never modify your cluster; it shows you the <code>kubectl</code> command when a change is needed.</span></li>
-          <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Grounded in live data</b> — calls tools like logs, events and describe to base every answer on your real cluster.</span></li>
-          <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Secrets redacted</b> — secret values are stripped from tool output before anything reaches the API.</span></li>
-          <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Provider-agnostic</b> — connects to any OpenAI-compatible endpoint (TrueFoundry, OpenAI, Azure, LiteLLM…) and stays aware of your current view.</span></li>
-        </ul>
-        <div class="ai-note" style="margin-top:24px; display:flex; gap:12px; align-items:flex-start; padding:16px 18px; border:1px solid var(--border-2); border-left:3px solid var(--amber); border-radius:12px; background:var(--panel-2);">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" style="flex:0 0 auto; margin-top:1px;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
-          <span style="color:var(--text-dim); font-size:14.5px; line-height:1.6;"><b style="color:var(--text);">Needs your own LLM subscription.</b> The assistant ships with no built-in model — you connect an OpenAI-compatible API (TrueFoundry, OpenAI, Azure OpenAI, LiteLLM, …), which usually requires a paid account and API key. Your key is stored locally in <code style="font-family:var(--mono); font-size:12.5px;">~/.config/k8s-manager/config.json</code>. Everything else in the app works without it.</span>
-        </div>
-      </div>
-      <div class="chat reveal">
-        <div class="chat-head">
-          <span class="spark"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span>
-          <b>Assistant</b><span>read-only · your model</span>
-        </div>
-        <div class="chat-body">
-          <div class="bubble user">Why is the checkout pod stuck in Pending?</div>
-          <div>
-            <span class="tool-pill"><span class="d"></span> get_events</span>
-            <span class="tool-pill"><span class="d"></span> describe_resource</span>
-            <span class="tool-pill"><span class="d"></span> list_nodes</span>
-          </div>
-          <div class="bubble ai">The <code>checkout-7d9f</code> pod is <b>Pending</b> because no node can satisfy its request of <code>2 CPU</code> — all nodes are at capacity. Either scale the deployment down, add a node, or lower the CPU request. To inspect: <code>kubectl describe pod checkout-7d9f</code>.</div>
-        </div>
-      </div>
-    </div>
-    <div class="shot-wrap reveal" style="margin-top:52px;">
-      <div class="shot-glow"></div>
-      <div class="shot-frame">
-        <div class="shot-bar">
-          <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
-          <span class="addr">localhost:3001 · AI Assistant — connect your LLM API</span>
-        </div>
-        <img src="assets/screenshot-ai.png" alt="Kubernetes Manager AI assistant panel showing the bring-your-own OpenAI-compatible API connection form with base URL, model and API key fields" />
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- ARGOCD -->
 <section class="sec" id="argocd">
   <div class="wrap">
@@ -525,6 +476,56 @@
       <span class="tag">🧭 Auto-detected when the <code>argocd</code> namespace exists</span>
       <span class="tag">🔗 Opens your external Argo CD UI when configured</span>
       <span class="tag">🔒 Uses your kubeconfig RBAC — no extra credentials</span>
+    </div>
+  </div>
+</section>
+
+<!-- AI ASSISTANT -->
+<section class="band" id="assistant">
+  <div class="wrap sec">
+    <div class="sec-head reveal">
+      <span class="kicker">Bring your own LLM</span>
+      <h2>An AI assistant that actually reads your cluster</h2>
+      <p>Click the ✨ button and ask in plain English — <em>“why is this pod not ready?”</em> or <em>“any warning events in kube-system?”</em>. It runs an agentic tool-use loop over read-only cluster data and streams the answer back token by token.</p>
+    </div>
+    <div class="shot-wrap reveal" style="margin-bottom:52px;">
+      <div class="shot-glow"></div>
+      <div class="shot-frame">
+        <div class="shot-bar">
+          <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+          <span class="addr">localhost:3001 · AI Assistant — connect your LLM API</span>
+        </div>
+        <img src="assets/screenshot-ai.png" alt="Kubernetes Manager AI assistant panel showing the bring-your-own OpenAI-compatible API connection form with base URL, model and API key fields" />
+      </div>
+    </div>
+    <div class="split">
+      <div class="reveal">
+        <ul class="checklist">
+          <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Read-only by design</b> — it can never modify your cluster; it shows you the <code>kubectl</code> command when a change is needed.</span></li>
+          <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Grounded in live data</b> — calls tools like logs, events and describe to base every answer on your real cluster.</span></li>
+          <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Secrets redacted</b> — secret values are stripped from tool output before anything reaches the API.</span></li>
+          <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Provider-agnostic</b> — connects to any OpenAI-compatible endpoint (TrueFoundry, OpenAI, Azure, LiteLLM…) and stays aware of your current view.</span></li>
+        </ul>
+        <div class="ai-note" style="margin-top:24px; display:flex; gap:12px; align-items:flex-start; padding:16px 18px; border:1px solid var(--border-2); border-left:3px solid var(--amber); border-radius:12px; background:var(--panel-2);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" style="flex:0 0 auto; margin-top:1px;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+          <span style="color:var(--text-dim); font-size:14.5px; line-height:1.6;"><b style="color:var(--text);">Needs your own LLM subscription.</b> Connect an OpenAI-compatible API (TrueFoundry, OpenAI, Azure OpenAI, LiteLLM). Your key is stored locally.</span>
+        </div>
+      </div>
+      <div class="chat reveal">
+        <div class="chat-head">
+          <span class="spark"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span>
+          <b>Assistant</b><span>read-only · your model</span>
+        </div>
+        <div class="chat-body">
+          <div class="bubble user">Why is the checkout pod stuck in Pending?</div>
+          <div>
+            <span class="tool-pill"><span class="d"></span> get_events</span>
+            <span class="tool-pill"><span class="d"></span> describe_resource</span>
+            <span class="tool-pill"><span class="d"></span> list_nodes</span>
+          </div>
+          <div class="bubble ai">The <code>checkout-7d9f</code> pod is <b>Pending</b> because no node can satisfy its request of <code>2 CPU</code> — all nodes are at capacity. Either scale the deployment down, add a node, or lower the CPU request. To inspect: <code>kubectl describe pod checkout-7d9f</code>.</div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -624,6 +625,9 @@ docker run --rm <span class="flag">-p</span> 8080:3001 \
       <a href="https://hub.docker.com/r/praveenraghav/k8s-manager-ui" target="_blank" rel="noopener">Docker Hub</a>
     </div>
     <div class="copy">Built for developers and platform teams. Requires a Kubernetes cluster and a valid kubeconfig. Not affiliated with the Kubernetes project or the CNCF.</div>
+    <div class="made" style="width:100%; text-align:center; color:var(--text-mute); font-size:13px; padding-top:4px;">
+      <a href="https://madewithloveinindia.org" target="_blank" rel="noopener">Made with <span aria-label="Love" style="color: #f43f5e">&hearts;</span> in India</a>
+    </div>
   </div>
 </footer>
 
