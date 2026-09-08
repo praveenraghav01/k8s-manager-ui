@@ -7,6 +7,7 @@
     "email": "praveensinghraghav96@gmail.com"
   },
   "license": "MIT",
+  "desktopName": "k8sight",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -86,7 +87,6 @@
     "linux": {
       "category": "Development",
       "icon": "build/icon.png",
-      "desktopName": "k8sight.desktop",
       "synopsis": "A desktop UI for browsing and operating Kubernetes clusters",
       "syncDesktopName": true,
       "target": [
