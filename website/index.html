@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Kubernetes Manager — a modern UI for your cluster</title>
-<meta name="description" content="A modern web UI to browse and operate your Kubernetes cluster from your local kubeconfig. Live dashboards, pod logs, interactive shells, topology, Helm, and an AI assistant. Download for macOS or run with Docker." />
-<meta property="og:title" content="Kubernetes Manager" />
-<meta property="og:description" content="A modern UI for browsing and operating your Kubernetes cluster." />
+<title>k8sight — a beautiful desktop UI for Kubernetes</title>
+<meta name="description" content="k8sight is a native desktop app for browsing and operating any Kubernetes cluster from your local kubeconfig. Live dashboards, pod logs, interactive shells, topology, Helm, Argo CD, cloud clusters (EKS/AKS), an AI assistant and docked coding agents. Download for macOS, Windows and Linux." />
+<meta property="og:title" content="k8sight" />
+<meta property="og:description" content="A beautiful native desktop UI for browsing and operating your Kubernetes cluster — macOS, Windows and Linux." />
 <meta property="og:type" content="website" />
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
 <style>
@@ -31,8 +31,11 @@
     --cyan: #39c5cf;
     --radius: 16px;
     --maxw: 1180px;
-    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+    /* Apple-style motion tokens */
+    --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --ease-spring: cubic-bezier(0.34, 1.3, 0.64, 1);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -48,6 +51,7 @@
   a { color: inherit; text-decoration: none; }
   img { max-width: 100%; display: block; }
   section { position: relative; }
+  code { font-family: var(--mono); }
 
   .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
 
@@ -63,7 +67,7 @@
   /* ---------- Nav ---------- */
   header {
     position: sticky; top: 0; z-index: 50;
-    backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px) saturate(180%);
     background: rgba(0,0,0,.72);
     border-bottom: 1px solid var(--border);
   }
@@ -71,16 +75,17 @@
   .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; letter-spacing: -.01em; }
   .brand .logo { width: 34px; height: 34px; border-radius: 9px; box-shadow: 0 6px 18px rgba(0,0,0,.5); }
   .brand small { display: block; font-size: 10px; letter-spacing: .18em; color: var(--text-mute); font-weight: 600; }
-  .nav-links { display: flex; align-items: center; gap: 28px; }
+  .nav-links { display: flex; align-items: center; gap: 26px; }
   .nav-links a { color: var(--text-dim); font-size: 14.5px; font-weight: 500; transition: color .15s; }
   .nav-links a:hover { color: var(--text); }
   .nav-cta {
     background: linear-gradient(135deg, var(--brand-light), var(--brand-dark));
     color: #0a0a0c !important; padding: 9px 18px; border-radius: 10px; font-weight: 600;
     box-shadow: 0 4px 16px rgba(255,255,255,.35);
-    transition: transform .15s, box-shadow .15s;
+    transition: transform .15s var(--ease-out), box-shadow .15s;
   }
   .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,255,255,.5); }
+  .nav-cta:active { transform: scale(.97); }
   .menu-btn { display: none; background: none; border: 0; color: var(--text); cursor: pointer; }
 
   /* ---------- Hero ---------- */
@@ -100,13 +105,13 @@
     background: linear-gradient(120deg, var(--brand-light), var(--brand-dark));
     -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
   }
-  .hero p.sub { font-size: clamp(17px, 2.2vw, 20px); color: var(--text-dim); max-width: 60ch; margin: 0 auto 38px; }
+  .hero p.sub { font-size: clamp(17px, 2.2vw, 20px); color: var(--text-dim); max-width: 62ch; margin: 0 auto 38px; }
 
   .cta-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 18px; }
   .btn {
     display: inline-flex; align-items: center; gap: 10px; font-size: 15.5px; font-weight: 600;
     padding: 14px 26px; border-radius: 12px; cursor: pointer; border: 1px solid transparent;
-    transition: transform .15s, box-shadow .15s, background .15s, border-color .15s;
+    transition: transform .15s var(--ease-out), box-shadow .15s, background .15s, border-color .15s;
   }
   .btn svg { width: 20px; height: 20px; }
   .btn-primary {
@@ -116,6 +121,8 @@
   .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(255,255,255,.55); }
   .btn-ghost { background: var(--panel); color: var(--text); border-color: var(--border-2); }
   .btn-ghost:hover { transform: translateY(-2px); border-color: var(--brand-light); background: var(--panel-2); }
+  /* Press feedback — respond on the press, not the release */
+  .btn:active { transform: scale(.98); transition: transform .1s var(--ease-out); }
   .hero .fineprint { color: var(--text-mute); font-size: 13.5px; }
 
   /* ---------- Screenshot ---------- */
@@ -155,7 +162,7 @@
   .card {
     background: linear-gradient(180deg, var(--panel), var(--bg-2));
     border: 1px solid var(--border); border-radius: var(--radius); padding: 26px;
-    transition: transform .18s, border-color .18s, box-shadow .18s;
+    transition: transform .18s var(--ease-out), border-color .18s, box-shadow .18s;
   }
   .card:hover { transform: translateY(-4px); border-color: var(--border-2); box-shadow: 0 18px 40px rgba(0,0,0,.35); }
   .card .ico {
@@ -165,13 +172,14 @@
   .card .ico svg { width: 24px; height: 24px; stroke: var(--brand-light); }
   .card h3 { font-size: 18px; margin-bottom: 8px; letter-spacing: -.01em; }
   .card p { color: var(--text-dim); font-size: 14.5px; }
+  .card p code, .sec-head code, .split code { font-family: var(--mono); font-size: .9em; color: var(--cyan); }
   .card.i-green .ico { background: rgba(63,185,80,.1); border-color: rgba(63,185,80,.22); } .card.i-green .ico svg { stroke: var(--green); }
   .card.i-purple .ico { background: rgba(163,113,247,.1); border-color: rgba(163,113,247,.22); } .card.i-purple .ico svg { stroke: var(--purple); }
   .card.i-cyan .ico { background: rgba(57,197,207,.1); border-color: rgba(57,197,207,.22); } .card.i-cyan .ico svg { stroke: var(--cyan); }
   .card.i-amber .ico { background: rgba(210,153,34,.1); border-color: rgba(210,153,34,.22); } .card.i-amber .ico svg { stroke: var(--amber); }
   .card.i-red .ico { background: rgba(248,81,73,.1); border-color: rgba(248,81,73,.22); } .card.i-red .ico svg { stroke: var(--red); }
 
-  /* ---------- AI feature band ---------- */
+  /* ---------- Split band ---------- */
   .band { background: var(--bg-2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
   .split { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
   .split .kicker { color: var(--purple); font-weight: 700; font-size: 13px; letter-spacing: .16em; text-transform: uppercase; }
@@ -181,6 +189,7 @@
   .checklist li { display: flex; gap: 12px; align-items: flex-start; color: var(--text-dim); font-size: 15px; }
   .checklist .ck { flex: none; width: 22px; height: 22px; border-radius: 50%; background: rgba(163,113,247,.15); display: grid; place-items: center; margin-top: 2px; }
   .checklist .ck svg { width: 13px; height: 13px; stroke: var(--purple); }
+  .checklist.green .ck { background: rgba(63,185,80,.15); } .checklist.green .ck svg { stroke: var(--green); }
   .chat {
     background: var(--panel); border: 1px solid var(--border-2); border-radius: var(--radius); overflow: hidden;
     box-shadow: 0 30px 70px rgba(0,0,0,.45);
@@ -197,27 +206,59 @@
   .tool-pill { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11.5px; color: var(--text-mute); background: var(--bg); border: 1px solid var(--border); padding: 4px 9px; border-radius: 7px; margin: 0 4px 4px 0; }
   .tool-pill .d { width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
 
-  /* ---------- Download ---------- */
-  .dl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-  .dl-card {
-    background: linear-gradient(180deg, var(--panel), var(--bg-2)); border: 1px solid var(--border);
-    border-radius: 18px; padding: 34px; position: relative; overflow: hidden;
+  /* ---------- Agent rail mock ---------- */
+  .agents-strip { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+  .agent-chip {
+    display: inline-flex; align-items: center; gap: 9px; font-size: 13.5px; color: var(--text-dim);
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 9px 14px;
   }
-  .dl-card::before { content: ""; position: absolute; inset: 0 0 auto; height: 3px; background: linear-gradient(90deg, var(--brand-light), var(--brand-dark)); opacity: .7; }
-  .dl-card .head { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
-  .dl-card .head .ico { width: 44px; height: 44px; border-radius: 11px; display: grid; place-items: center; background: var(--panel-2); border: 1px solid var(--border-2); }
-  .dl-card .head .ico svg { width: 24px; height: 24px; fill: var(--text); }
-  .dl-card h3 { font-size: 20px; letter-spacing: -.01em; }
-  .dl-card .meta { font-size: 12.5px; color: var(--text-mute); }
-  .dl-card > p { color: var(--text-dim); font-size: 14.5px; margin: 14px 0 22px; }
-  .dl-card .btn { width: 100%; justify-content: center; }
+  .agent-chip svg { width: 17px; height: 17px; fill: var(--text); }
+
+  /* ---------- Cloud logos ---------- */
+  .cloud-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .cloud-card {
+    background: linear-gradient(180deg, var(--panel), var(--bg-2)); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px; text-align: center;
+    transition: transform .18s var(--ease-out), border-color .18s;
+  }
+  .cloud-card:hover { transform: translateY(-4px); border-color: var(--border-2); }
+  .cloud-card .logo-badge { width: 56px; height: 56px; margin: 0 auto 16px; border-radius: 14px; display: grid; place-items: center; background: var(--panel-2); border: 1px solid var(--border-2); }
+  .cloud-card .logo-badge svg { width: 30px; height: 30px; }
+  .cloud-card h3 { font-size: 17px; margin-bottom: 8px; }
+  .cloud-card p { color: var(--text-dim); font-size: 14px; }
+  .cloud-card .tags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 14px; }
+  .cloud-card .tags span { font-size: 11.5px; color: var(--text-mute); background: var(--bg); border: 1px solid var(--border); padding: 3px 9px; border-radius: 999px; }
+
+  /* ---------- Docs ---------- */
+  .docs-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; align-items: start; }
+  .doc-group { background: linear-gradient(180deg, var(--panel), var(--bg-2)); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .doc-group > .g-head { display: flex; align-items: center; gap: 12px; padding: 20px 22px 6px; }
+  .doc-group > .g-head .ico { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); }
+  .doc-group > .g-head .ico svg { width: 18px; height: 18px; stroke: var(--brand-light); }
+  .doc-group > .g-head h3 { font-size: 16px; letter-spacing: -.01em; }
+  details.doc { border-top: 1px solid var(--border); }
+  details.doc:first-of-type { border-top: 1px solid var(--border); margin-top: 12px; }
+  details.doc > summary {
+    list-style: none; cursor: pointer; padding: 15px 22px; font-size: 14.5px; font-weight: 500; color: var(--text);
+    display: flex; align-items: center; gap: 10px; transition: color .15s, background .15s;
+  }
+  details.doc > summary::-webkit-details-marker { display: none; }
+  details.doc > summary:hover { background: var(--panel-2); }
+  details.doc > summary .chev { margin-left: auto; width: 16px; height: 16px; flex: none; color: var(--text-mute); transition: transform .2s var(--ease-out); }
+  details.doc[open] > summary .chev { transform: rotate(90deg); }
+  details.doc .doc-body { padding: 2px 22px 20px; color: var(--text-dim); font-size: 14px; line-height: 1.7; }
+  details.doc .doc-body p { margin-bottom: 10px; }
+  details.doc .doc-body ul { margin: 8px 0 10px; padding-left: 18px; }
+  details.doc .doc-body li { margin-bottom: 6px; }
+  details.doc .doc-body code { font-family: var(--mono); font-size: 12.5px; color: var(--cyan); background: rgba(57,197,207,.08); padding: 2px 6px; border-radius: 5px; }
+  details.doc .doc-body a.inline { color: var(--brand-light); text-decoration: underline; text-underline-offset: 2px; }
 
   .code {
     background: #05070c; border: 1px solid var(--border); border-radius: 12px;
-    font-family: var(--mono); font-size: 13px; color: #cdd6e4; position: relative; margin-bottom: 14px;
+    font-family: var(--mono); font-size: 12.5px; color: #cdd6e4; position: relative; margin: 10px 0;
   }
-  .code .code-head { display: flex; align-items: center; justify-content: space-between; padding: 9px 14px; border-bottom: 1px solid var(--border); color: var(--text-mute); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; }
-  .code pre { padding: 16px; overflow-x: auto; line-height: 1.7; }
+  .code .code-head { display: flex; align-items: center; justify-content: space-between; padding: 9px 14px; border-bottom: 1px solid var(--border); color: var(--text-mute); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+  .code pre { padding: 14px; overflow-x: auto; line-height: 1.7; }
   .code .cmt { color: var(--text-mute); }
   .code .flag { color: var(--cyan); }
   .code .img { color: var(--green); }
@@ -229,9 +270,26 @@
   .copy-btn:hover { color: var(--text); border-color: var(--brand-light); }
   .copy-btn.ok { color: var(--green); border-color: var(--green); }
 
-  .steps { list-style: none; counter-reset: s; display: grid; gap: 10px; margin-top: 6px; }
-  .steps li { counter-increment: s; display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: var(--text-dim); }
-  .steps li::before { content: counter(s); flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--panel-2); border: 1px solid var(--border-2); display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--brand-light); }
+  /* ---------- Download ---------- */
+  .dl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .dl-card {
+    background: linear-gradient(180deg, var(--panel), var(--bg-2)); border: 1px solid var(--border);
+    border-radius: 18px; padding: 30px; position: relative; overflow: hidden;
+    transition: transform .18s var(--ease-out), border-color .18s;
+  }
+  .dl-card:hover { transform: translateY(-4px); border-color: var(--border-2); }
+  .dl-card::before { content: ""; position: absolute; inset: 0 0 auto; height: 3px; background: linear-gradient(90deg, var(--brand-light), var(--brand-dark)); opacity: .7; }
+  .dl-card .head { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+  .dl-card .head .ico { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; background: var(--panel-2); border: 1px solid var(--border-2); }
+  .dl-card .head .ico svg { width: 26px; height: 26px; fill: var(--text); }
+  .dl-card h3 { font-size: 19px; letter-spacing: -.01em; }
+  .dl-card .meta { font-size: 12px; color: var(--text-mute); }
+  .dl-card > p { color: var(--text-dim); font-size: 14px; margin: 14px 0 20px; min-height: 42px; }
+  .dl-card .btn { width: 100%; justify-content: center; font-size: 14.5px; padding: 12px 20px; }
+  .steps { list-style: none; counter-reset: s; display: grid; gap: 10px; margin-top: 18px; }
+  .steps li { counter-increment: s; display: flex; gap: 12px; align-items: flex-start; font-size: 13px; color: var(--text-dim); }
+  .steps li::before { content: counter(s); flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--panel-2); border: 1px solid var(--border-2); display: grid; place-items: center; font-size: 11px; font-weight: 700; color: var(--brand-light); }
+  .steps li code { font-family: var(--mono); font-size: 11.5px; color: var(--cyan); }
 
   /* ---------- Prereq ---------- */
   .prereq { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 40px; }
@@ -246,19 +304,20 @@
   footer { border-top: 1px solid var(--border); padding: 40px 0; }
   footer .wrap { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
   footer .brand small { color: var(--text-mute); }
-  footer .links { display: flex; gap: 24px; }
+  footer .links { display: flex; gap: 24px; flex-wrap: wrap; }
   footer .links a { color: var(--text-dim); font-size: 14px; }
   footer .links a:hover { color: var(--text); }
   footer .copy { color: var(--text-mute); font-size: 13px; width: 100%; padding-top: 8px; border-top: 1px solid var(--border); }
 
   /* ---------- Reveal animation ---------- */
-  .reveal { opacity: 0; transform: translateY(24px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity .6s var(--ease-out), transform .6s var(--ease-out); }
   .reveal.in { opacity: 1; transform: none; }
 
   /* ---------- Responsive ---------- */
   @media (max-width: 900px) {
-    .grid { grid-template-columns: repeat(2, 1fr); }
-    .split, .dl-grid { grid-template-columns: 1fr; gap: 32px; }
+    .grid, .cloud-grid { grid-template-columns: repeat(2, 1fr); }
+    .split, .dl-grid, .docs-grid { grid-template-columns: 1fr; gap: 32px; }
+    .dl-grid { gap: 18px; }
     .nav-links { display: none; }
     .menu-btn { display: block; }
     .nav-links.open {
@@ -267,12 +326,27 @@
     }
   }
   @media (max-width: 560px) {
-    .grid { grid-template-columns: 1fr; }
+    .grid, .cloud-grid { grid-template-columns: 1fr; }
     .hero { padding: 60px 0 40px; }
     .btn { width: 100%; justify-content: center; }
     .cta-row { flex-direction: column; }
   }
-  @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } html { scroll-behavior: auto; } }
+
+  /* ---------- Accessibility: reduced motion / transparency / contrast ---------- */
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    html { scroll-behavior: auto; }
+    * { animation: none !important; }
+    .btn:active { transform: none; }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    header { background: #000; backdrop-filter: none; }
+    .badge { background: rgba(255,255,255,.06); }
+  }
+  @media (prefers-contrast: more) {
+    :root { --border: #4a4a52; --border-2: #5a5a64; --text-dim: #cfcfd6; }
+    header { background: #000; backdrop-filter: none; }
+  }
 </style>
 </head>
 <body>
@@ -283,16 +357,16 @@
   <div class="wrap">
     <nav>
       <a class="brand" href="#top">
-        <img class="logo" src="assets/icon.svg" alt="Kubernetes Manager logo" />
-        <span>Kubernetes Manager<small>DASHBOARD FOR K8S</small></span>
+        <img class="logo" src="assets/icon.svg" alt="k8sight logo" />
+        <span>k8sight<small>KUBERNETES, IN SIGHT</small></span>
       </a>
       <div class="nav-links" id="navLinks">
         <a href="#features">Features</a>
-        <a href="#assistant">AI Assistant</a>
+        <a href="#assistant">AI</a>
+        <a href="#cloud">Cloud</a>
         <a href="#argocd">Argo CD</a>
-        <a href="#download">Download</a>
-        <a href="#docker">Docker</a>
-        <a class="nav-cta" href="#download">Get the app</a>
+        <a href="#docs">Docs</a>
+        <a class="nav-cta" href="#download">Download</a>
       </div>
       <button class="menu-btn" id="menuBtn" aria-label="Menu">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -304,29 +378,29 @@
 <!-- HERO -->
 <section class="hero" id="top">
   <div class="wrap">
-    <span class="badge"><span class="dot"></span> Version 1.3.0 · macOS &amp; Docker</span>
-    <h1>Operate your cluster with a <span class="grad">beautiful</span> Kubernetes UI</h1>
-    <p class="sub">A modern dashboard for browsing and operating any Kubernetes cluster using your local <code>kubeconfig</code> — live metrics, pod logs, interactive shells, topology, Helm, Argo CD, and a built-in AI debugging assistant.</p>
+    <span class="badge"><span class="dot"></span> Version 1.3.0 · macOS · Windows · Linux</span>
+    <h1>See your whole cluster in <span class="grad">one beautiful</span> window</h1>
+    <p class="sub">k8sight is a native desktop app for browsing and operating any Kubernetes cluster from your local <code>kubeconfig</code> — live metrics, pod logs, interactive shells, topology, Helm, Argo CD, one-click EKS &amp; AKS clusters, a built-in AI assistant and docked coding agents.</p>
     <div class="cta-row">
-      <a class="btn btn-primary" href="https://github.com/praveenraghav01/k8s-manager-ui/releases/download/v1.3.0/Kubernetes.Manager-1.3.0-arm64.dmg">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.365 1.43c0 1.14-.42 2.2-1.12 3.02-.84.99-2.22 1.75-3.36 1.66-.14-1.12.43-2.3 1.08-3.04C13.78 2.05 15.3 1.4 16.365 1.43zM20.9 17.02c-.55 1.27-.82 1.84-1.53 2.96-1 1.56-2.4 3.5-4.15 3.51-1.55.02-1.95-1.02-4.05-1.01-2.1.01-2.54 1.03-4.1 1.02-1.74-.02-3.07-1.77-4.07-3.33C1.16 15.66.8 10.55 3.05 7.83c1.02-1.24 2.5-1.97 4.06-1.97 1.6 0 2.6 1.02 3.92 1.02 1.28 0 2.06-1.02 3.91-1.02 1.38 0 2.85.75 3.9 2.05-3.43 1.88-2.87 6.78.06 8.08z"/></svg>
-        Download for macOS
+      <a class="btn btn-primary" href="#download">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+        Download k8sight
       </a>
-      <a class="btn btn-ghost" href="#docker">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.98 11.08h2.12a.19.19 0 0 0 .19-.19V9.01a.19.19 0 0 0-.19-.19h-2.12a.19.19 0 0 0-.19.19v1.88c0 .11.08.19.19.19m-2.95 0h2.12a.19.19 0 0 0 .19-.19V9.01a.19.19 0 0 0-.19-.19h-2.12a.19.19 0 0 0-.19.19v1.88c0 .11.09.19.19.19m-2.9 0h2.11a.19.19 0 0 0 .19-.19V9.01a.19.19 0 0 0-.19-.19H8.13a.19.19 0 0 0-.19.19v1.88c0 .11.08.19.19.19m-2.94 0h2.12a.19.19 0 0 0 .18-.19V9.01a.19.19 0 0 0-.18-.19H5.19A.19.19 0 0 0 5 9.01v1.88c0 .11.08.19.19.19m2.94-2.72h2.11a.19.19 0 0 0 .19-.19V6.29a.19.19 0 0 0-.19-.19H8.13a.19.19 0 0 0-.19.19v1.88c0 .11.08.19.19.19m2.95 0h2.12a.19.19 0 0 0 .19-.19V6.29a.19.19 0 0 0-.19-.19h-2.12a.19.19 0 0 0-.19.19v1.88c0 .11.09.19.19.19m11.65 1.23c-.28-.19-.93-.26-1.44-.16-.06-.48-.33-.9-.81-1.28l-.28-.19-.18.27c-.24.36-.33.87-.29 1.35.02.31.13.66.31.94-.14.08-.42.19-.78.18H.16l-.02.13c-.11.66-.11 2.7 1.21 4.26 1 1.19 2.5 1.79 4.46 1.79 4.24 0 7.38-1.95 8.85-5.51.58.01 1.83.01 2.47-1.21.04-.07.13-.25.17-.32z"/></svg>
-        Run with Docker
+      <a class="btn btn-ghost" href="#docs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M13 3v5h5M8 13h8M8 17h6"/></svg>
+        Read the docs
       </a>
     </div>
-    <p class="fineprint">Free &amp; open-source · Apple Silicon <code>.dmg</code> · Multi-arch container image</p>
+    <p class="fineprint">Free &amp; open-source · macOS <code>.dmg</code> · Windows <code>.exe</code> · Linux <code>.AppImage</code> / <code>.deb</code></p>
 
     <div class="shot-wrap reveal">
       <div class="shot-glow"></div>
       <div class="shot-frame">
         <div class="shot-bar">
           <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
-          <span class="addr">localhost:3001 · Cluster dashboard</span>
+          <span class="addr">k8sight · Cluster dashboard</span>
         </div>
-        <img src="assets/screenshot-dashboard.png" alt="Kubernetes Manager cluster dashboard showing node and pod health, capacity, and cluster info" />
+        <img src="assets/screenshot-dashboard.png" alt="k8sight cluster dashboard showing node and pod health, capacity, and cluster info" />
       </div>
     </div>
   </div>
@@ -335,11 +409,11 @@
 <!-- STRIP -->
 <div class="strip reveal">
   <div class="wrap">
-    <div class="stat"><b><span class="grad">Fast</span></b><span>keyboard-friendly workflow</span></div>
+    <div class="stat"><b><span class="grad">Native</span></b><span>macOS · Windows · Linux</span></div>
     <div class="stat"><b>15+</b><span>resource views</span></div>
     <div class="stat"><b>Live</b><span>CPU / memory metrics</span></div>
-    <div class="stat"><b>Read-only</b><span>AI assistant, by design</span></div>
-    <div class="stat"><b>2 ways</b><span>macOS app or Docker</span></div>
+    <div class="stat"><b>EKS · AKS</b><span>cloud clusters, no CLI</span></div>
+    <div class="stat"><b>⌘K</b><span>command palette</span></div>
   </div>
 </div>
 
@@ -349,7 +423,7 @@
     <div class="sec-head reveal">
       <span class="kicker">Everything in one pane</span>
       <h2>All your cluster operations, beautifully unified</h2>
-      <p>Browse workloads, watch live metrics, stream logs, open a shell, forward ports and inspect topology — without leaving the window.</p>
+      <p>Browse workloads, watch live metrics, stream logs, open a shell, forward ports and inspect topology — with a native title bar, a command palette and Apple-smooth motion throughout.</p>
     </div>
     <div class="grid">
       <div class="card i-cyan reveal">
@@ -362,20 +436,25 @@
         <h3>Every workload type</h3>
         <p>Pods, Deployments, StatefulSets, DaemonSets, Services and more — with live CPU/memory from metrics-server and per-container status.</p>
       </div>
+      <div class="card i-purple reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg></div>
+        <h3>Command palette (⌘K)</h3>
+        <p>A Spotlight-style palette to jump to any view, cluster or action from the keyboard — plus a native top toolbar with back/forward history.</p>
+      </div>
       <div class="card i-green reveal">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></div>
         <h3>Interactive shell</h3>
-        <p>A real TTY into any pod — <code>kubectl exec -it</code> streamed over WebSocket to a full xterm.js terminal.</p>
+        <p>A real TTY into any pod — <code>kubectl exec -it</code> streamed over WebSocket to a full xterm.js terminal, docked in a bottom panel.</p>
+      </div>
+      <div class="card i-amber reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 6h13M4 12h9M4 18h11"/><circle cx="19.5" cy="15" r="2.5"/></svg></div>
+        <h3>Pro log viewer</h3>
+        <p>Timestamps, per-container or merged "all containers" streams, case/regex search with match navigation, line wrap, tail size and one-click download.</p>
       </div>
       <div class="card i-purple reveal">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><circle cx="6" cy="18" r="3"/><path d="M6 9v6M9 6h6a3 3 0 0 1 3 3v6"/></svg></div>
         <h3>Interactive topology</h3>
         <p>Pan &amp; zoom the graph of Deployment → ReplicaSet → Pod → Service relationships to understand what talks to what.</p>
-      </div>
-      <div class="card i-amber reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="15" r="3"/></svg></div>
-        <h3>Pod logs &amp; multi-tab panel</h3>
-        <p>Search, tail and format logs with per-container selection. Logs, terminal and YAML tabs sit side by side in a bottom panel.</p>
       </div>
       <div class="card i-red reveal">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/><path d="M3 5v14"/></svg></div>
@@ -385,7 +464,7 @@
       <div class="card reveal">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/></svg></div>
         <h3>Custom Resources &amp; Helm</h3>
-        <p>Lazy-loaded CRD tree with YAML details, plus Helm releases with their values and rendered manifests.</p>
+        <p>Lazy-loaded CRD tree with YAML details, plus Helm releases with their values and rendered manifests — no <code>helm</code> CLI needed.</p>
       </div>
       <div class="card i-cyan reveal">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></div>
@@ -407,6 +486,11 @@
         <h3>MCP server built in</h3>
         <p>Expose the same read-only tools to your own agents over the Model Context Protocol — via HTTP or stdio, with write tools off by default.</p>
       </div>
+      <div class="card i-cyan reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <h3>External tools, detected</h3>
+        <p>k8sight finds <code>kubectl</code>, <code>helm</code>, cloud CLIs and coding agents on your real login-shell PATH — shown with their official logos.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -418,7 +502,7 @@
       <div class="reveal">
         <span class="kicker">Bring your own LLM</span>
         <h2>An AI assistant that actually reads your cluster</h2>
-        <p>Click the ✨ button and ask in plain English — <em>“why is this pod not ready?”</em> or <em>“any warning events in kube-system?”</em>. It runs an agentic tool-use loop over read-only cluster data and streams the answer back token by token.</p>
+        <p>Pick your model in the top toolbar and ask in plain English — <em>“why is this pod not ready?”</em> or <em>“any warning events in kube-system?”</em>. It runs an agentic tool-use loop over read-only cluster data and streams the answer back token by token.</p>
         <ul class="checklist">
           <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Read-only by design</b> — it can never modify your cluster; it shows you the <code>kubectl</code> command when a change is needed.</span></li>
           <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Grounded in live data</b> — calls tools like logs, events and describe to base every answer on your real cluster.</span></li>
@@ -446,21 +530,76 @@
         </div>
       </div>
     </div>
-    <div class="shot-wrap reveal" style="margin-top:52px;">
-      <div class="shot-glow"></div>
-      <div class="shot-frame">
-        <div class="shot-bar">
-          <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
-          <span class="addr">localhost:3001 · AI Assistant — connect your LLM API</span>
+
+    <!-- Coding agents -->
+    <div class="split" style="margin-top:72px;">
+      <div class="chat reveal" style="order:2;">
+        <div class="chat-head">
+          <span class="spark" style="background:linear-gradient(135deg,var(--brand-light),var(--brand-dark));"><svg viewBox="0 0 24 24" fill="none" stroke="#0a0a0c" stroke-width="2"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3M13 5l-2 14"/></svg></span>
+          <b>Agent panel</b><span>docks like a terminal</span>
         </div>
-        <img src="assets/screenshot-ai.png" alt="Kubernetes Manager AI assistant panel showing the bring-your-own OpenAI-compatible API connection form with base URL, model and API key fields" />
+        <div class="chat-body" style="font-family:var(--mono); font-size:12.5px; color:var(--text-dim); background:#05070c;">
+          <div><span style="color:var(--green);">➜</span> claude <span style="color:var(--text-mute);"># running in ./deploy</span></div>
+          <div style="color:var(--text-mute);">▍scanning manifests for the checkout service…</div>
+          <div><span style="color:var(--cyan);">●</span> Found <b style="color:var(--text);">deployment.yaml</b> requesting 2 CPU — reducing to 500m.</div>
+          <div style="color:var(--text-mute);">▍apply with <code style="color:var(--cyan);">kubectl apply -f</code> when ready.</div>
+        </div>
+      </div>
+      <div class="reveal" style="order:1;">
+        <span class="kicker" style="color:var(--brand-light);">Your terminal agents, docked</span>
+        <h2>Run your favourite coding agent right beside the cluster</h2>
+        <p>k8sight detects the coding agents already installed on your machine and opens them in a docked panel — same place as the pod terminal — so you can debug manifests and cluster state side by side. The top toolbar shows the chosen agent's own icon and name.</p>
+        <div class="agents-strip">
+          <span class="agent-chip"><svg viewBox="0 0 24 24"><path d="M12 2 2 19.5h20L12 2z"/></svg> Claude Code</span>
+          <span class="agent-chip"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg> GitHub Copilot</span>
+          <span class="agent-chip"><svg viewBox="0 0 24 24"><path d="M12 2l2.5 7.5H22l-6 4.5 2.5 7.5L12 17l-6.5 4.5L8 14 2 9.5h7.5z"/></svg> Gemini CLI</span>
+          <span class="agent-chip"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/></svg> Codex</span>
+          <span class="agent-chip"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z" fill="none" stroke="currentColor" stroke-width="2"/></svg> opencode</span>
+        </div>
+        <p style="margin-top:18px; color:var(--text-mute); font-size:13.5px;">Agents run as local processes using their own auth — k8sight just gives them a home next to your cluster.</p>
       </div>
     </div>
   </div>
 </section>
 
+<!-- CLOUD -->
+<section class="sec" id="cloud">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="kicker">Managed Kubernetes</span>
+      <h2>Add cloud clusters without wrestling the CLI</h2>
+      <p>Bring your Amazon EKS and Azure AKS clusters into k8sight and it writes them straight into your kubeconfig. For Azure you can sign in through your <b>system browser</b> — no <code>az</code> install and it works with device Conditional Access — or use the classic Azure CLI if you prefer.</p>
+    </div>
+    <div class="cloud-grid">
+      <div class="cloud-card reveal">
+        <div class="logo-badge"><svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.8"><path d="M6 16l6 3 6-3M6 8l6-3 6 3-6 3-6-3zM4 11v5l3 1.5M20 11v5l-3 1.5M12 11v8"/></svg></div>
+        <h3>Amazon EKS</h3>
+        <p>List clusters across regions, generate a short-lived access token and merge the kubeconfig entry — using your existing AWS credentials.</p>
+        <div class="tags"><span>SDK-based</span><span>token auth</span><span>multi-region</span></div>
+      </div>
+      <div class="cloud-card reveal">
+        <div class="logo-badge"><svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="1.8"><path d="M4 18l7-13 4 7H9l-2 3h11L13 4"/></svg></div>
+        <h3>Azure AKS</h3>
+        <p>Discover clusters across subscriptions and pull user or admin credentials. Sign in through the browser (PKCE) or the Azure CLI — your choice, per add.</p>
+        <div class="tags"><span>Browser login</span><span>or az CLI</span><span>CA-compliant</span></div>
+      </div>
+      <div class="cloud-card reveal">
+        <div class="logo-badge"><svg viewBox="0 0 24 24" fill="none" stroke="var(--brand-light)" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="7" cy="7" r="0"/></svg></div>
+        <h3>Any kubeconfig</h3>
+        <p>Already have contexts for GKE, on-prem or a local kind/minikube? k8sight reads them all straight from <code>~/.kube/config</code> — nothing to configure.</p>
+        <div class="tags"><span>GKE</span><span>kind / minikube</span><span>on-prem</span></div>
+      </div>
+    </div>
+    <div class="prereq reveal">
+      <span class="tag">☁️ EKS uses the AWS SDK — no <code>aws</code> CLI required</span>
+      <span class="tag">🔐 Azure browser login satisfies device compliance policies</span>
+      <span class="tag">🧩 Credentials merged into your existing kubeconfig</span>
+    </div>
+  </div>
+</section>
+
 <!-- ARGOCD -->
-<section class="sec" id="argocd">
+<section class="sec" id="argocd" style="padding-top:0;">
   <div class="wrap">
     <div class="sec-head reveal">
       <span class="kicker">GitOps, natively</span>
@@ -482,9 +621,9 @@
       <div class="shot-frame">
         <div class="shot-bar">
           <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
-          <span class="addr">localhost:3001 · Argo CD — dashboard</span>
+          <span class="addr">k8sight · Argo CD — dashboard</span>
         </div>
-        <img src="assets/screenshot-argocd.png" alt="Kubernetes Manager Argo CD dashboard showing sync and health status, application summary cards, a needs-attention row, and recent sync activity" />
+        <img src="assets/screenshot-argocd.png" alt="k8sight Argo CD dashboard showing sync and health status, application summary cards, a needs-attention row, and recent sync activity" />
       </div>
     </div>
 
@@ -520,11 +659,157 @@
         <p>One click hands an app&rsquo;s sync/health condition and failing resources to the assistant for a root-cause read <span style="color:var(--text-mute)">(needs your own LLM subscription)</span>.</p>
       </div>
     </div>
+  </div>
+</section>
 
-    <div class="prereq reveal">
-      <span class="tag">🧭 Auto-detected when the <code>argocd</code> namespace exists</span>
-      <span class="tag">🔗 Opens your external Argo CD UI when configured</span>
-      <span class="tag">🔒 Uses your kubeconfig RBAC — no extra credentials</span>
+<!-- DOCS -->
+<section class="band" id="docs">
+  <div class="wrap sec">
+    <div class="sec-head reveal">
+      <span class="kicker">Documentation</span>
+      <h2>Everything you need to get running</h2>
+      <p>Short, practical guides — installing on each platform, connecting clusters, wiring up AI, and the little things like clearing macOS Gatekeeper. Full docs live in the repo&rsquo;s <a class="inline" style="color:var(--brand-light); text-decoration:underline; text-underline-offset:2px;" href="https://github.com/praveenraghav01/k8s-manager-ui#readme" target="_blank" rel="noopener">README</a>.</p>
+    </div>
+
+    <div class="docs-grid">
+      <!-- Install -->
+      <div class="doc-group reveal">
+        <div class="g-head">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></span>
+          <h3>Install &amp; first launch</h3>
+        </div>
+        <details class="doc">
+          <summary>macOS <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
+          <div class="doc-body">
+            <p>Download the Apple-Silicon <code>.dmg</code>, open it and drag <b>k8sight</b> to Applications.</p>
+            <p>The build is <b>ad-hoc signed</b> (no Apple Developer ID), so on first launch right-click the app → <b>Open</b>. If macOS says it&rsquo;s &ldquo;damaged&rdquo; after downloading, clear the quarantine flag:</p>
+            <div class="code"><div class="code-head"><span>Terminal</span><button class="copy-btn" data-copy="c-mac"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div><pre id="c-mac">xattr -dr com.apple.quarantine "/Applications/k8sight.app"</pre></div>
+          </div>
+        </details>
+        <details class="doc">
+          <summary>Windows <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
+          <div class="doc-body">
+            <p>Download the <code>.exe</code> installer and run it. Because the build is unsigned, SmartScreen may warn — choose <b>More info → Run anyway</b>. k8sight installs per-user and adds a Start-menu entry.</p>
+          </div>
+        </details>
+        <details class="doc">
+          <summary>Linux <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
+          <div class="doc-body">
+            <p><b>AppImage</b> — make it executable and run:</p>
+            <div class="code"><div class="code-head"><span>Terminal</span><button class="copy-btn" data-copy="c-appimage"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div><pre id="c-appimage">chmod +x k8sight-*.AppImage
+./k8sight-*.AppImage</pre></div>
+            <p><b>Debian / Ubuntu</b> — install the <code>.deb</code>:</p>
+            <div class="code"><div class="code-head"><span>Terminal</span><button class="copy-btn" data-copy="c-deb"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div><pre id="c-deb">sudo dpkg -i k8sight_*_amd64.deb</pre></div>
+          </div>
+        </details>
+        <details class="doc">
+          <summary>Requirements <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
+          <div class="doc-body">
+            <ul>
+              <li><code>kubectl</code> installed and on your PATH (the app shells out to it).</li>
+              <li>A valid <code>~/.kube/config</code> with at least one context.</li>
+              <li><b>metrics-server</b> in-cluster for live CPU/memory graphs (optional).</li>
+            </ul>
+            <p>k8sight reconstructs your login-shell PATH at launch, so tools installed via Homebrew, asdf or <code>~/.local/bin</code> are found even when launched from the Dock.</p>
+          </div>
+        </details>
+      </div>
+
+      <!-- Clusters -->
+      <div class="doc-group reveal">
+        <div class="g-head">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/></svg></span>
+          <h3>Connecting clusters</h3>
+        </div>
+        <details class="doc">
+          <summary>Local kubeconfig contexts <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
+          <div class="doc-body">
+            <p>k8sight reads every context in <code>~/.kube/config</code>. Use the context selector in the sidebar to switch clusters, and pin the ones you use often to the left-hand rail for one-click quick-switch.</p>
+          </div>
+        </details>
+        <details class="doc">
+          <summary>Amazon EKS <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
+          <div class="doc-body">
+            <p>Open <b>Add cluster → AWS</b>. k8sight uses the AWS SDK with your existing credentials (env vars, shared config or SSO) to list EKS clusters across regions, then generates a short-lived token and merges the entry into your kubeconfig. No <code>aws</code> CLI required.</p>
+          </div>
+        </details>
+        <details class="doc">
+          <summary>Azure AKS — browser or CLI <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
+          <div class="doc-body">
+            <p>Open <b>Add cluster → Azure</b> and choose a sign-in method:</p>
+            <ul>
+              <li><b>Browser (recommended)</b> — k8sight opens your system browser and signs in with the OAuth auth-code + PKCE flow. This uses your normal SSO session and satisfies device Conditional Access policies, with <b>no <code>az</code> install</b>.</li>
+              <li><b>Azure CLI</b> — if you already use <code>az login</code>, k8sight can drive the CLI instead.</li>
+            </ul>
+            <p>It then lists clusters across your subscriptions and pulls user (or admin) credentials into your kubeconfig.</p>
+          </div>
+        </details>
+      </div>
+
+      <!-- AI -->
+      <div class="doc-group reveal">
+        <div class="g-head">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span>
+          <h3>AI assistant &amp; agents</h3>
+        </div>
+        <details class="doc">
+          <summary>Connect an LLM <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
+          <div class="doc-body">
+            <p>The assistant needs your own OpenAI-compatible endpoint. In <b>Preferences → AI</b>, set the base URL, model and API key (TrueFoundry, OpenAI, Azure OpenAI, LiteLLM, …). Values are stored locally in <code>~/.config/k8s-manager/config.json</code>.</p>
+            <p>Or set them as environment variables:</p>
+            <div class="code"><div class="code-head"><span>Env</span><button class="copy-btn" data-copy="c-llm"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div><pre id="c-llm">LLM_BASE_URL=https://api.your-provider.com/v1
+LLM_API_KEY=sk-…
+LLM_MODEL=gpt-4o-mini</pre></div>
+          </div>
+        </details>
+        <details class="doc">
+          <summary>Docked coding agents <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
+          <div class="doc-body">
+            <p>k8sight detects coding agents on your PATH — Claude Code, GitHub Copilot CLI, Gemini CLI, Codex and opencode — and opens the chosen one in a docked panel beside the pod terminal. Pick the default in <b>Preferences → External Tools</b>; the top toolbar then shows that agent&rsquo;s icon and name. Agents run as local processes with their own authentication.</p>
+          </div>
+        </details>
+        <details class="doc">
+          <summary>MCP server <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
+          <div class="doc-body">
+            <p>k8sight exposes its read-only cluster tools over the Model Context Protocol so your own agents can use them. Run the stdio server with:</p>
+            <div class="code"><div class="code-head"><span>Terminal</span><button class="copy-btn" data-copy="c-mcp"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div><pre id="c-mcp">npm run mcp</pre></div>
+            <p>Write tools are off by default — the server is read-only unless you explicitly enable them.</p>
+          </div>
+        </details>
+      </div>
+
+      <!-- Build & release -->
+      <div class="doc-group reveal">
+        <div class="g-head">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></span>
+          <h3>Build &amp; release</h3>
+        </div>
+        <details class="doc">
+          <summary>Run from source <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
+          <div class="doc-body">
+            <p>Clone the repo, install dependencies and start the dev servers with hot reload:</p>
+            <div class="code"><div class="code-head"><span>Terminal</span><button class="copy-btn" data-copy="c-dev"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div><pre id="c-dev">npm ci
+npm ci --prefix client
+npm run dev</pre></div>
+          </div>
+        </details>
+        <details class="doc">
+          <summary>Package the desktop app <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
+          <div class="doc-body">
+            <p>Build installers for the current OS with electron-builder:</p>
+            <div class="code"><div class="code-head"><span>Terminal</span><button class="copy-btn" data-copy="c-dist"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div><pre id="c-dist">npm run dist   <span class="cmt"># artifacts land in release/</span></pre></div>
+            <p>The macOS build is ad-hoc signed with the hardened runtime automatically.</p>
+          </div>
+        </details>
+        <details class="doc">
+          <summary>Cut a release (GitHub Actions) <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
+          <div class="doc-body">
+            <p>Pushing a <code>v*.*.*</code> tag runs the <b>Build &amp; Release</b> workflow across macOS, Windows and Linux and publishes the installers to a GitHub Release:</p>
+            <div class="code"><div class="code-head"><span>Terminal</span><button class="copy-btn" data-copy="c-tag"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div><pre id="c-tag">git tag v1.3.0
+git push origin v1.3.0</pre></div>
+          </div>
+        </details>
+      </div>
     </div>
   </div>
 </section>
@@ -534,8 +819,8 @@
   <div class="wrap">
     <div class="sec-head reveal">
       <span class="kicker">Get started in a minute</span>
-      <h2>Download &amp; run</h2>
-      <p>Grab the native macOS app, or spin it up anywhere with the official Docker image. Both serve the same UI on top of your kubeconfig.</p>
+      <h2>Download k8sight</h2>
+      <p>Native installers for every desktop. Pick your platform — each build serves the same UI on top of your kubeconfig.</p>
     </div>
     <div class="dl-grid">
       <!-- MAC -->
@@ -543,46 +828,61 @@
         <div class="head">
           <div class="ico"><svg viewBox="0 0 24 24"><path d="M16.365 1.43c0 1.14-.42 2.2-1.12 3.02-.84.99-2.22 1.75-3.36 1.66-.14-1.12.43-2.3 1.08-3.04C13.78 2.05 15.3 1.4 16.365 1.43zM20.9 17.02c-.55 1.27-.82 1.84-1.53 2.96-1 1.56-2.4 3.5-4.15 3.51-1.55.02-1.95-1.02-4.05-1.01-2.1.01-2.54 1.03-4.1 1.02-1.74-.02-3.07-1.77-4.07-3.33C1.16 15.66.8 10.55 3.05 7.83c1.02-1.24 2.5-1.97 4.06-1.97 1.6 0 2.6 1.02 3.92 1.02 1.28 0 2.06-1.02 3.91-1.02 1.38 0 2.85.75 3.9 2.05-3.43 1.88-2.87 6.78.06 8.08z"/></svg></div>
           <div>
-            <h3>macOS App</h3>
-            <div class="meta">Apple Silicon (arm64) · .dmg · v1.3.0</div>
+            <h3>macOS</h3>
+            <div class="meta">Apple Silicon · .dmg</div>
           </div>
         </div>
-        <p>A native <code>Kubernetes Manager.app</code> that starts the server and opens the UI in its own window. It reconstructs your shell <code>PATH</code> so <code>kubectl</code> is found automatically.</p>
-        <a class="btn btn-primary" href="https://github.com/praveenraghav01/k8s-manager-ui/releases/download/v1.3.0/Kubernetes.Manager-1.3.0-arm64.dmg">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.365 1.43c0 1.14-.42 2.2-1.12 3.02-.84.99-2.22 1.75-3.36 1.66-.14-1.12.43-2.3 1.08-3.04C13.78 2.05 15.3 1.4 16.365 1.43zM20.9 17.02c-.55 1.27-.82 1.84-1.53 2.96-1 1.56-2.4 3.5-4.15 3.51-1.55.02-1.95-1.02-4.05-1.01-2.1.01-2.54 1.03-4.1 1.02-1.74-.02-3.07-1.77-4.07-3.33C1.16 15.66.8 10.55 3.05 7.83c1.02-1.24 2.5-1.97 4.06-1.97 1.6 0 2.6 1.02 3.92 1.02 1.28 0 2.06-1.02 3.91-1.02 1.38 0 2.85.75 3.9 2.05-3.43 1.88-2.87 6.78.06 8.08z"/></svg>
-          Download for macOS
+        <p>A native <code>k8sight.app</code> that starts the server and opens the UI in its own window, with your shell <code>PATH</code> repaired automatically.</p>
+        <a class="btn btn-primary" href="https://github.com/praveenraghav01/k8s-manager-ui/releases/latest">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+          Download .dmg
         </a>
-        <ol class="steps" style="margin-top:18px">
-          <li>Open the <code>.dmg</code> and drag the app to Applications.</li>
-          <li>First launch: right-click the app → <b>Open</b> (ad-hoc signed build).</li>
+        <ol class="steps">
+          <li>Open the <code>.dmg</code> and drag k8sight to Applications.</li>
+          <li>First launch: right-click → <b>Open</b> (ad-hoc signed).</li>
           <li>Requires <code>kubectl</code> installed locally.</li>
         </ol>
       </div>
 
-      <!-- DOCKER -->
-      <div class="dl-card reveal" id="docker">
+      <!-- WINDOWS -->
+      <div class="dl-card reveal">
         <div class="head">
-          <div class="ico"><svg viewBox="0 0 24 24"><path d="M13.98 11.08h2.12a.19.19 0 0 0 .19-.19V9.01a.19.19 0 0 0-.19-.19h-2.12a.19.19 0 0 0-.19.19v1.88c0 .11.08.19.19.19m-2.95 0h2.12a.19.19 0 0 0 .19-.19V9.01a.19.19 0 0 0-.19-.19h-2.12a.19.19 0 0 0-.19.19v1.88c0 .11.09.19.19.19m-2.9 0h2.11a.19.19 0 0 0 .19-.19V9.01a.19.19 0 0 0-.19-.19H8.13a.19.19 0 0 0-.19.19v1.88c0 .11.08.19.19.19m-2.94 0h2.12a.19.19 0 0 0 .18-.19V9.01a.19.19 0 0 0-.18-.19H5.19A.19.19 0 0 0 5 9.01v1.88c0 .11.08.19.19.19m2.94-2.72h2.11a.19.19 0 0 0 .19-.19V6.29a.19.19 0 0 0-.19-.19H8.13a.19.19 0 0 0-.19.19v1.88c0 .11.08.19.19.19m2.95 0h2.12a.19.19 0 0 0 .19-.19V6.29a.19.19 0 0 0-.19-.19h-2.12a.19.19 0 0 0-.19.19v1.88c0 .11.09.19.19.19m11.65 1.23c-.28-.19-.93-.26-1.44-.16-.06-.48-.33-.9-.81-1.28l-.28-.19-.18.27c-.24.36-.33.87-.29 1.35.02.31.13.66.31.94-.14.08-.42.19-.78.18H.16l-.02.13c-.11.66-.11 2.7 1.21 4.26 1 1.19 2.5 1.79 4.46 1.79 4.24 0 7.38-1.95 8.85-5.51.58.01 1.83.01 2.47-1.21.04-.07.13-.25.17-.32z"/></svg></div>
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M3 5.7 10.5 4.6v7.1H3zM11.4 4.5 21 3v8.6h-9.6zM3 12.4h7.5v7.1L3 18.4zM11.4 12.4H21V21l-9.6-1.3z"/></svg></div>
           <div>
-            <h3>Docker</h3>
-            <div class="meta">Multi-arch (amd64 / arm64) · serves on :3001</div>
+            <h3>Windows</h3>
+            <div class="meta">x64 · NSIS installer (.exe)</div>
           </div>
         </div>
-        <p>The image bundles Node and <code>kubectl</code>. Mount your kubeconfig read-only and open the mapped port.</p>
-        <div class="code">
-          <div class="code-head"><span>Terminal</span><button class="copy-btn" data-copy="run"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div>
-<pre id="run"><span class="cmt"># pull &amp; run — UI on http://localhost:8080</span>
-docker run --rm <span class="flag">-p</span> 8080:3001 \
-  <span class="flag">-v</span> "$HOME/.kube:/home/node/.kube:ro" \
-  <span class="img">praveenraghav/k8s-manager-ui:latest</span></pre>
-        </div>
-        <div class="code">
-          <div class="code-head"><span>Pull only</span><button class="copy-btn" data-copy="pull"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div>
-<pre id="pull">docker pull <span class="img">praveenraghav/k8s-manager-ui:latest</span></pre>
-        </div>
+        <p>A standard per-user installer with a Start-menu shortcut. Bundles Node so only <code>kubectl</code> needs to be on your PATH.</p>
+        <a class="btn btn-primary" href="https://github.com/praveenraghav01/k8s-manager-ui/releases/latest">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+          Download .exe
+        </a>
         <ol class="steps">
-          <li>Optionally enable the AI assistant with your own OpenAI-compatible endpoint — <code>-e LLM_BASE_URL=…</code> <code>-e LLM_API_KEY=…</code> <code>-e LLM_MODEL=…</code> (needs a paid LLM subscription).</li>
-          <li>For EKS/GKE/AKS, ensure the cloud auth CLI is available or use a static-token kubeconfig.</li>
+          <li>Run the installer and follow the prompts.</li>
+          <li>SmartScreen: <b>More info → Run anyway</b> (unsigned).</li>
+          <li>Requires <code>kubectl</code> on your PATH.</li>
+        </ol>
+      </div>
+
+      <!-- LINUX -->
+      <div class="dl-card reveal">
+        <div class="head">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 2.2c-1.9 0-3.1 1.5-3.1 3.6 0 .9.1 1.6.1 2.3 0 1-.6 1.7-1.5 3C6.4 14 5.5 15.6 5.5 17.3c0 .7.3 1.1.9 1.4-.2.4-.3.7-.3 1.1 0 .8.7 1.1 1.7 1.1h8.4c1 0 1.7-.3 1.7-1.1 0-.4-.1-.7-.3-1.1.6-.3.9-.7.9-1.4 0-1.7-.9-3.3-2-5.2-.9-1.3-1.5-2-1.5-3 0-.7.1-1.4.1-2.3 0-2.1-1.2-3.6-3.1-3.6z"/></svg></div>
+          <div>
+            <h3>Linux</h3>
+            <div class="meta">x64 · AppImage &amp; .deb</div>
+          </div>
+        </div>
+        <p>A portable <code>.AppImage</code> that runs anywhere, or a <code>.deb</code> for Debian &amp; Ubuntu with a desktop entry.</p>
+        <a class="btn btn-primary" href="https://github.com/praveenraghav01/k8s-manager-ui/releases/latest">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+          Download for Linux
+        </a>
+        <ol class="steps">
+          <li><code>chmod +x</code> the AppImage, or <code>dpkg -i</code> the .deb.</li>
+          <li>Launch k8sight from your app menu.</li>
+          <li>Requires <code>kubectl</code> on your PATH.</li>
         </ol>
       </div>
     </div>
@@ -593,6 +893,9 @@ docker run --rm <span class="flag">-p</span> 8080:3001 \
       <span class="tag">📄 A working <code>kubeconfig</code></span>
       <span class="tag">📊 metrics-server for live CPU/memory</span>
     </div>
+    <p style="text-align:center; margin-top:26px; color:var(--text-mute); font-size:13.5px;">
+      Looking for a specific version or checksums? See <a style="color:var(--brand-light); text-decoration:underline; text-underline-offset:2px;" href="https://github.com/praveenraghav01/k8s-manager-ui/releases" target="_blank" rel="noopener">all releases on GitHub</a>.
+    </p>
   </div>
 </section>
 
@@ -600,13 +903,13 @@ docker run --rm <span class="flag">-p</span> 8080:3001 \
 <section class="final">
   <div class="wrap reveal">
     <h2>Ready to see your cluster clearly?</h2>
-    <p>Install the macOS app or pull the container — you'll be exploring workloads in under a minute.</p>
+    <p>Install k8sight on macOS, Windows or Linux — you'll be exploring workloads in under a minute.</p>
     <div class="cta-row">
-      <a class="btn btn-primary" href="https://github.com/praveenraghav01/k8s-manager-ui/releases/download/v1.3.0/Kubernetes.Manager-1.3.0-arm64.dmg">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.365 1.43c0 1.14-.42 2.2-1.12 3.02-.84.99-2.22 1.75-3.36 1.66-.14-1.12.43-2.3 1.08-3.04C13.78 2.05 15.3 1.4 16.365 1.43zM20.9 17.02c-.55 1.27-.82 1.84-1.53 2.96-1 1.56-2.4 3.5-4.15 3.51-1.55.02-1.95-1.02-4.05-1.01-2.1.01-2.54 1.03-4.1 1.02-1.74-.02-3.07-1.77-4.07-3.33C1.16 15.66.8 10.55 3.05 7.83c1.02-1.24 2.5-1.97 4.06-1.97 1.6 0 2.6 1.02 3.92 1.02 1.28 0 2.06-1.02 3.91-1.02 1.38 0 2.85.75 3.9 2.05-3.43 1.88-2.87 6.78.06 8.08z"/></svg>
-        Download for macOS
+      <a class="btn btn-primary" href="#download">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+        Download k8sight
       </a>
-      <a class="btn btn-ghost" href="#docker">Run with Docker</a>
+      <a class="btn btn-ghost" href="https://github.com/praveenraghav01/k8s-manager-ui" target="_blank" rel="noopener">View on GitHub</a>
     </div>
   </div>
 </section>
@@ -615,13 +918,14 @@ docker run --rm <span class="flag">-p</span> 8080:3001 \
   <div class="wrap">
     <a class="brand" href="#top">
       <img class="logo" src="assets/icon.svg" alt="" />
-      <span>Kubernetes Manager<small>© 2026 · MIT-style open source</small></span>
+      <span>k8sight<small>© 2026 · MIT-style open source</small></span>
     </a>
     <div class="links">
       <a href="#features">Features</a>
+      <a href="#cloud">Cloud</a>
+      <a href="#docs">Docs</a>
       <a href="#download">Download</a>
       <a href="https://github.com/praveenraghav01/k8s-manager-ui" target="_blank" rel="noopener">GitHub</a>
-      <a href="https://hub.docker.com/r/praveenraghav/k8s-manager-ui" target="_blank" rel="noopener">Docker Hub</a>
     </div>
     <div class="copy">Built for developers and platform teams. Requires a Kubernetes cluster and a valid kubeconfig. Not affiliated with the Kubernetes project or the CNCF.</div>
   </div>
@@ -638,7 +942,7 @@ docker run --rm <span class="flag">-p</span> 8080:3001 \
   document.querySelectorAll('.copy-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const el = document.getElementById(btn.dataset.copy);
-      const text = el.innerText.replace(/^#.*\n/, '').trim();
+      const text = el.innerText.replace(/\s*#.*$/gm, '').trim();
       try {
         await navigator.clipboard.writeText(text);
         const orig = btn.innerHTML;
