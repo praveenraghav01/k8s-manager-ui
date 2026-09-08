@@ -1,14 +1,23 @@
 name: Build & Release
 
 # Build the k8sight desktop app for macOS, Windows and Linux in parallel, then
-# attach the installers to a GitHub Release. Push a version tag (e.g. v1.4.0)
-# to build AND publish a release; run manually from the Actions tab to just
-# produce the build artifacts without publishing.
+# create a GitHub Release with the installers attached. You never create the
+# release by hand — the workflow builds first and publishes for you. Trigger it
+# either way:
+#   * push a version tag (e.g. `git push origin v1.4.1`), or
+#   * Actions -> Build & Release -> Run workflow, and type the version (e.g.
+#     v1.4.1); the workflow creates that tag + release at the current commit.
+# A manual run with an empty version just builds artifacts (no release).
 on:
   push:
     tags:
       - 'v*.*.*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to build & release (e.g. v1.4.1). Leave empty to only build artifacts.'
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -83,8 +92,9 @@ jobs:
     name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-latest
-    # Only publish for tag pushes; manual runs stop after producing artifacts.
-    if: startsWith(github.ref, 'refs/tags/')
+    # Publish for a pushed tag, or a manual run where a version was given.
+    # A manual run with an empty version skips this job (build artifacts only).
+    if: startsWith(github.ref, 'refs/tags/') || inputs.version != ''
     steps:
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
@@ -95,6 +105,9 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
+          # For a manual run, create this tag + release at the current commit;
+          # for a tag push, reuse the pushed tag.
+          tag_name: ${{ inputs.version || github.ref_name }}
           draft: false
           generate_release_notes: true
           fail_on_unmatched_files: true
