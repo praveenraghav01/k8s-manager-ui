@@ -57,10 +57,7 @@
     },
     "files": [
       "electron/**/*",
-      "server.js",
-      "assistant.js",
-      "mcp.js",
-      "mcp-stdio.js",
+      "*.js",
       "package.json",
       "client/dist/**/*"
     ],
