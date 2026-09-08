@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import Icon from './Icons';
 
 // Lightweight, app-wide toast notifications.
@@ -62,6 +62,14 @@ export function ToastProvider({ children }) {
     success: useCallback((m, o) => push('success', m, o), [push]),
     info: useCallback((m, o) => push('info', m, o), [push]),
   };
+
+  // Bridge for components outside the provider's React tree: they can raise a
+  // toast with window.dispatchEvent(new CustomEvent('toast', { detail })).
+  useEffect(() => {
+    const onToast = (e) => { const d = e.detail || {}; push(d.type || 'info', d.message, { title: d.title }); };
+    window.addEventListener('toast', onToast);
+    return () => window.removeEventListener('toast', onToast);
+  }, [push]);
 
   return (
     <ToastContext.Provider value={api}>

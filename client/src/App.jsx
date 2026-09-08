@@ -10,6 +10,8 @@ import Nodes from './components/Nodes';
 import Helm from './components/Helm';
 import CustomResourceDetail from './components/CustomResourceDetail';
 import Topology from './components/Topology';
+import AzureIntegration from './components/AzureIntegration';
+import AwsIntegration from './components/AwsIntegration';
 import Loader from './components/Loader';
 import Namespaces from './components/Namespaces';
 import KubeConfigModal from './components/KubeConfigModal';
@@ -17,6 +19,10 @@ import AuthErrorModal from './components/AuthErrorModal';
 import AccessControl from './components/AccessControl';
 import ArgoCD from './components/ArgoCD';
 import Assistant from './components/Assistant';
+import AgentPanel from './components/AgentPanel';
+import CommandPalette from './components/CommandPalette';
+import TopBar from './components/TopBar';
+import Preferences from './components/Preferences';
 import ClusterRail from './components/ClusterRail';
 import { useToast } from './components/Toast';
 
@@ -44,6 +50,9 @@ function App() {
   const [selectedNamespaces, setSelectedNamespaces] = useState(['all']);
   const [namespaces, setNamespaces] = useState([]);
   const [resourceType, setResourceType] = useState('overview');
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [history, setHistory] = useState({ stack: ['overview'], idx: 0 });
+  const navGuard = useRef(false);
   const [allResources, setAllResources] = useState({});
   const [selectedResource, setSelectedResource] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -51,7 +60,7 @@ function App() {
   const [focusResource, setFocusResource] = useState(null); // { type, namespace, name }
   const [focusNode, setFocusNode] = useState(null);
   const [crSelection, setCrSelection] = useState(null);
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'system');
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   // Auto-refresh cadence (key into REFRESH_OPTIONS). Defaults to 'auto' (= 1 min).
@@ -62,8 +71,17 @@ function App() {
   useEffect(() => { localStorage.setItem('refreshInterval', refreshInterval); }, [refreshInterval]);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
+    const mq = window.matchMedia('(prefers-color-scheme: light)');
+    const apply = () => {
+      const eff = theme === 'system' ? (mq.matches ? 'light' : 'dark') : theme;
+      document.documentElement.setAttribute('data-theme', eff);
+    };
+    apply();
+    if (theme === 'system') {
+      mq.addEventListener('change', apply);
+      return () => mq.removeEventListener('change', apply);
+    }
   }, [theme]);
   const fetchIdRef = useRef(0);
   const [navExpanded, setNavExpanded] = useState({
@@ -76,6 +94,15 @@ function App() {
   });
   // Which ArgoCD sub-view the sidebar is pointing at (dashboard/applications/…).
   const [argoView, setArgoView] = useState('dashboard');
+  const [showAzure, setShowAzure] = useState(false);
+  const [showAws, setShowAws] = useState(false);
+  const [prefSection, setPrefSection] = useState('general');
+  const [prefReturn, setPrefReturn] = useState('overview');
+  const [agentOpen, setAgentOpen] = useState(false);
+  const openPreferences = (section) => {
+    setResourceType((cur) => { if (cur !== 'preferences') setPrefReturn(cur); return 'preferences'; });
+    setPrefSection(section);
+  };
 
   const authOk = authState.ok;
 
@@ -200,6 +227,37 @@ function App() {
   };
   handleRefreshRef.current = handleRefresh;
 
+  // ⌘K / Ctrl+K opens the command palette.
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); setPaletteOpen((o) => !o); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Back/forward view history for the top bar. Record each view change unless it
+  // was driven by a back/forward navigation (navGuard) or is the settings overlay.
+  useEffect(() => {
+    if (navGuard.current) { navGuard.current = false; return; }
+    if (resourceType === 'preferences') return;
+    setHistory((h) => {
+      if (h.stack[h.idx] === resourceType) return h;
+      const stack = h.stack.slice(0, h.idx + 1).concat(resourceType);
+      return { stack, idx: stack.length - 1 };
+    });
+  }, [resourceType]);
+  const goBack = () => setHistory((h) => {
+    if (h.idx <= 0) return h;
+    const idx = h.idx - 1; navGuard.current = true; setResourceType(h.stack[idx]);
+    return { ...h, idx };
+  });
+  const goForward = () => setHistory((h) => {
+    if (h.idx >= h.stack.length - 1) return h;
+    const idx = h.idx + 1; navGuard.current = true; setResourceType(h.stack[idx]);
+    return { ...h, idx };
+  });
+
   // Auto-refresh timer. Fires the same handleRefresh used by the button, so it
   // works on every page. Uses a ref so the interval isn't torn down on each
   // page change / render — only when the cadence itself changes.
@@ -298,8 +356,11 @@ function App() {
   // Resolve a pending focus target once its list has loaded (cross-link navigation).
   useEffect(() => {
     if (!focusResource) return;
-    const list = allResources[focusResource.type + 's'] || [];
-    const match = list.find(r => r.name === focusResource.name && r.namespace === focusResource.namespace);
+    // Use the app's pluralisation (naive +'s' breaks e.g. storageClass→storageClasses).
+    const list = allResources[pluralKey(focusResource.type)] || [];
+    // Normalise namespace so cluster-scoped targets (StorageClass, PV, …) match
+    // whether the row/target uses '' or undefined.
+    const match = list.find(r => r.name === focusResource.name && (r.namespace || '') === (focusResource.namespace || ''));
     if (match) {
       setSelectedResource(match);
       setFocusResource(null);
@@ -354,6 +415,16 @@ function App() {
 
   return (
     <div className="app-shell">
+      {authOk && (
+        <TopBar
+          onBack={goBack}
+          onForward={goForward}
+          canBack={history.idx > 0}
+          canForward={history.idx < history.stack.length - 1}
+          onNotifications={() => setResourceType('events')}
+          onConfigureAi={() => openPreferences('external-tools')}
+        />
+      )}
       {serverUnreachable && configChecked && (
         <AuthErrorModal
           auth={{ reason: 'error', message: 'Cannot reach the backend server on port 3001. Is it running?' }}
@@ -377,8 +448,11 @@ function App() {
           onChangeConfig={() => setForceConfigModal(true)}
           retrying={authRetrying}
           contexts={configStatus.contexts || []}
+          contextsInfo={configStatus.contextsInfo}
           currentContext={configStatus.currentContext}
           onSwitchContext={switchContext}
+          onAddAzure={() => setShowAzure(true)}
+          onAddAws={() => setShowAws(true)}
         />
       )}
 
@@ -393,6 +467,21 @@ function App() {
           }}
         />
       )}
+
+      {showAzure && (
+        <AzureIntegration
+          onClose={() => setShowAzure(false)}
+          onImported={async () => { await fetchConfigStatus(); retryAuth(); }}
+        />
+      )}
+
+      {showAws && (
+        <AwsIntegration
+          onClose={() => setShowAws(false)}
+          onImported={async () => { await fetchConfigStatus(); retryAuth(); }}
+        />
+      )}
+
 
       {authOk ? (
         <div className="layout-main">
@@ -411,13 +500,15 @@ function App() {
             onToggleNav={toggleNavSection}
             crSelection={crSelection}
             onSelectCustomResource={(sel) => { setResourceType('customResources'); setCrSelection(sel); }}
-            theme={theme}
-            onToggleTheme={() => setTheme(t => (t === 'dark' ? 'light' : 'dark'))}
             argocdInstalled={argocdInstalled}
             argoView={resourceType === 'argocd' ? argoView : null}
             onSelectArgoView={(v) => { setArgoView(v); setResourceType('argocd'); }}
+            onAddAzure={() => setShowAzure(true)}
+            onAddAws={() => setShowAws(true)}
+            onOpenPreferences={() => openPreferences('general')}
           />
 
+          <div className="content-col">
           {resourceType === 'overview' ? (
             <Overview
               allResources={allResources}
@@ -443,6 +534,17 @@ function App() {
             <AccessControl key={`ac-${refreshNonce}`} onNavigate={nav} />
           ) : resourceType === 'argocd' ? (
             <ArgoCD onNavigate={nav} refreshSignal={refreshNonce} view={argoView} onViewChange={setArgoView} />
+          ) : resourceType === 'preferences' ? (
+            <Preferences
+              configStatus={configStatus}
+              theme={theme}
+              onSetTheme={setTheme}
+              onChangeConfig={() => setForceConfigModal(true)}
+              onAddAzure={() => setShowAzure(true)}
+              onAddAws={() => setShowAws(true)}
+              initialSection={prefSection}
+              onClose={() => setResourceType(prefReturn || 'overview')}
+            />
           ) : (
             <ResourceViewer
               resourceType={resourceType}
@@ -461,6 +563,8 @@ function App() {
               onRefresh={handleRefresh}
             />
           )}
+          <AgentPanel context={{ currentContext: configStatus.currentContext }} onOpenChange={setAgentOpen} />
+          </div>
         </div>
       ) : !configChecked ? (
         <div className="loading-state">
@@ -474,6 +578,20 @@ function App() {
         // A modal (config / auth / server error) is overlaid above; keep a
         // neutral backdrop underneath it.
         <div className="loading-state" />
+      )}
+
+      {authOk && (
+        <CommandPalette
+          open={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+          onNavigate={(k) => setResourceType(k)}
+          contexts={configStatus.contexts || []}
+          currentContext={configStatus.currentContext}
+          onSwitchContext={switchContext}
+          onOpenPreferences={() => openPreferences('general')}
+          onRefresh={handleRefresh}
+          onSetTheme={setTheme}
+        />
       )}
     </div>
   );

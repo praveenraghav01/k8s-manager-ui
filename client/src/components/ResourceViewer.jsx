@@ -10,10 +10,13 @@ import ContextMenu from './ContextMenu';
 import Loader from './Loader';
 import Icon from './Icons';
 import { useToast } from './Toast';
+import { askLabel, aiToolIcon } from '../aiConfig';
 
 // workloads whose replica count can be scaled / rolled out
 const SCALABLE = new Set(['deployment', 'statefulSet', 'replicaSet', 'replicationController']);
 const RESTARTABLE = new Set(['deployment', 'statefulSet', 'daemonSet']);
+// resource kinds that have per-pod logs & live CPU/memory metrics worth analyzing
+const HAS_LOGS_METRICS = new Set(['pod', 'deployment', 'statefulSet', 'daemonSet', 'replicaSet', 'replicationController', 'job', 'cronJob']);
 
 const TAB_META = {
   logs: { icon: 'logs', label: 'Logs' },
@@ -119,8 +122,43 @@ export default function ResourceViewer({
     }
   };
 
+  // "Ask <AI tool>" — hand the resource to the chosen AI (a CLI agent terminal,
+  // or the built-in chat) with an action-specific prompt. Routing is automatic:
+  // the `assistant:ask` event opens the agent terminal for CLI tools, or the
+  // chat window for the built-in assistant.
+  const kindLabel = (RESOURCE_LABELS[resourceType]?.label || resourceType).replace(/s$/, '');
+  const askAi = (res, action) => {
+    const where = `the Kubernetes ${kindLabel} "${res.name}"${res.namespace ? ` in namespace ${res.namespace}` : ''}`;
+    const ctx = 'Your kubeconfig context is already set to this cluster — use kubectl directly.';
+    const prompts = {
+      summarize: `Summarize ${where}: its purpose, current status and health, and anything notable. ${ctx}`,
+      events: `Analyze the recent events for ${where}. Inspect kubectl events / describe, surface any warnings or errors, and explain the likely cause and how to fix them. ${ctx}`,
+      metrics: `Analyze resource usage (CPU and memory) for ${where}. Use kubectl top plus the configured requests/limits; flag saturation, throttling or waste and recommend right-sizing. ${ctx}`,
+      logs: `Analyze the logs of ${where}. Fetch recent logs with kubectl logs, surface errors and warnings with their likely root cause, and suggest next steps. ${ctx}`,
+      related: `Find and analyze the resources related to ${where} — owner references, selectors, Services, Endpoints, ConfigMaps/Secrets and PVCs. Explain how they connect and whether any are unhealthy. ${ctx}`,
+    };
+    toast.info(`${res.name} · ${action}`, { title: askLabel() });
+    window.dispatchEvent(new CustomEvent('assistant:ask', { detail: { prompt: prompts[action] } }));
+  };
+
+  const askAiItem = (res) => {
+    const children = [
+      { icon: 'sparkles', label: 'Summarize', onClick: () => askAi(res, 'summarize') },
+      { icon: 'events', label: 'Analyze events', onClick: () => askAi(res, 'events') },
+    ];
+    if (HAS_LOGS_METRICS.has(resourceType)) {
+      children.push({ icon: 'cpu', label: 'Analyze metrics', onClick: () => askAi(res, 'metrics') });
+      children.push({ icon: 'logs', label: 'Analyze logs', onClick: () => askAi(res, 'logs') });
+    }
+    children.push({ icon: 'topology', label: 'Analyze related resources', onClick: () => askAi(res, 'related') });
+    return { icon: aiToolIcon(), label: askLabel(), children };
+  };
+
   const menuItems = (res) => {
-    const items = [{ icon: 'details', label: 'Details', onClick: () => onSelectResource(res) }];
+    const items = [
+      { icon: 'details', label: 'Details', onClick: () => onSelectResource(res) },
+      askAiItem(res),
+    ];
     if (resourceType === 'pod') {
       const cns = res.containerNames || [];
       if (cns.length > 1) {
@@ -443,6 +481,7 @@ export default function ResourceViewer({
                     selectedResource?.name === resource.name ? 'active' : ''
                   } ${isRowSelected(resource) ? 'selected' : ''}`}
                   onClick={() => onSelectResource(resource)}
+                  onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, resource }); }}
                 >
                   <td className="ck-col" onClick={(e) => e.stopPropagation()}>
                     <input

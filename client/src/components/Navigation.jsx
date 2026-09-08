@@ -13,11 +13,12 @@ export default function Navigation({
   onToggleNav,
   crSelection,
   onSelectCustomResource,
-  theme,
-  onToggleTheme,
   argocdInstalled,
   argoView,
-  onSelectArgoView
+  onSelectArgoView,
+  onAddAzure,
+  onAddAws,
+  onOpenPreferences
 }) {
   // Route context changes through the app-level switch so the new cluster's
   // namespaces + resources are re-fetched (a plain POST leaves the UI empty).
@@ -115,9 +116,9 @@ export default function Navigation({
             <Icon name="logo" size={19} strokeWidth={1.8} />
           </div>
           <div className="nav-brand-text">
-            <span className="nav-brand-title">Kubernetes</span>
+            <span className="nav-brand-title">k8sight</span>
             <span className="nav-brand-sub">
-              Manager
+              Kubernetes
               {typeof __APP_VERSION__ !== 'undefined' && (
                 <span className="nav-brand-version">v{__APP_VERSION__}</span>
               )}
@@ -125,17 +126,20 @@ export default function Navigation({
           </div>
           <button
             className="theme-toggle"
-            onClick={onToggleTheme}
-            title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+            onClick={onOpenPreferences}
+            title="Preferences"
           >
-            <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={16} />
+            <Icon name="settings" size={16} />
           </button>
         </div>
         <div className="nav-cluster">Context</div>
         <ContextSelector
           contexts={configStatus.contexts || []}
+          contextsInfo={configStatus.contextsInfo}
           currentContext={configStatus.currentContext}
           onChange={handleContextChange}
+          onAddAzure={onAddAzure}
+          onAddAws={onAddAws}
         />
       </div>
 
