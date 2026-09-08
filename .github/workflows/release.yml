@@ -1,8 +1,9 @@
 name: Build & Release
 
-# Build the k8sight desktop app for macOS, Windows and Linux, then attach the
-# installers to a GitHub Release. Push a version tag (e.g. v1.3.0) to cut a
-# release, or run manually from the Actions tab to just build the artifacts.
+# Build the k8sight desktop app for macOS, Windows and Linux in parallel, then
+# attach the installers to a GitHub Release. Push a version tag (e.g. v1.4.0)
+# to build AND publish a release; run manually from the Actions tab to just
+# produce the build artifacts without publishing.
 on:
   push:
     tags:
@@ -12,19 +13,31 @@ on:
 permissions:
   contents: write
 
+# Only one release run per ref at a time; cancel superseded runs.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    name: Build (${{ matrix.os }})
+    name: Build ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
     strategy:
+      # Build every platform even if one fails, so a single flaky OS doesn't
+      # block the others. Each matrix leg runs on its own runner in parallel.
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
+          # macos-14 is Apple Silicon, so the arm64 .dmg builds natively.
+          - os: macos-14
+            name: macOS (arm64)
             artifact: mac
           - os: windows-latest
+            name: Windows (x64)
             artifact: windows
           - os: ubuntu-latest
+            name: Linux (x64)
             artifact: linux
     steps:
       - name: Checkout
@@ -35,6 +48,9 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            client/package-lock.json
 
       - name: Install root dependencies
         run: npm ci
@@ -68,9 +84,10 @@ jobs:
     name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-latest
+    # Only publish for tag pushes; manual runs stop after producing artifacts.
     if: startsWith(github.ref, 'refs/tags/')
     steps:
-      - name: Download all artifacts
+      - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
           path: dist
@@ -81,6 +98,7 @@ jobs:
         with:
           draft: false
           generate_release_notes: true
+          fail_on_unmatched_files: true
           files: |
             dist/*.dmg
             dist/*.zip
