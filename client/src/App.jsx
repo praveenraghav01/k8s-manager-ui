@@ -22,7 +22,6 @@ import Assistant from './components/Assistant';
 import AgentPanel from './components/AgentPanel';
 import CommandPalette from './components/CommandPalette';
 import TopBar from './components/TopBar';
-import AiToolButton from './components/AiToolButton';
 import Preferences from './components/Preferences';
 import ClusterRail from './components/ClusterRail';
 import { useToast } from './components/Toast';
@@ -581,8 +580,6 @@ function App() {
         <div className="loading-state" />
       )}
 
-      {/* Floating "Ask AI" button; the agent terminal docks in the content column. */}
-      {authOk && !agentOpen && resourceType !== 'preferences' && <AiToolButton onConfigure={() => openPreferences('external-tools')} />}
       {authOk && (
         <CommandPalette
           open={paletteOpen}

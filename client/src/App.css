@@ -2536,27 +2536,6 @@ span.xlink.resource-name-cell { color: var(--accent); }
 }
 .assistant-fab:hover { transform: translateY(-2px); filter: brightness(1.06); }
 
-/* AI-tool launcher (bottom-right) — shows the chosen tool's icon; opens its
-   terminal (CLI agent) or the chat window (built-in). */
-.ai-tool-fab {
-  position: fixed;
-  right: 22px;
-  bottom: 22px;
-  z-index: 950;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  border: none;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  color: #fff;
-  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-  box-shadow: var(--shadow-3);
-  transition: transform 0.12s ease, filter 0.12s ease;
-}
-.ai-tool-fab:hover { transform: translateY(-2px); filter: brightness(1.06); }
-
 .assistant-panel {
   position: fixed;
   right: 22px;
