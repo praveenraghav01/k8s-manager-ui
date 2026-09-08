@@ -6,6 +6,7 @@
     "name": "Praveen Kumar",
     "email": "praveensinghraghav96@gmail.com"
   },
+  "license": "MIT",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {

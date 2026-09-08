@@ -1,5 +1,12 @@
 # k8sight
 
+[![Build & Release](https://github.com/praveenraghav01/k8s-manager-ui/actions/workflows/release.yml/badge.svg)](https://github.com/praveenraghav01/k8s-manager-ui/actions/workflows/release.yml)
+[![Latest release](https://img.shields.io/github/v/release/praveenraghav01/k8s-manager-ui?sort=semver)](https://github.com/praveenraghav01/k8s-manager-ui/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/praveenraghav01/k8s-manager-ui/total)](https://github.com/praveenraghav01/k8s-manager-ui/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-informational)
+![Built with Electron](https://img.shields.io/badge/built%20with-Electron-47848F?logo=electron&logoColor=white)
+
 A beautiful, native **desktop app** (macOS · Windows · Linux) — and a Docker image — for browsing and operating any Kubernetes cluster from your local `kubeconfig`.
 
 ![k8sight — cluster dashboard](docs/screenshot-dashboard.png)
