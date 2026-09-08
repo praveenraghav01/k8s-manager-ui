@@ -3,8 +3,8 @@
   "version": "1.4.0",
   "description": "Kubernetes resource manager UI",
   "author": {
-    "name": "Praveen Raghav",
-    "email": "praveenraghav01@users.noreply.github.com"
+    "name": "Praveen Kumar",
+    "email": "praveensinghraghav96@gmail.com"
   },
   "type": "module",
   "main": "electron/main.cjs",
