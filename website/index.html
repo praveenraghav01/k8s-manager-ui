@@ -538,11 +538,23 @@
 <!-- AI ASSISTANT -->
 <section class="band" id="assistant">
   <div class="wrap sec">
+    <div class="sec-head reveal">
+      <span class="kicker" style="color:var(--purple);">Bring your own LLM</span>
+      <h2>An AI assistant that actually reads your cluster</h2>
+      <p>Pick your model in the top toolbar and ask in plain English — <em>“why is this pod not ready?”</em> or <em>“any warning events in kube-system?”</em>. It runs an agentic tool-use loop over read-only cluster data and streams the answer back token by token.</p>
+    </div>
+    <div class="shot-wrap reveal" style="margin-bottom:52px;">
+      <div class="shot-glow"></div>
+      <div class="shot-frame">
+        <div class="shot-bar">
+          <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+          <span class="addr">k8sight · AI Assistant — connect your LLM API</span>
+        </div>
+        <img src="assets/screenshot-ai.png" alt="k8sight AI assistant panel showing the bring-your-own OpenAI-compatible API connection form with base URL, model and API key fields" />
+      </div>
+    </div>
     <div class="split">
       <div class="reveal">
-        <span class="kicker">Bring your own LLM</span>
-        <h2>An AI assistant that actually reads your cluster</h2>
-        <p>Pick your model in the top toolbar and ask in plain English — <em>“why is this pod not ready?”</em> or <em>“any warning events in kube-system?”</em>. It runs an agentic tool-use loop over read-only cluster data and streams the answer back token by token.</p>
         <ul class="checklist">
           <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Read-only by design</b> — it can never modify your cluster; it shows you the <code>kubectl</code> command when a change is needed.</span></li>
           <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Grounded in live data</b> — calls tools like logs, events and describe to base every answer on your real cluster.</span></li>
