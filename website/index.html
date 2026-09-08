@@ -309,6 +309,47 @@
   footer .links a:hover { color: var(--text); }
   footer .copy { color: var(--text-mute); font-size: 13px; width: 100%; padding-top: 8px; border-top: 1px solid var(--border); }
 
+  /* ---------- Download / coffee modal ---------- */
+  .dl-modal-scrim {
+    position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 24px;
+    background: rgba(0,0,0,.6); backdrop-filter: blur(6px);
+    opacity: 0; transition: opacity .25s var(--ease-out);
+  }
+  .dl-modal-scrim[hidden] { display: none; }
+  .dl-modal-scrim.show { opacity: 1; }
+  .dl-modal {
+    position: relative; width: 100%; max-width: 420px; text-align: center;
+    background: linear-gradient(180deg, var(--panel), var(--bg-2));
+    border: 1px solid var(--border-2); border-radius: 20px; padding: 36px 32px 30px;
+    box-shadow: 0 40px 120px rgba(0,0,0,.7);
+    /* materialize: scale + fade in together */
+    transform: scale(.92); opacity: 0;
+    transition: transform .3s var(--ease-spring), opacity .25s var(--ease-out);
+  }
+  .dl-modal-scrim.show .dl-modal { transform: scale(1); opacity: 1; }
+  .dl-modal .dl-emoji { font-size: 42px; line-height: 1; margin-bottom: 12px; }
+  .dl-modal h3 { font-size: 20px; letter-spacing: -.01em; margin-bottom: 10px; }
+  .dl-modal p { color: var(--text-dim); font-size: 14.5px; margin-bottom: 22px; }
+  .dl-modal .bmc { display: inline-block; transition: transform .15s var(--ease-out); }
+  .dl-modal .bmc:hover { transform: translateY(-2px) scale(1.02); }
+  .dl-modal .bmc:active { transform: scale(.98); }
+  .dl-modal .bmc img { height: 50px; width: auto; border-radius: 12px; }
+  .dl-count { margin-top: 24px; font-size: 13.5px; color: var(--text-mute); }
+  .dl-count b { color: var(--brand-light); font-variant-numeric: tabular-nums; }
+  .dl-now { display: inline-block; margin-top: 12px; font-size: 13.5px; color: var(--brand-light); text-decoration: underline; text-underline-offset: 3px; }
+  .dl-now:hover { color: #fff; }
+  .dl-close {
+    position: absolute; top: 12px; right: 14px; width: 30px; height: 30px; border-radius: 9px;
+    border: 1px solid var(--border); background: var(--panel-2); color: var(--text-dim);
+    font-size: 18px; line-height: 1; cursor: pointer; transition: color .15s, border-color .15s;
+  }
+  .dl-close:hover { color: var(--text); border-color: var(--border-2); }
+  @media (prefers-reduced-motion: reduce) {
+    .dl-modal { transform: none; transition: opacity .15s; }
+    .dl-modal-scrim.show .dl-modal { transform: none; }
+  }
+  @media (prefers-reduced-transparency: reduce) { .dl-modal-scrim { background: rgba(0,0,0,.9); backdrop-filter: none; } }
+
   /* ---------- Reveal animation ---------- */
   .reveal { opacity: 0; transform: translateY(24px); transition: opacity .6s var(--ease-out), transform .6s var(--ease-out); }
   .reveal.in { opacity: 1; transform: none; }
@@ -833,7 +874,7 @@ git push origin v1.3.0</pre></div>
           </div>
         </div>
         <p>A native <code>k8sight.app</code> that starts the server and opens the UI in its own window, with your shell <code>PATH</code> repaired automatically.</p>
-        <a class="btn btn-primary" href="https://github.com/praveenraghav01/k8s-manager-ui/releases/latest">
+        <a class="btn btn-primary" data-os="the macOS .dmg" href="https://github.com/praveenraghav01/k8s-manager-ui/releases/latest">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
           Download .dmg
         </a>
@@ -854,7 +895,7 @@ git push origin v1.3.0</pre></div>
           </div>
         </div>
         <p>A standard per-user installer with a Start-menu shortcut. Bundles Node so only <code>kubectl</code> needs to be on your PATH.</p>
-        <a class="btn btn-primary" href="https://github.com/praveenraghav01/k8s-manager-ui/releases/latest">
+        <a class="btn btn-primary" data-os="the Windows installer" href="https://github.com/praveenraghav01/k8s-manager-ui/releases/latest">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
           Download .exe
         </a>
@@ -875,7 +916,7 @@ git push origin v1.3.0</pre></div>
           </div>
         </div>
         <p>A portable <code>.AppImage</code> that runs anywhere, or a <code>.deb</code> for Debian &amp; Ubuntu with a desktop entry.</p>
-        <a class="btn btn-primary" href="https://github.com/praveenraghav01/k8s-manager-ui/releases/latest">
+        <a class="btn btn-primary" data-os="the Linux build" href="https://github.com/praveenraghav01/k8s-manager-ui/releases/latest">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
           Download for Linux
         </a>
@@ -931,7 +972,65 @@ git push origin v1.3.0</pre></div>
   </div>
 </footer>
 
+<!-- DOWNLOAD / COFFEE MODAL -->
+<div class="dl-modal-scrim" id="dlModal" hidden>
+  <div class="dl-modal" role="dialog" aria-modal="true" aria-labelledby="dlTitle">
+    <button class="dl-close" id="dlClose" aria-label="Close">&times;</button>
+    <div class="dl-emoji">☕️</div>
+    <h3 id="dlTitle">Thanks for trying k8sight!</h3>
+    <p>It&rsquo;s free and open-source. If it saves you time, a coffee helps keep it going — no pressure, your download is on its way.</p>
+    <a class="bmc" href="https://www.buymeacoffee.com/praveenraghav01" target="_blank" rel="noopener">
+      <img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=praveenraghav01&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" alt="Buy me a coffee" />
+    </a>
+    <div class="dl-count">Starting <span id="dlOs">your download</span> in <b id="dlSecs">10</b>s&hellip;</div>
+    <a class="dl-now" id="dlNow" href="#">Download now</a>
+  </div>
+</div>
+
 <script>
+  // Download → coffee modal with a 10s countdown, then start the download
+  (function () {
+    const scrim = document.getElementById('dlModal');
+    if (!scrim) return;
+    const secsEl = document.getElementById('dlSecs');
+    const osEl = document.getElementById('dlOs');
+    const nowLink = document.getElementById('dlNow');
+    const closeBtn = document.getElementById('dlClose');
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let timer = null, url = null;
+
+    function start(u, label) {
+      url = u;
+      nowLink.href = u;
+      osEl.textContent = label || 'your download';
+      let n = 10;
+      secsEl.textContent = n;
+      scrim.hidden = false;
+      requestAnimationFrame(() => scrim.classList.add('show'));
+      clearInterval(timer);
+      timer = setInterval(() => {
+        n -= 1;
+        secsEl.textContent = Math.max(n, 0);
+        if (n <= 0) { clearInterval(timer); go(); }
+      }, 1000);
+    }
+    function go() { if (url) window.location.assign(url); }
+    function close() {
+      clearInterval(timer);
+      scrim.classList.remove('show');
+      setTimeout(() => { scrim.hidden = true; }, reduce ? 0 : 250);
+    }
+
+    document.querySelectorAll('#download .dl-card a.btn-primary').forEach((a) => {
+      a.addEventListener('click', (e) => { e.preventDefault(); start(a.getAttribute('href'), a.dataset.os); });
+    });
+    // "Download now" is a real anchor — just stop the timer and let it navigate.
+    nowLink.addEventListener('click', () => clearInterval(timer));
+    closeBtn.addEventListener('click', close);
+    scrim.addEventListener('click', (e) => { if (e.target === scrim) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !scrim.hidden) close(); });
+  })();
+
   // Mobile menu
   const menuBtn = document.getElementById('menuBtn');
   const navLinks = document.getElementById('navLinks');
