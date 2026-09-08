@@ -1,6 +1,6 @@
 {
   "name": "k8s-manager-ui",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Kubernetes resource manager UI",
   "type": "module",
   "main": "electron/main.cjs",
@@ -68,9 +68,7 @@
       "category": "public.app-category.developer-tools",
       "icon": "build/icon.icns",
       "identity": null,
-      "hardenedRuntime": true,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist",
+      "hardenedRuntime": false,
       "target": [
         {
           "target": "dmg",

@@ -10,12 +10,10 @@
 // here — after the .app is packed, before any DMG is built — so both the
 // unpacked app and the DMG contain a runnable, ad-hoc-signed bundle.
 //
-// Because this app forks a Node utility process and loads an unpacked native
-// `.node` addon (asarUnpack), a bare `codesign --deep -s -` is not enough: the
-// bundle needs the hardened runtime plus entitlements (JIT, unsigned exec
-// memory, relaxed library validation, dyld env vars) or it crashes on launch.
-// We sign nested code first (inside-out), then the app bundle with those
-// entitlements.
+// We sign every nested Mach-O first (frameworks, helpers, dylibs, the unpacked
+// `.node` addon) and then the app bundle, inside-out, which is the order
+// codesign requires. We deliberately do NOT enable the hardened runtime — see
+// the note on `sign()` below.
 //
 // This is NOT a substitute for Developer ID signing + notarization if you
 // intend to distribute the app to other machines (those users would still get
@@ -31,12 +29,18 @@ exports.default = async function afterPack(context) {
 
   const appName = context.packager.appInfo.productFilename;
   const appPath = path.join(context.appOutDir, `${appName}.app`);
-  const entitlements = path.join(context.packager.projectDir, 'build', 'entitlements.mac.plist');
 
-  const sign = (target, extraArgs = []) => {
+  // Plain ad-hoc signature, WITHOUT the hardened runtime. Hardened runtime
+  // turns on library validation, which requires every loaded library to share
+  // the main executable's Team ID or be an Apple platform binary. Ad-hoc
+  // signatures carry no Team ID, so a hardened helper refuses to load the
+  // ad-hoc Electron Framework ("mapping process and mapped file have different
+  // Team IDs", dyld). An ad-hoc build can never be notarized anyway, so the
+  // hardened runtime buys us nothing here — omit it and the app runs.
+  const sign = (target) => {
     execFileSync(
       'codesign',
-      ['--force', '--timestamp=none', '--options', 'runtime', '--sign', '-', ...extraArgs, target],
+      ['--force', '--timestamp=none', '--sign', '-', target],
       { stdio: 'inherit' },
     );
   };
@@ -49,8 +53,8 @@ exports.default = async function afterPack(context) {
     const nested = collectNested(path.join(appPath, 'Contents'));
     for (const p of nested) sign(p);
 
-    // 2. The app bundle itself, with the entitlements the runtime needs.
-    sign(appPath, ['--entitlements', entitlements]);
+    // 2. The app bundle itself.
+    sign(appPath);
 
     // 3. Verify the signature is valid before a DMG is built around it.
     execFileSync('codesign', ['--verify', '--deep', '--strict', '--verbose=2', appPath], {
