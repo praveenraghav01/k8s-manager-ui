@@ -72,6 +72,7 @@
       "icon": "build/icon.icns",
       "identity": null,
       "hardenedRuntime": false,
+      "artifactName": "${productName}-macos.${ext}",
       "target": [
         {
           "target": "dmg",
@@ -89,6 +90,7 @@
       "icon": "build/icon.png",
       "synopsis": "A desktop UI for browsing and operating Kubernetes clusters",
       "syncDesktopName": true,
+      "artifactName": "${productName}-linux.${ext}",
       "target": [
         "AppImage",
         "deb"
@@ -96,6 +98,7 @@
     },
     "win": {
       "icon": "build/icon.png",
+      "artifactName": "${productName}-windows.${ext}",
       "target": [
         "nsis"
       ]
