@@ -1,11 +1,24 @@
-# Kubernetes Manager UI
+# k8sight
 
-A modern web UI for browsing and operating a Kubernetes cluster using your local `kubeconfig`.
+[![Build & Release](https://github.com/praveenraghav01/k8s-manager-ui/actions/workflows/release.yml/badge.svg)](https://github.com/praveenraghav01/k8s-manager-ui/actions/workflows/release.yml)
+[![Latest release](https://img.shields.io/github/v/release/praveenraghav01/k8s-manager-ui?sort=semver)](https://github.com/praveenraghav01/k8s-manager-ui/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/praveenraghav01/k8s-manager-ui/total)](https://github.com/praveenraghav01/k8s-manager-ui/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-informational)
+![Built with Electron](https://img.shields.io/badge/built%20with-Electron-47848F?logo=electron&logoColor=white)
 
-![Kubernetes Manager — cluster dashboard](docs/screenshot-dashboard.png)
+A beautiful, native **desktop app** (macOS · Windows · Linux) — and a Docker image — for browsing and operating any Kubernetes cluster from your local `kubeconfig`.
+
+![k8sight — cluster dashboard](docs/screenshot-dashboard.png)
+
+> **Download:** grab the latest macOS `.dmg`, Windows `.exe`, or Linux `.AppImage`/`.deb` from the [**Releases**](https://github.com/praveenraghav01/k8s-manager-ui/releases/latest) page. See [Run — Desktop app](#run--desktop-app-electron) to build it yourself, or [Run — Docker](#run--docker) to run it anywhere.
 
 ## Features
 
+- **Native desktop app** — packaged for **macOS, Windows and Linux** (plus a Docker image), with a native title bar (traffic lights, back/forward history) and a right-side launcher that shows the chosen AI model/agent.
+- **Command palette (⌘K)** — a Spotlight-style palette to jump to any view, cluster, or action from the keyboard.
+- **Built-in AI assistant (bring your own LLM)** — a read-only, tool-using debugging session over live cluster data; connect any OpenAI-compatible endpoint (TrueFoundry, OpenAI, Azure OpenAI, LiteLLM, …). Secrets are redacted before anything leaves the app.
+- **Docked coding agents** — detects **Claude Code, GitHub Copilot CLI, Gemini CLI, Codex and opencode** on your `PATH` and opens the one you pick in a panel beside the pod terminal. External tools are shown with their official logos.
 - **One-click Azure AKS integration** — two sign-in methods: **Browser** (CLI-free — Azure AD auth-code + PKCE in your system browser + the ARM REST API; works with managed-device Conditional Access, since the browser carries the device's compliance state) or the **Azure CLI (`az`)** if you prefer it or the browser flow is blocked. Either way, auto-discover every AKS cluster you can access across all subscriptions and add the ones you pick to your kubeconfig in one step. Also offered on the "could not connect" screen, so an expired Azure session is one click from re-auth.
 - **One-click AWS EKS integration** — the same, for EKS, and **no `aws` CLI required**: it's built on the AWS SDK, so sign-in and discovery run in-process. Sign in via **AWS SSO** (IAM Identity Center device flow — enter your start URL or pick a profile), **access keys** (IAM user), or an **assume-role** profile, then auto-discover every EKS cluster across **all accounts and regions** and add the ones you pick. Cluster auth is generated natively (a bundled `eks-token.js` helper signs the STS request), so even *using* the imported clusters needs no `aws` binary.
 - **Cluster overview** — live dashboard (node/pod health donuts, workload charts, capacity)
@@ -19,7 +32,7 @@ A modern web UI for browsing and operating a Kubernetes cluster using your local
 - **Edit & apply** — edit any resource's YAML and apply it; per-row and drawer actions for Scale, Rollout restart, and Delete (two-step confirm)
 - **Helm** — releases with values and rendered manifest
 - **Detail drawer** — slide-in right-side panel with metadata, live metric graphs, conditions, containers
-- **Pod logs** — search, tail, formatting, and per-container selection
+- **Pro log viewer** — timestamps, per-container or merged "all containers" streams, case-sensitive/regex search with match navigation, line wrap, tail size, and one-click download
 - **Interactive shell** — a real TTY into pods (`kubectl exec -it` streamed over WebSocket to xterm.js)
 - **Port forwarding** — forward a Service port to `localhost` (choose a port or get a random one)
 - **Multi-tab bottom panel** — logs/terminal/YAML tabs open side by side
@@ -27,7 +40,7 @@ A modern web UI for browsing and operating a Kubernetes cluster using your local
 
 ## Prerequisites
 
-- **Node.js 18+** and npm
+- **Node.js 20+** and npm (24 recommended) — for building from source or the Docker image; the packaged desktop app bundles its own runtime
 - **`kubectl`** on your `PATH` — the app shells out to it for metrics, topology, CRDs, port-forward, etc.
 - **`helm`** (v3) on your `PATH` — for the Helm releases view
 - A working **`kubeconfig`** (default `~/.kube/config`, or set `KUBECONFIG`) with access to a cluster
@@ -96,7 +109,7 @@ Open **http://localhost:8080**.
 Notes:
 - Mount your kubeconfig at `/home/node/.kube/config` (as above) or pass `-e KUBECONFIG=/path/inside/container`.
 - If your kubeconfig references cloud auth plugins (EKS/GKE/AKS exec credentials), those CLIs must be available inside the container too, or use a static-token kubeconfig.
-- **Local clusters (Docker Desktop / kind / minikube):** their API server listens on `127.0.0.1`, which inside a container points at the container itself — so the config loads but the connection fails. Reach the host instead: add `--add-host=host.docker.internal:host-gateway` and set the context's `server:` to `https://host.docker.internal:<port>` with `insecure-skip-tls-verify: true` — or simply use the native macOS app / `npm start` for local clusters.
+- **Local clusters (Docker Desktop / kind / minikube):** their API server listens on `127.0.0.1`, which inside a container points at the container itself — so the config loads but the connection fails. Reach the host instead: add `--add-host=host.docker.internal:host-gateway` and set the context's `server:` to `https://host.docker.internal:<port>` with `insecure-skip-tls-verify: true` — or simply use the native desktop app / `npm start` for local clusters.
 - The build auto-selects `amd64`/`arm64` via BuildKit's `TARGETARCH`.
 
 ### OIDC clusters (`kubectl oidc-login` / kubelogin)
@@ -120,41 +133,45 @@ relies on a token that's already cached. Do this:
 If the cached token has fully expired (refresh token gone), re-run step 1 on the
 host, then restart the container.
 
-## Run — Mac app (Electron)
+## Run — Desktop app (Electron)
 
-Package the whole thing as a native `Kubernetes Manager.app` / `.dmg`:
+k8sight ships as a native desktop app. Most people just [download a build](https://github.com/praveenraghav01/k8s-manager-ui/releases/latest); to build it yourself:
 
 ```bash
-npm install          # installs Electron + electron-builder (first time)
-npm run app:dist     # builds the UI and produces release/Kubernetes Manager-*.dmg (arm64)
+npm ci                     # installs Electron + electron-builder (first time)
+npm ci --prefix client
+npm run dist               # builds the UI and packages for the current OS → release/
 ```
 
-The artifacts land in `release/`. The default target is **arm64** (Apple Silicon);
-to also build an Intel `x64` DMG, add `"x64"` to the `build.mac.target[].arch`
-array in `package.json` (this triggers a second Electron binary download).
+`npm run dist` produces the installer for whatever OS you run it on:
 
-To try it without packaging a DMG:
+| OS | Artifact |
+|----|----------|
+| macOS | `k8sight-<ver>-arm64.dmg` (Apple Silicon) |
+| Windows | `k8sight Setup <ver>.exe` (NSIS) |
+| Linux | `k8sight-<ver>.AppImage` and `k8sight_<ver>_amd64.deb` |
+
+To try it without packaging:
 
 ```bash
 npm run app          # runs the UI in an Electron window (uses the current client/dist)
-npm run app:pack     # builds an unpacked .app into release/mac* (faster than app:dist)
+npm run app:pack     # builds an unpacked app into release/ (faster than a full package)
 ```
 
 How it works: the Electron main process (`electron/main.cjs`) starts `server.js`
 as a child using Electron's bundled Node, waits for port `3001`, then loads the
-UI in a window. Because a Finder-launched app doesn't inherit your shell `PATH`,
-the main process reconstructs it (querying your login shell + the usual Homebrew
+UI in a window. Because a launched app doesn't inherit your shell `PATH`, the main
+process reconstructs it (querying your login shell + the usual Homebrew/`~/.local/bin`
 paths) so `kubectl` is found at runtime.
 
 Notes:
 - `kubectl` still has to be installed on the machine — the app shells out to it.
-- The build is **ad-hoc signed** (no Apple Developer ID) by `electron/after-pack.cjs`,
-  so it runs on the machine that built it. If you copy the `.dmg` to *another* Mac,
-  macOS quarantines the download and Gatekeeper will block it — the recipient
-  right-clicks the app → **Open**, or runs
-  `xattr -dr com.apple.quarantine "/Applications/Kubernetes Manager.app"`.
-  For frictionless distribution, add a Developer ID signature + notarization
-  (set `CSC_LINK`/`CSC_KEY_PASSWORD` and an `afterSign` notarize step).
+- Builds are **unsigned / ad-hoc signed** (no paid code-signing certificate). On macOS the
+  `.dmg` is ad-hoc signed by `electron/after-pack.cjs` so it runs locally; copied to
+  *another* Mac it's quarantined, so the recipient right-clicks → **Open** or runs
+  `xattr -dr com.apple.quarantine "/Applications/k8sight.app"`. On Windows, SmartScreen
+  shows **More info → Run anyway**. For frictionless distribution, add a Developer ID
+  signature + notarization (macOS) and an EV/OV cert (Windows).
 
 ## Release (GitHub Actions)
 
@@ -163,26 +180,30 @@ macOS, Windows and Linux on GitHub-hosted runners and attaches the installers to
 GitHub Release. To cut a release, bump the version and push a matching `v*.*.*` tag:
 
 ```bash
-npm version 1.3.0 --no-git-tag-version   # bump package.json (or edit it by hand)
-git commit -am "Release v1.3.0"
-git tag v1.3.0
+npm version 1.4.0 --no-git-tag-version   # bump package.json (or edit it by hand)
+git commit -am "Release v1.4.0"
+git tag v1.4.0
 git push origin main --tags
 ```
 
-The tag push triggers a matrix build (macOS `.dmg`, Windows `.exe`, Linux
-`.AppImage` + `.deb`) and publishes them all to one Release with auto-generated
-notes. Keep the tag in sync with `version` in `package.json`. You can also run the
-workflow manually from the **Actions** tab to produce build artifacts without
-publishing a release.
+The tag push runs a **parallel matrix build** across `macos-14` (Apple Silicon),
+`windows-latest` and `ubuntu-latest`, then publishes the installers (macOS `.dmg`,
+Windows `.exe`, Linux `.AppImage` + `.deb`) to one GitHub Release with
+auto-generated notes. Keep the tag in sync with `version` in `package.json`. You
+can also run the workflow manually from the **Actions** tab to produce build
+artifacts without publishing a release.
 
 ## Usage
 
-1. **Pick a context** — the searchable selector in the sidebar switches clusters (`kubectl config use-context`).
-2. **Filter namespaces** — the multi-select in each view, or click a namespace name anywhere.
-3. **Click a row** — opens the right-side detail drawer (with live metric graphs for pods).
-4. **⋮ menu** — per row: Details, Logs (expands to pick a container), Terminal, Edit YAML.
-5. **Port-forward** — open a Service's drawer → Port Forwarding → Forward.
-6. **Toggle theme** — the sun/moon button in the sidebar header.
+1. **Command palette** — press **⌘K** (Ctrl+K) to jump to any view, cluster, or action; use the top toolbar's back/forward arrows to retrace your steps.
+2. **Pick a context** — the searchable selector in the sidebar switches clusters (`kubectl config use-context`); pin favourites to the left rail for one-click switching.
+3. **Add a cloud cluster** — the **+** button → **AWS** or **Azure** discovers your EKS/AKS clusters and merges the ones you pick into your kubeconfig.
+4. **Filter namespaces** — the multi-select in each view, or click a namespace name anywhere.
+5. **Click a row** — opens the right-side detail drawer (with live metric graphs for pods).
+6. **⋮ menu** — per row: Details, Logs (expands to pick a container), Terminal, Edit YAML.
+7. **Port-forward** — open a Service's drawer → Port Forwarding → Forward.
+8. **AI & agents** — launch the built-in assistant or your chosen coding agent from the top toolbar; configure them in **Preferences → AI / External Tools**.
+9. **Toggle theme** — the sun/moon button in the sidebar header.
 
 ## Connect AI agents (MCP)
 
@@ -234,6 +255,9 @@ context** — switch clusters from the UI, the `switch_context` tool, or a pin.
 | Variable | Purpose | Default |
 |----------|---------|---------|
 | `KUBECONFIG` | Path to kubeconfig | `~/.kube/config` |
+| `LLM_BASE_URL` | OpenAI-compatible endpoint for the built-in AI assistant | — |
+| `LLM_API_KEY` | API key for the assistant's endpoint (stored locally; also settable in **Preferences → AI**) | — |
+| `LLM_MODEL` | Model name the assistant requests | — |
 | `MCP_ALLOW_WRITE` | Enable MCP write/destructive tools (`apply_yaml`, `delete_resource`, `scale_workload`, `rollout_restart`) | `0` (read-only) |
 | `MCP_API_BASE` | API base URL the stdio MCP bridge targets | `http://127.0.0.1:3001` |
 
@@ -242,7 +266,9 @@ The backend always listens on port **3001**; map it to any host port with Docker
 ## Architecture
 
 - **Backend** (`server.js`) — Express + `@kubernetes/client-node`. Reads the kubeconfig, exposes a REST API and a `/ws/exec` WebSocket for interactive shells, and shells out to `kubectl`/`helm` for features without a clean typed-API path. Responses are cached with short TTLs; in production it also serves the built frontend.
-- **Frontend** (`client/`) — React + Vite. Same-origin calls to `/api/*` and `/ws/exec`, xterm.js terminal, token-driven theming.
+- **Frontend** (`client/`) — React + Vite. Same-origin calls to `/api/*` and `/ws/exec`, xterm.js terminal, token-driven theming, a ⌘K command palette, and a native top toolbar.
+- **Cloud** (`aws-eks.js`, `azure-aks.js`, `eks-token.js`) — CLI-free EKS/AKS discovery and kubeconfig merge, built on the AWS SDK and Azure AD + ARM REST.
+- **Desktop** (`electron/`) — Electron shell (`main.cjs`) that runs the backend as a utility process and packages the app for macOS/Windows/Linux with electron-builder; `after-pack.cjs` ad-hoc signs the macOS build.
 
 ## Troubleshooting
 
