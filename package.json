@@ -86,6 +86,9 @@
     "linux": {
       "category": "Development",
       "icon": "build/icon.png",
+      "desktopName": "k8sight.desktop",
+      "synopsis": "A desktop UI for browsing and operating Kubernetes clusters",
+      "syncDesktopName": true,
       "target": [
         "AppImage",
         "deb"
