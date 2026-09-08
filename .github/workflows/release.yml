@@ -46,7 +46,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: |
             package-lock.json
@@ -74,7 +74,6 @@ jobs:
           retention-days: 7
           path: |
             release/*.dmg
-            release/*.zip
             release/*.exe
             release/*.AppImage
             release/*.deb
@@ -101,7 +100,6 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             dist/*.dmg
-            dist/*.zip
             dist/*.exe
             dist/*.AppImage
             dist/*.deb
