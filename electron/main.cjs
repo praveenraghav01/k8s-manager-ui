@@ -1,4 +1,4 @@
-// Electron main process for Kubernetes Manager.
+// Electron main process for k8sight.
 //
 // Responsibilities:
 //   1. Repair PATH — a Finder-launched .app inherits only a minimal PATH, so
@@ -88,7 +88,7 @@ function startServer(fixedPath) {
       stdio: ['ignore', 'pipe', 'pipe'],
     });
   } catch (err) {
-    dialog.showErrorBox('Kubernetes Manager', `Failed to start the backend:\n${err.message}`);
+    dialog.showErrorBox('k8sight', `Failed to start the backend:\n${err.message}`);
     app.quit();
     return;
   }
@@ -109,7 +109,7 @@ function startServer(fixedPath) {
         ? `Port ${BACKEND_PORT} is already in use — another copy of the app or a process on that port is running. Quit it and relaunch.`
         : `The backend exited unexpectedly (code ${code}).` +
           (stderrTail.trim() ? `\n\n${stderrTail.trim().split('\n').slice(-4).join('\n')}` : '');
-      dialog.showErrorBox('Kubernetes Manager', detail);
+      dialog.showErrorBox('k8sight', detail);
       app.quit();
     }
   });
@@ -154,13 +154,13 @@ function createWindow() {
     height: 900,
     minWidth: 960,
     minHeight: 600,
-    title: 'Kubernetes Manager',
+    title: 'k8sight',
     // Match the app's dark surface — no separate gray macOS title bar. On
     // macOS `hiddenInset` floats the traffic lights over the (black) content;
     // the frontend adds a draggable top strip via the `is-electron` class.
     backgroundColor: '#000000',
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
-    trafficLightPosition: { x: 16, y: 8 },
+    trafficLightPosition: { x: 18, y: 15 },
     show: false,
     webPreferences: {
       contextIsolation: true,
@@ -211,7 +211,7 @@ async function boot() {
     mainWindow.loadURL(SERVER_URL);
   } else {
     dialog.showErrorBox(
-      'Kubernetes Manager',
+      'k8sight',
       `The backend did not become ready on port ${BACKEND_PORT} within 30s.\n` +
         `Something else may be using the port. Free it and relaunch.`
     );

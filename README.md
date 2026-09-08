@@ -6,6 +6,8 @@ A modern web UI for browsing and operating a Kubernetes cluster using your local
 
 ## Features
 
+- **One-click Azure AKS integration** — two sign-in methods: **Browser** (CLI-free — Azure AD auth-code + PKCE in your system browser + the ARM REST API; works with managed-device Conditional Access, since the browser carries the device's compliance state) or the **Azure CLI (`az`)** if you prefer it or the browser flow is blocked. Either way, auto-discover every AKS cluster you can access across all subscriptions and add the ones you pick to your kubeconfig in one step. Also offered on the "could not connect" screen, so an expired Azure session is one click from re-auth.
+- **One-click AWS EKS integration** — the same, for EKS, and **no `aws` CLI required**: it's built on the AWS SDK, so sign-in and discovery run in-process. Sign in via **AWS SSO** (IAM Identity Center device flow — enter your start URL or pick a profile), **access keys** (IAM user), or an **assume-role** profile, then auto-discover every EKS cluster across **all accounts and regions** and add the ones you pick. Cluster auth is generated natively (a bundled `eks-token.js` helper signs the STS request), so even *using* the imported clusters needs no `aws` binary.
 - **Cluster overview** — live dashboard (node/pod health donuts, workload charts, capacity)
 - **Workloads** — Pods, Deployments, StatefulSets, DaemonSets, Services, etc. with live CPU/memory (metrics-server), per-container status boxes, and cross-links (namespace → node → pod → owner)
 - **Nodes** — live per-node CPU/memory graphs with capacity thresholds, and the pods running on each node
@@ -153,6 +155,25 @@ Notes:
   `xattr -dr com.apple.quarantine "/Applications/Kubernetes Manager.app"`.
   For frictionless distribution, add a Developer ID signature + notarization
   (set `CSC_LINK`/`CSC_KEY_PASSWORD` and an `afterSign` notarize step).
+
+## Release (GitHub Actions)
+
+The [`Build & Release`](.github/workflows/release.yml) workflow builds the app for
+macOS, Windows and Linux on GitHub-hosted runners and attaches the installers to a
+GitHub Release. To cut a release, bump the version and push a matching `v*.*.*` tag:
+
+```bash
+npm version 1.3.0 --no-git-tag-version   # bump package.json (or edit it by hand)
+git commit -am "Release v1.3.0"
+git tag v1.3.0
+git push origin main --tags
+```
+
+The tag push triggers a matrix build (macOS `.dmg`, Windows `.exe`, Linux
+`.AppImage` + `.deb`) and publishes them all to one Release with auto-generated
+notes. Keep the tag in sync with `version` in `package.json`. You can also run the
+workflow manually from the **Actions** tab to produce build artifacts without
+publishing a release.
 
 ## Usage
 

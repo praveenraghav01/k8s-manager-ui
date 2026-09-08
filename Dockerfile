@@ -15,6 +15,10 @@ RUN npm run build
 # ============================================================
 FROM node:22-alpine AS server-deps
 WORKDIR /app
+# node-pty (pod terminal) has no Alpine/musl prebuild, so it compiles from
+# source here — needs python3 + a C/C++ toolchain. This stage is discarded;
+# only the resulting node_modules is copied into the runtime image.
+RUN apk add --no-cache python3 make g++
 COPY package*.json ./
 RUN npm ci --omit=dev
 
@@ -36,7 +40,7 @@ ARG TARGETARCH=amd64
 # authenticate via `kubectl oidc-login` work inside the container (statically
 # linked Go binary, so it runs fine on Alpine/musl).
 RUN apk upgrade --no-cache \
-  && apk add --no-cache bash curl ca-certificates \
+  && apk add --no-cache bash curl ca-certificates libstdc++ \
   && apk add --no-cache --virtual .build-deps unzip \
   && KUBECTL_VERSION="$(curl -fsSL https://dl.k8s.io/release/stable.txt)" \
   && curl -fsSL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl" -o /usr/local/bin/kubectl \
@@ -59,6 +63,8 @@ COPY server.js ./
 COPY assistant.js ./
 COPY mcp.js ./
 COPY mcp-stdio.js ./
+COPY aws-eks.js ./
+COPY eks-token.js ./
 COPY --from=client-build /app/client/dist ./client/dist
 
 ENV NODE_ENV=production
