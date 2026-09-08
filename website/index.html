@@ -185,6 +185,10 @@
   .shot-bar .tl.r { background: #ff5f57; } .shot-bar .tl.y { background: #febc2e; } .shot-bar .tl.g { background: #28c840; }
   .shot-bar .addr { margin-left: 14px; font-family: var(--mono); font-size: 12px; color: var(--text-mute); }
   .shot-frame img { width: 100%; }
+  /* Theme-aware screenshots: show the variant matching the active theme. */
+  .shot-frame .shot-light { display: none; }
+  :root[data-theme="light"] .shot-frame .shot-dark { display: none; }
+  :root[data-theme="light"] .shot-frame .shot-light { display: block; }
   .shot-glow { position: absolute; inset: -40px -20px auto; height: 200px; background: radial-gradient(closest-side, rgba(255,255,255,.35), transparent); filter: blur(40px); z-index: -1; }
 
   /* ---------- Trust strip ---------- */
@@ -499,7 +503,8 @@
           <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
           <span class="addr">k8sight · Cluster dashboard</span>
         </div>
-        <img src="assets/screenshot-dashboard.png" alt="k8sight cluster dashboard showing node and pod health, capacity, and cluster info" />
+        <img class="shot-dark" src="assets/screenshot-dashboard-dark.png" alt="k8sight cluster dashboard showing node and pod health, capacity, and cluster info" />
+        <img class="shot-light" src="assets/screenshot-dashboard-light.png" alt="k8sight cluster dashboard in light theme showing node and pod health, capacity, and cluster info" />
       </div>
     </div>
   </div>
@@ -607,9 +612,10 @@
       <div class="shot-frame">
         <div class="shot-bar">
           <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
-          <span class="addr">k8sight · AI Assistant — connect your LLM API</span>
+          <span class="addr">k8sight · AI — Claude Code docked beside the cluster</span>
         </div>
-        <img src="assets/screenshot-ai.png" alt="k8sight AI assistant panel showing the bring-your-own OpenAI-compatible API connection form with base URL, model and API key fields" />
+        <img class="shot-dark" src="assets/screenshot-agent-dark.png" alt="k8sight with a Claude Code coding agent docked in a panel beside the cluster dashboard" />
+        <img class="shot-light" src="assets/screenshot-agent-light.png" alt="k8sight in light theme with a Claude Code coding agent docked in a panel beside the cluster dashboard" />
       </div>
     </div>
     <div class="split">
@@ -734,7 +740,8 @@
           <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
           <span class="addr">k8sight · Argo CD — dashboard</span>
         </div>
-        <img src="assets/screenshot-argocd.png" alt="k8sight Argo CD dashboard showing sync and health status, application summary cards, a needs-attention row, and recent sync activity" />
+        <img class="shot-dark" src="assets/screenshot-argocd-dark.png" alt="k8sight Argo CD dashboard showing sync and health status, application summary cards, a needs-attention row, and recent sync activity" />
+        <img class="shot-light" src="assets/screenshot-argocd-light.png" alt="k8sight Argo CD dashboard in light theme showing sync and health status, application summary cards, a needs-attention row, and recent sync activity" />
       </div>
     </div>
 
