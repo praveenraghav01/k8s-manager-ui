@@ -393,6 +393,20 @@
   }
   @media (prefers-reduced-transparency: reduce) { .dl-modal-scrim { background: rgba(0,0,0,.9); backdrop-filter: none; } }
 
+  /* ---------- Buy Me a Coffee floating button (self-hosted, no external script) ---------- */
+  .bmc-float {
+    position: fixed; right: 18px; bottom: 18px; z-index: 60;
+    display: inline-flex; align-items: center; gap: 9px;
+    background: #5F7FFF; color: #fff; font-weight: 700; font-size: 14px;
+    padding: 11px 16px; border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.28);
+    transition: transform .15s var(--ease-out), box-shadow .15s;
+  }
+  .bmc-float:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(0,0,0,.4); color: #fff; }
+  .bmc-float:active { transform: scale(.97); }
+  .bmc-float svg { width: 19px; height: 19px; flex: none; }
+  @media (max-width: 560px) { .bmc-float span { display: none; } .bmc-float { padding: 13px; border-radius: 50%; } }
+
   /* ---------- Reveal animation ---------- */
   .reveal { opacity: 0; transform: translateY(24px); transition: opacity .6s var(--ease-out), transform .6s var(--ease-out); }
   .reveal.in { opacity: 1; transform: none; }
@@ -887,7 +901,7 @@
     <a class="bmc" href="https://www.buymeacoffee.com/praveenraghav01" target="_blank" rel="noopener">
       <img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=praveenraghav01&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" alt="Buy me a coffee" />
     </a>
-    <div class="dl-count">Starting <span id="dlOs">your download</span> in <b id="dlSecs">10</b>s&hellip;</div>
+    <div class="dl-count">Starting <span id="dlOs">your download</span> in <b id="dlSecs">10</b> s&hellip;</div>
     <a class="dl-now" id="dlNow" href="#">Download now</a>
   </div>
 </div>
@@ -986,6 +1000,15 @@
 </script>
 
 <!-- Buy Me a Coffee floating widget -->
-<script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.1.4.1meacoffee.com/1.0.0/widget.prod.min.js" data-id="praveenraghav01" data-description="Support k8sight on 1.4.1 Me a Coffee" data-message="Enjoying k8sight? It's free &amp; open-source - a coffee helps keep it going" data-color="#5F7FFF" data-position="Right" data-x_margin="18" data-y_margin="18"></script>
+<script data-name="BMC-Widget" 
+data-cfasync="false" 
+src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" 
+data-id="praveenraghav01" 
+data-description="Support k8sight on Buy Me a Coffee" 
+data-message="Enjoying k8sight? It's free &amp; open-source - a coffee helps keep it going" 
+data-color="#5F7FFF" 
+data-position="Right" 
+data-x_margin="18" 
+data-y_margin="18"></script>
 </body>
 </html>
