@@ -406,7 +406,6 @@
         <a href="#assistant">AI</a>
         <a href="#cloud">Cloud</a>
         <a href="#argocd">Argo CD</a>
-        <a href="#docs">Docs</a>
         <a class="nav-cta" href="#download">Download</a>
       </div>
       <button class="menu-btn" id="menuBtn" aria-label="Menu">
@@ -427,9 +426,9 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
         Download k8sight
       </a>
-      <a class="btn btn-ghost" href="#docs">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M13 3v5h5M8 13h8M8 17h6"/></svg>
-        Read the docs
+      <a class="btn btn-ghost" href="https://github.com/praveenraghav01/k8s-manager-ui" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.5v-1.7c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.7.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.4-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0C17.3 5 18.3 5.3 18.3 5.3c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.6.8.5 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+        View on GitHub
       </a>
     </div>
     <p class="fineprint">Free &amp; open-source · macOS <code>.dmg</code> · Windows <code>.exe</code> · Linux <code>.AppImage</code> / <code>.deb</code></p>
@@ -703,158 +702,6 @@
   </div>
 </section>
 
-<!-- DOCS -->
-<section class="band" id="docs">
-  <div class="wrap sec">
-    <div class="sec-head reveal">
-      <span class="kicker">Documentation</span>
-      <h2>Everything you need to get running</h2>
-      <p>Short, practical guides — installing on each platform, connecting clusters, wiring up AI, and the little things like clearing macOS Gatekeeper. Full docs live in the repo&rsquo;s <a class="inline" style="color:var(--brand-light); text-decoration:underline; text-underline-offset:2px;" href="https://github.com/praveenraghav01/k8s-manager-ui#readme" target="_blank" rel="noopener">README</a>.</p>
-    </div>
-
-    <div class="docs-grid">
-      <!-- Install -->
-      <div class="doc-group reveal">
-        <div class="g-head">
-          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></span>
-          <h3>Install &amp; first launch</h3>
-        </div>
-        <details class="doc">
-          <summary>macOS <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
-          <div class="doc-body">
-            <p>Download the Apple-Silicon <code>.dmg</code>, open it and drag <b>k8sight</b> to Applications.</p>
-            <p>The build is <b>ad-hoc signed</b> (no Apple Developer ID), so on first launch right-click the app → <b>Open</b>. If macOS says it&rsquo;s &ldquo;damaged&rdquo; after downloading, clear the quarantine flag:</p>
-            <div class="code"><div class="code-head"><span>Terminal</span><button class="copy-btn" data-copy="c-mac"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div><pre id="c-mac">xattr -dr com.apple.quarantine "/Applications/k8sight.app"</pre></div>
-          </div>
-        </details>
-        <details class="doc">
-          <summary>Windows <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
-          <div class="doc-body">
-            <p>Download the <code>.exe</code> installer and run it. Because the build is unsigned, SmartScreen may warn — choose <b>More info → Run anyway</b>. k8sight installs per-user and adds a Start-menu entry.</p>
-          </div>
-        </details>
-        <details class="doc">
-          <summary>Linux <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
-          <div class="doc-body">
-            <p><b>AppImage</b> — make it executable and run:</p>
-            <div class="code"><div class="code-head"><span>Terminal</span><button class="copy-btn" data-copy="c-appimage"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div><pre id="c-appimage">chmod +x k8sight-*.AppImage
-./k8sight-*.AppImage</pre></div>
-            <p><b>Debian / Ubuntu</b> — install the <code>.deb</code>:</p>
-            <div class="code"><div class="code-head"><span>Terminal</span><button class="copy-btn" data-copy="c-deb"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div><pre id="c-deb">sudo dpkg -i k8sight_*_amd64.deb</pre></div>
-          </div>
-        </details>
-        <details class="doc">
-          <summary>Requirements <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
-          <div class="doc-body">
-            <ul>
-              <li><code>kubectl</code> installed and on your PATH (the app shells out to it).</li>
-              <li>A valid <code>~/.kube/config</code> with at least one context.</li>
-              <li><b>metrics-server</b> in-cluster for live CPU/memory graphs (optional).</li>
-            </ul>
-            <p>k8sight reconstructs your login-shell PATH at launch, so tools installed via Homebrew, asdf or <code>~/.local/bin</code> are found even when launched from the Dock.</p>
-          </div>
-        </details>
-      </div>
-
-      <!-- Clusters -->
-      <div class="doc-group reveal">
-        <div class="g-head">
-          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/></svg></span>
-          <h3>Connecting clusters</h3>
-        </div>
-        <details class="doc">
-          <summary>Local kubeconfig contexts <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
-          <div class="doc-body">
-            <p>k8sight reads every context in <code>~/.kube/config</code>. Use the context selector in the sidebar to switch clusters, and pin the ones you use often to the left-hand rail for one-click quick-switch.</p>
-          </div>
-        </details>
-        <details class="doc">
-          <summary>Amazon EKS <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
-          <div class="doc-body">
-            <p>Open <b>Add cluster → AWS</b>. k8sight uses the AWS SDK with your existing credentials (env vars, shared config or SSO) to list EKS clusters across regions, then generates a short-lived token and merges the entry into your kubeconfig. No <code>aws</code> CLI required.</p>
-          </div>
-        </details>
-        <details class="doc">
-          <summary>Azure AKS — browser or CLI <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
-          <div class="doc-body">
-            <p>Open <b>Add cluster → Azure</b> and choose a sign-in method:</p>
-            <ul>
-              <li><b>Browser (recommended)</b> — k8sight opens your system browser and signs in with the OAuth auth-code + PKCE flow. This uses your normal SSO session and satisfies device Conditional Access policies, with <b>no <code>az</code> install</b>.</li>
-              <li><b>Azure CLI</b> — if you already use <code>az login</code>, k8sight can drive the CLI instead.</li>
-            </ul>
-            <p>It then lists clusters across your subscriptions and pulls user (or admin) credentials into your kubeconfig.</p>
-          </div>
-        </details>
-      </div>
-
-      <!-- AI -->
-      <div class="doc-group reveal">
-        <div class="g-head">
-          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span>
-          <h3>AI assistant &amp; agents</h3>
-        </div>
-        <details class="doc">
-          <summary>Connect an LLM <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
-          <div class="doc-body">
-            <p>The assistant needs your own OpenAI-compatible endpoint. In <b>Preferences → AI</b>, set the base URL, model and API key (TrueFoundry, OpenAI, Azure OpenAI, LiteLLM, …). Values are stored locally in <code>~/.config/k8s-manager/config.json</code>.</p>
-            <p>Or set them as environment variables:</p>
-            <div class="code"><div class="code-head"><span>Env</span><button class="copy-btn" data-copy="c-llm"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div><pre id="c-llm">LLM_BASE_URL=https://api.your-provider.com/v1
-LLM_API_KEY=sk-…
-LLM_MODEL=gpt-4o-mini</pre></div>
-          </div>
-        </details>
-        <details class="doc">
-          <summary>Docked coding agents <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
-          <div class="doc-body">
-            <p>k8sight detects coding agents on your PATH — Claude Code, GitHub Copilot CLI, Gemini CLI, Codex and opencode — and opens the chosen one in a docked panel beside the pod terminal. Pick the default in <b>Preferences → External Tools</b>; the top toolbar then shows that agent&rsquo;s icon and name. Agents run as local processes with their own authentication.</p>
-          </div>
-        </details>
-        <details class="doc">
-          <summary>MCP server <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
-          <div class="doc-body">
-            <p>k8sight exposes its read-only cluster tools over the Model Context Protocol so your own agents can use them. Run the stdio server with:</p>
-            <div class="code"><div class="code-head"><span>Terminal</span><button class="copy-btn" data-copy="c-mcp"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div><pre id="c-mcp">npm run mcp</pre></div>
-            <p>Write tools are off by default — the server is read-only unless you explicitly enable them.</p>
-          </div>
-        </details>
-      </div>
-
-      <!-- Build & release -->
-      <div class="doc-group reveal">
-        <div class="g-head">
-          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></span>
-          <h3>Build &amp; release</h3>
-        </div>
-        <details class="doc">
-          <summary>Run from source <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
-          <div class="doc-body">
-            <p>Clone the repo, install dependencies and start the dev servers with hot reload:</p>
-            <div class="code"><div class="code-head"><span>Terminal</span><button class="copy-btn" data-copy="c-dev"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div><pre id="c-dev">npm ci
-npm ci --prefix client
-npm run dev</pre></div>
-          </div>
-        </details>
-        <details class="doc">
-          <summary>Package the desktop app <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
-          <div class="doc-body">
-            <p>Build installers for the current OS with electron-builder:</p>
-            <div class="code"><div class="code-head"><span>Terminal</span><button class="copy-btn" data-copy="c-dist"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div><pre id="c-dist">npm run dist   <span class="cmt"># artifacts land in release/</span></pre></div>
-            <p>The macOS build is ad-hoc signed with the hardened runtime automatically.</p>
-          </div>
-        </details>
-        <details class="doc">
-          <summary>Cut a release (GitHub Actions) <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary>
-          <div class="doc-body">
-            <p>Pushing a <code>v*.*.*</code> tag runs the <b>Build &amp; Release</b> workflow across macOS, Windows and Linux and publishes the installers to a GitHub Release:</p>
-            <div class="code"><div class="code-head"><span>Terminal</span><button class="copy-btn" data-copy="c-tag"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div><pre id="c-tag">git tag v1.3.0
-git push origin v1.3.0</pre></div>
-          </div>
-        </details>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- DOWNLOAD -->
 <section class="sec" id="download">
   <div class="wrap">
@@ -964,7 +811,6 @@ git push origin v1.3.0</pre></div>
     <div class="links">
       <a href="#features">Features</a>
       <a href="#cloud">Cloud</a>
-      <a href="#docs">Docs</a>
       <a href="#download">Download</a>
       <a href="https://github.com/praveenraghav01/k8s-manager-ui" target="_blank" rel="noopener">GitHub</a>
     </div>
