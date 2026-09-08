@@ -5,9 +5,9 @@ name: Build & Release
 # release by hand — the workflow builds first and publishes for you. Trigger it
 # either way:
 #   * push a version tag (e.g. `git push origin v1.4.1`), or
-#   * Actions -> Build & Release -> Run workflow, and type the version (e.g.
-#     v1.4.1); the workflow creates that tag + release at the current commit.
-# A manual run with an empty version just builds artifacts (no release).
+#   * Actions -> Build & Release -> Run workflow on `main`; the version is read
+#     from the repo's VERSION file, so it tags `v<VERSION>` and releases at the
+#     current commit. (Optionally override with the `version` input.)
 on:
   push:
     tags:
@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version tag to build & release (e.g. v1.4.1). Leave empty to only build artifacts.'
+        description: 'Optional tag override (e.g. v1.4.2). Leave empty to use the VERSION file.'
         required: false
         type: string
 
@@ -92,10 +92,26 @@ jobs:
     name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-latest
-    # Publish for a pushed tag, or a manual run where a version was given.
-    # A manual run with an empty version skips this job (build artifacts only).
-    if: startsWith(github.ref, 'refs/tags/') || inputs.version != ''
+    # Publish for a pushed tag, or any manual run (version from the VERSION file).
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve release tag
+        id: ver
+        shell: bash
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG="${{ github.ref_name }}"                 # tag push: reuse it
+          elif [ -n "${{ inputs.version }}" ]; then
+            TAG="${{ inputs.version }}"                  # manual override
+          else
+            TAG="v$(tr -d ' \t\r\n' < VERSION)"          # from the VERSION file
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Release tag: $TAG"
+
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -105,9 +121,9 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          # For a manual run, create this tag + release at the current commit;
-          # for a tag push, reuse the pushed tag.
-          tag_name: ${{ inputs.version || github.ref_name }}
+          # Reuse a pushed tag; otherwise create this tag + release at this commit.
+          tag_name: ${{ steps.ver.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           draft: false
           generate_release_notes: true
           fail_on_unmatched_files: true
