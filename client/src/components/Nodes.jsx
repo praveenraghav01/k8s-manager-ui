@@ -176,6 +176,7 @@ export default function Nodes({ focusNode, onFocusHandled, onNavigate }) {
                   key={`${node.name}-${idx}`}
                   className={`resource-table-row ${selectedNode?.name === node.name ? 'active' : ''}`}
                   onClick={() => selectNode(node)}
+                  onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, node }); }}
                 >
                   <td>
                     <span className="resource-name-cell">{node.name}</span>

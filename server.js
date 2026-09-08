@@ -14,12 +14,24 @@ import { PassThrough, Writable } from 'stream';
 import { WebSocketServer } from 'ws';
 import * as k8s from '@kubernetes/client-node';
 import yaml from 'js-yaml';
+import * as azure from './azure-aks.js';
 import compression from 'compression';
 import { registerAssistant } from './assistant.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { randomUUID } from 'crypto';
 import { createMcpServer } from './mcp.js';
+import * as awsEks from './aws-eks.js';
+
+// node-pty powers the pod terminal (a real PTY bridged to `kubectl exec`). Load
+// it defensively so a missing/unbuildable native module never crashes the whole
+// server — only the terminal feature is disabled in that (rare) case.
+let pty = null;
+try {
+  pty = (await import('node-pty')).default;
+} catch (e) {
+  console.warn('[terminal] node-pty is unavailable; pod shells are disabled:', e.message);
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -133,10 +145,28 @@ app.get('/api/config/status', (req, res) => {
     });
   }
 
+  // Tag each context with its cloud provider (derived from the cluster's server
+  // URL) so the UI can group and icon them.
+  const clusterByName = new Map(kubeConfig.clusters.map((c) => [c.name, c]));
+  const providerOf = (server = '') => {
+    const s = server.toLowerCase();
+    if (s.includes('.azmk8s.io') || s.includes('azure')) return 'azure';
+    if (s.includes('.eks.amazonaws.com') || s.includes('eks.') ) return 'aws';
+    if (s.includes('.gke.') || s.includes('container.googleapis.com')) return 'gcp';
+    if (/(127\.0\.0\.1|localhost|:6443|:8443|host\.docker|kubernetes\.docker|minikube|kind|orbstack|rancher)/.test(s)) return 'local';
+    return 'other';
+  };
+  const contextsInfo = kubeConfig.contexts.map((c) => {
+    const cl = clusterByName.get(c.cluster);
+    return { name: c.name, cluster: c.cluster, provider: providerOf(cl?.server) };
+  });
+
   res.json({
     loaded: true,
     currentContext,
+    path: getKubeConfigPath(),
     contexts: kubeConfig.contexts.map(c => c.name),
+    contextsInfo,
     clusters: kubeConfig.clusters.map(c => c.name)
   });
 });
@@ -186,6 +216,415 @@ app.post('/api/config/context', (req, res) => {
     res.json({ success: true, currentContext });
   } catch (error) {
     res.status(500).json({ error: `Failed to set context: ${error.message}` });
+  }
+});
+
+// ------------------------------------------------------------------
+// Azure AKS integration — two sign-in methods.
+//
+//  1) 'browser' (default, CLI-free): OAuth auth-code + PKCE in the system
+//     browser (see azure-aks.js) + the ARM REST API. The browser carries the
+//     device's compliance state, so it satisfies managed-device Conditional
+//     Access policies (device-code cannot).
+//  2) 'az': the classic Azure CLI flow (`az login` / `az aks …`), used when the
+//     user prefers it or the browser flow is blocked. Only offered if `az` is
+//     on PATH.
+// ------------------------------------------------------------------
+const firstLine = (s) => (s || '').split('\n').map((x) => x.trim()).filter(Boolean)[0] || '';
+
+// az CLI helpers (method 'az').
+const runAz = (args, timeout = 60000) => new Promise((resolve, reject) => {
+  execFile('az', args, { encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024, timeout }, (err, stdout, stderr) => {
+    if (err) return reject(new Error((stderr || err.message || '').trim()));
+    resolve(stdout);
+  });
+});
+const azJson = async (args, timeout) => JSON.parse(await runAz([...args, '-o', 'json'], timeout));
+
+let azureMethod = 'browser';  // active sign-in method
+let azLogin = null;           // az login session: { proc, status, method, userCode, verificationUrl, error, buffer }
+
+app.get('/api/azure/status', async (req, res) => {
+  const azInstalled = await commandExists('az');
+  const loggedIn = azure.isLoggedIn() || (azureMethod === 'az' && azLogin?.status === 'done');
+  const account = azure.isLoggedIn() ? azure.loginStatus().account : undefined;
+  res.json({ installed: true, azInstalled, loggedIn, method: azureMethod, account: account ? { name: account } : undefined });
+});
+
+app.post('/api/azure/login', async (req, res) => {
+  const method = req.body?.method === 'az' ? 'az' : 'browser';
+  const tenant = (req.body?.tenant || 'organizations').toString();
+  azureMethod = method;
+
+  if (method === 'browser') {
+    try {
+      const { authUrl } = await azure.startBrowserLogin(tenant);
+      res.json({ method: 'browser', status: 'pending', authUrl });
+    } catch (e) { res.status(500).json({ error: firstLine(e.message) }); }
+    return;
+  }
+
+  // az method — spawn `az login` (browser by default; device-code on request).
+  if (!(await commandExists('az'))) return res.status(400).json({ error: 'Azure CLI (az) is not installed or not on PATH.' });
+  const useDeviceCode = req.body?.deviceCode === true;
+  let proc;
+  try { proc = spawn('az', ['login', '--only-show-errors', ...(useDeviceCode ? ['--use-device-code'] : [])], { env: process.env }); }
+  catch (e) { return res.status(500).json({ error: `Failed to launch az login: ${e.message}` }); }
+  const session = { proc, status: 'pending', method: useDeviceCode ? 'device' : 'browser', userCode: null, verificationUrl: 'https://microsoft.com/devicelogin', error: null, buffer: '' };
+  azLogin = session;
+  let replied = false;
+  const reply = () => { if (replied || res.headersSent) return; replied = true; res.json({ method: 'az', submethod: session.method, status: session.status, userCode: session.userCode, verificationUrl: session.verificationUrl, error: session.error }); };
+  const onData = (buf) => {
+    session.buffer += buf.toString();
+    const code = session.buffer.match(/enter the code\s+([A-Z0-9]{6,})/i);
+    const url = session.buffer.match(/(https?:\/\/\S*devicelogin\S*)/i);
+    if (code) { session.userCode = code[1]; session.method = 'device'; }
+    if (url) session.verificationUrl = url[1].replace(/[.,)]+$/, '');
+    if (session.userCode) reply();
+  };
+  proc.stdout.on('data', onData);
+  proc.stderr.on('data', onData);
+  proc.on('exit', (codeNum) => { session.status = codeNum === 0 ? 'done' : 'error'; if (codeNum !== 0 && !session.error) session.error = firstLine(session.buffer) || `az login exited (${codeNum})`; reply(); });
+  proc.on('error', (e) => { session.status = 'error'; session.error = e.message; reply(); });
+  setTimeout(reply, 1500);
+});
+
+app.get('/api/azure/login/status', (req, res) => {
+  if (azureMethod === 'az') {
+    if (!azLogin) return res.json({ status: 'idle' });
+    return res.json({ status: azLogin.status, method: 'az', submethod: azLogin.method, userCode: azLogin.userCode, verificationUrl: azLogin.verificationUrl, error: azLogin.error });
+  }
+  res.json(azure.loginStatus());
+});
+
+app.post('/api/azure/login/cancel', (req, res) => {
+  try { azLogin?.proc?.kill(); } catch { /* ignore */ }
+  azLogin = null;
+  azure.cancelLogin();
+  res.json({ ok: true });
+});
+
+app.get('/api/azure/clusters', async (req, res) => {
+  try {
+    let clusters, subscriptions;
+    if (azureMethod === 'az') {
+      const subs = await azJson(['account', 'list', '--all'], 30000);
+      const enabled = subs.filter((s) => s.state === 'Enabled');
+      const perSub = await Promise.all(enabled.map(async (s) => {
+        try {
+          const list = await azJson(['aks', 'list', '--subscription', s.id, '--only-show-errors'], 90000);
+          return list.map((a) => ({
+            name: a.name,
+            resourceGroup: a.resourceGroup || a.nodeResourceGroup?.replace(/^MC_/, '').split('_')[0],
+            subscriptionId: s.id, subscriptionName: s.name, location: a.location,
+            kubernetesVersion: a.currentKubernetesVersion || a.kubernetesVersion,
+            powerState: a.powerState?.code || a.provisioningState,
+          }));
+        } catch { return []; }
+      }));
+      clusters = perSub.flat().sort((a, b) => a.name.localeCompare(b.name));
+      subscriptions = enabled.length;
+    } else {
+      if (!azure.isLoggedIn()) return res.status(401).json({ error: 'Not signed in to Azure' });
+      ({ clusters, subscriptions } = await azure.listAllClusters());
+    }
+    const existing = new Set((kubeConfig?.contexts || []).map((c) => c.name));
+    const existingClusters = new Set((kubeConfig?.clusters || []).map((c) => c.name));
+    for (const c of clusters) c.imported = existing.has(c.name) || existingClusters.has(c.name);
+    res.json({ clusters, subscriptions });
+  } catch (e) {
+    res.status(500).json({ error: firstLine(e.message) });
+  }
+});
+
+// Merge a fetched kubeconfig (YAML string) into an on-disk kubeconfig object,
+// de-duplicating clusters/users/contexts by name.
+function mergeKubeconfigYaml(existingPath, incomingYaml) {
+  let base = { apiVersion: 'v1', kind: 'Config', clusters: [], users: [], contexts: [], 'current-context': '' };
+  try { if (fs.existsSync(existingPath)) base = { ...base, ...(yaml.load(fs.readFileSync(existingPath, 'utf-8')) || {}) }; } catch { /* start fresh */ }
+  for (const k of ['clusters', 'users', 'contexts']) if (!Array.isArray(base[k])) base[k] = [];
+  const incoming = yaml.load(incomingYaml) || {};
+  const mergeBy = (list, add) => {
+    for (const item of (add || [])) {
+      const i = list.findIndex((x) => x.name === item.name);
+      if (i >= 0) list[i] = item; else list.push(item);
+    }
+  };
+  mergeBy(base.clusters, incoming.clusters);
+  mergeBy(base.users, incoming.users);
+  mergeBy(base.contexts, incoming.contexts);
+  return base;
+}
+
+app.post('/api/azure/import', async (req, res) => {
+  const { clusters = [], admin = false } = req.body || {};
+  if (!Array.isArray(clusters) || clusters.length === 0) return res.status(400).json({ error: 'No clusters selected' });
+  if (azureMethod === 'browser' && !azure.isLoggedIn()) return res.status(401).json({ error: 'Not signed in to Azure' });
+
+  const p = getKubeConfigPath();
+  const imported = [], failed = [];
+  for (const c of clusters) {
+    if (!c?.name || !c?.resourceGroup || !c?.subscriptionId) { failed.push({ name: c?.name || '?', error: 'Missing cluster identifiers' }); continue; }
+    try {
+      if (azureMethod === 'az') {
+        // `az aks get-credentials` writes/merges into the kubeconfig itself.
+        const args = ['aks', 'get-credentials', '-g', c.resourceGroup, '-n', c.name, '--subscription', c.subscriptionId, '--overwrite-existing', '--only-show-errors'];
+        if (admin) args.push('--admin');
+        await runAz(args, 90000);
+      } else {
+        // Browser/REST: fetch the kubeconfig and merge it in ourselves.
+        const kc = await azure.getClusterKubeconfig(c.subscriptionId, c.resourceGroup, c.name, admin);
+        const merged = mergeKubeconfigYaml(p, kc);
+        fs.mkdirSync(path.dirname(p), { recursive: true }); // persist incrementally
+        fs.writeFileSync(p, yaml.dump(merged), { mode: 0o600 });
+      }
+      imported.push(c.name);
+    } catch (e) {
+      failed.push({ name: c.name, error: firstLine(e.message) });
+    }
+  }
+
+  // Reload the kubeconfig so the new contexts appear immediately; keep the user
+  // on the context they were already using instead of switching them away.
+  const prev = currentContext;
+  if (fs.existsSync(p)) loadKubeConfig(p);
+  if (prev && kubeConfig?.contexts.some((c) => c.name === prev)) { kubeConfig.setCurrentContext(prev); currentContext = prev; }
+  cache.clear();
+  res.json({ imported, failed, contexts: kubeConfig?.contexts.map((c) => c.name) || [], currentContext });
+});
+
+// ------------------------------------------------------------------
+// AWS EKS one-click integration — CLI-FREE (AWS SDK for JavaScript v3).
+//
+// No `aws` binary: sign in (SSO device flow / access keys / assume-role),
+// discover every EKS cluster across accounts and regions, and write kubeconfig
+// entries whose auth execs our native eks-token.js helper. See aws-eks.js.
+// ------------------------------------------------------------------
+let awsSession = null; // { sso: { accessToken, ssoRegion, startUrl }, ssoClusters: Map, poll }
+
+app.get('/api/aws/status', async (req, res) => {
+  // The SDK is bundled, so the integration is always available — no CLI needed.
+  try {
+    const profiles = (await awsEks.listProfiles()).map((p) => p.name);
+    res.json({ installed: true, profiles });
+  } catch (e) { res.json({ installed: true, profiles: [] }); }
+});
+
+app.post('/api/aws/sso-login', async (req, res) => {
+  try {
+    const { profile, startUrl: bodyUrl, ssoRegion: bodyRegion } = req.body || {};
+    // Accept pasted URLs with a "#/..." fragment or trailing slashes.
+    const clean = (u) => (u || '').trim().replace(/#.*$/, '').replace(/\/+$/, '');
+    let startUrl = clean(bodyUrl), ssoRegion = bodyRegion;
+    if (!startUrl || !ssoRegion) {
+      // Fall back to an existing SSO profile's start URL / region.
+      const all = await awsEks.listProfiles();
+      const p = all.find((x) => x.name === profile) || all.find((x) => x.type === 'sso');
+      startUrl = startUrl || clean(p?.ssoStartUrl);
+      ssoRegion = ssoRegion || p?.ssoRegion;
+    }
+    // Leave ssoRegion undefined so the SDK layer auto-detects the Identity Center
+    // region from the start URL (cluster discovery still scans every region).
+    if (!startUrl) return res.status(400).json({ error: 'Enter your AWS SSO start URL.' });
+    const session = await awsEks.ssoStartDeviceFlow({ startUrl, ssoRegion: ssoRegion || undefined });
+    awsSession = { sso: null, ssoClusters: new Map(), device: session, status: 'pending', error: null };
+    res.json({ status: 'pending', userCode: session.userCode, verificationUrl: session.verificationUri });
+  } catch (e) { res.status(500).json({ error: firstLine(e.message) }); }
+});
+
+app.get('/api/aws/sso-login/status', async (req, res) => {
+  if (!awsSession?.device) return res.json({ status: awsSession?.status || 'idle' });
+  if (awsSession.status !== 'pending') return res.json({ status: awsSession.status, error: awsSession.error, userCode: awsSession.device.userCode, verificationUrl: awsSession.device.verificationUri });
+  try {
+    const out = await awsEks.ssoPollToken(awsSession.device);
+    if (out.pending) return res.json({ status: 'pending', userCode: awsSession.device.userCode, verificationUrl: awsSession.device.verificationUri });
+    awsSession.sso = { accessToken: out.accessToken, ssoRegion: awsSession.device.ssoRegion, startUrl: awsSession.device.startUrl };
+    awsSession.status = 'done';
+    res.json({ status: 'done' });
+  } catch (e) { awsSession.status = 'error'; awsSession.error = firstLine(e.message); res.json({ status: 'error', error: awsSession.error }); }
+});
+
+app.post('/api/aws/sso-login/cancel', (req, res) => { awsSession = null; res.json({ ok: true }); });
+
+// After SSO auth: choose an AWS account, then a role for it (Lens-style flow).
+app.get('/api/aws/sso-accounts', async (req, res) => {
+  if (!awsSession?.sso?.accessToken) return res.status(400).json({ error: 'Not signed in to AWS SSO' });
+  try { res.json({ accounts: await awsEks.ssoListAccounts(awsSession.sso) }); }
+  catch (e) { res.status(500).json({ error: firstLine(e.message) }); }
+});
+
+app.get('/api/aws/sso-roles', async (req, res) => {
+  if (!awsSession?.sso?.accessToken) return res.status(400).json({ error: 'Not signed in to AWS SSO' });
+  const account = req.query.account;
+  if (!account) return res.status(400).json({ error: 'account is required' });
+  try { res.json({ roles: await awsEks.ssoListRoles(awsSession.sso, account) }); }
+  catch (e) { res.status(500).json({ error: firstLine(e.message) }); }
+});
+
+// Validate access-key / assume-role credentials and persist them as an ~/.aws
+// profile so eks-token.js can read them at runtime.
+app.post('/api/aws/configure', async (req, res) => {
+  const { method, name, accessKeyId, secretAccessKey, sessionToken, region, roleArn, sourceProfile, sessionName } = req.body || {};
+  const profile = (name || '').trim();
+  if (!profile) return res.status(400).json({ error: 'A profile name is required' });
+  try {
+    const { credentials } = await awsEks.resolveCredentials(method, { accessKeyId, secretAccessKey, sessionToken, region, roleArn, sourceProfile, sessionName });
+    await awsEks.validateCredentials(credentials, region); // fail fast on bad creds
+    awsEks.saveProfile(profile, { accessKeyId, secretAccessKey, sessionToken, roleArn, sourceProfile, sessionName, region });
+    res.json({ profile });
+  } catch (e) { res.status(500).json({ error: firstLine(e.message) }); }
+});
+
+app.post('/api/aws/clusters', async (req, res) => {
+  const { profile, account, role } = req.body || {};
+  try {
+    const existing = new Set((kubeConfig?.contexts || []).map((c) => c.name));
+    // Active SSO session with a chosen account + role → list that account's clusters.
+    if (awsSession?.sso?.accessToken && account && role) {
+      const credentials = await awsEks.ssoRoleCredentials(awsSession.sso, account, role);
+      awsSession.ssoSelected = { account, role, credentials };
+      const { clusters, regions } = await awsEks.discoverClusters({ credentials, account });
+      awsSession.ssoClusters = new Map(clusters.map((c) => [`${c.region}/${c.name}`, { ...c, account, role }]));
+      return res.json({ clusters: clusters.map((c) => ({ name: c.name, region: c.region, account, imported: existing.has(c.name) })), regions });
+    }
+    // Otherwise use a profile's credentials (access-key / role / existing).
+    const { fromNodeProviderChain } = await import('@aws-sdk/credential-providers');
+    const credentials = await fromNodeProviderChain(profile ? { profile } : {})();
+    const { clusters, regions } = await awsEks.discoverClusters({ credentials });
+    res.json({ clusters: clusters.map((c) => ({ name: c.name, region: c.region, imported: existing.has(c.name) })), regions });
+  } catch (e) { res.status(500).json({ error: firstLine(e.message) }); }
+});
+
+app.post('/api/aws/import', async (req, res) => {
+  const { clusters = [], profile } = req.body || {};
+  if (!Array.isArray(clusters) || clusters.length === 0) return res.status(400).json({ error: 'No clusters selected' });
+  const imported = [], failed = [];
+  const { fromNodeProviderChain } = await import('@aws-sdk/credential-providers');
+  const { SSOClient, GetRoleCredentialsCommand } = await import('@aws-sdk/client-sso');
+
+  for (const c of clusters) {
+    if (!c?.name || !c?.region) { failed.push({ name: c?.name || '?', error: 'Missing cluster name or region' }); continue; }
+    try {
+      let credentials, credProfile = profile || undefined;
+      const ssoInfo = awsSession?.ssoClusters?.get(`${c.region}/${c.name}`);
+      if (awsSession?.sso?.accessToken && ssoInfo) {
+        // Per-account SSO role credentials (short-lived). Save them as a profile
+        // so the token helper can use them at runtime.
+        const sso = new SSOClient({ region: awsSession.sso.ssoRegion });
+        const rc = await sso.send(new GetRoleCredentialsCommand({ accessToken: awsSession.sso.accessToken, accountId: ssoInfo.account, roleName: ssoInfo.role }));
+        credentials = { accessKeyId: rc.roleCredentials.accessKeyId, secretAccessKey: rc.roleCredentials.secretAccessKey, sessionToken: rc.roleCredentials.sessionToken };
+        credProfile = `sso-${ssoInfo.account}`;
+        awsEks.saveProfile(credProfile, { accessKeyId: credentials.accessKeyId, secretAccessKey: credentials.secretAccessKey, sessionToken: credentials.sessionToken, region: c.region });
+      } else {
+        credentials = await fromNodeProviderChain(profile ? { profile } : {})();
+      }
+      await awsEks.writeCluster({ credentials, region: c.region, name: c.name, alias: c.name, profile: credProfile });
+      imported.push(c.name);
+    } catch (e) { failed.push({ name: c.name, error: firstLine(e.message) }); }
+  }
+  // Keep the user on the cluster they were already using.
+  const prev = currentContext;
+  const p = getKubeConfigPath();
+  if (fs.existsSync(p)) loadKubeConfig(p);
+  if (prev && kubeConfig?.contexts.some((c) => c.name === prev)) { kubeConfig.setCurrentContext(prev); currentContext = prev; }
+  cache.clear();
+  res.json({ imported, failed, contexts: kubeConfig?.contexts.map((c) => c.name) || [], currentContext });
+});
+
+// ------------------------------------------------------------------
+// Bring-your-own AI agent — detect installed CLI agents and run them in a
+// terminal with the cluster context loaded (Lens-Prism style). No API key.
+// ------------------------------------------------------------------
+const AI_AGENTS = [
+  { id: 'claude', name: 'Claude Code', command: 'claude', desc: 'The coding assistant by Anthropic', install: 'https://docs.anthropic.com/en/docs/claude-code' },
+  { id: 'copilot', name: 'GitHub Copilot CLI', command: 'copilot', desc: 'AI pair programmer by GitHub', install: 'https://github.com/github/gh-copilot' },
+  { id: 'gemini', name: 'Gemini CLI', command: 'gemini', desc: 'Google Gemini in your terminal', install: 'https://github.com/google-gemini/gemini-cli' },
+  { id: 'codex', name: 'Codex CLI', command: 'codex', desc: 'OpenAI Codex coding agent', install: 'https://github.com/openai/codex' },
+  { id: 'opencode', name: 'OpenCode', command: 'opencode', desc: 'Open-source terminal AI agent', install: 'https://opencode.ai' },
+];
+// Detect a CLI regardless of how the app was launched. A GUI-launched app
+// inherits a minimal PATH, and a login shell (`-lc`) sources ~/.zprofile but
+// NOT ~/.zshrc — where installers like Claude Code's add ~/.local/bin. Relying
+// on any single shell invocation therefore misses tools. Instead we search the
+// process PATH, the login-shell PATH, and a set of well-known bin directories.
+let loginPathCache;
+const loginShellPath = () => new Promise((resolve) => {
+  if (loginPathCache !== undefined) return resolve(loginPathCache);
+  execFile(process.env.SHELL || '/bin/sh', ['-lc', 'printf %s "$PATH"'], { timeout: 8000 }, (err, stdout) => {
+    resolve((loginPathCache = (!err && stdout ? String(stdout).trim() : '')));
+  });
+});
+const commandExists = async (cmd) => {
+  const safe = String(cmd).replace(/[^a-zA-Z0-9_.-]/g, '');
+  if (!safe) return false;
+  const home = process.env.HOME || os.homedir();
+  const known = [
+    `${home}/.local/bin`, `${home}/bin`, `${home}/.npm-global/bin`,
+    `${home}/.yarn/bin`, `${home}/.bun/bin`, `${home}/.deno/bin`, `${home}/.cargo/bin`,
+    '/opt/homebrew/bin', '/usr/local/bin', '/usr/bin', '/bin',
+  ];
+  const dirs = new Set([
+    ...(process.env.PATH ? process.env.PATH.split(path.delimiter) : []),
+    ...(await loginShellPath()).split(path.delimiter),
+    ...known,
+  ].filter(Boolean));
+  for (const dir of dirs) {
+    try { fs.accessSync(path.join(dir, safe), fs.constants.X_OK); return true; } catch { /* keep looking */ }
+  }
+  return false;
+};
+app.get('/api/ai-agents', async (req, res) => {
+  const agents = await Promise.all(AI_AGENTS.map(async (a) => ({ id: a.id, name: a.name, command: a.command, desc: a.desc, install: a.install, installed: await commandExists(a.command) })));
+  res.json({ agents });
+});
+
+// Launch the chosen agent in a *native* OS terminal window (rather than the
+// in-app terminal panel) — the "Open AI tools in an external terminal" option.
+// Writes a temp kubeconfig pinned to the app's current context, then opens the
+// platform terminal running the agent CLI. macOS/Linux; best-effort.
+app.post('/api/ai-agents/launch-external', (req, res) => {
+  try {
+    const { agentId, command: customCommand, prompt } = req.body || {};
+    const info = AI_AGENTS.find((a) => a.id === agentId);
+    const command = info ? info.command : String(customCommand || '').replace(/[^a-zA-Z0-9_./\s-]/g, '').trim();
+    if (!command) return res.status(400).json({ error: 'Unknown AI agent' });
+
+    // Temp kubeconfig with the app's in-memory current context.
+    const kubeconfigPath = path.join(os.tmpdir(), `km-agent-${randomUUID()}.yaml`);
+    fs.writeFileSync(kubeconfigPath, kubeConfig.exportConfig(), { mode: 0o600 });
+
+    const shq = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
+    const launch = prompt ? `${command} ${shq(prompt)}` : command;
+    // A small launcher script: pin the kubeconfig, print a banner, run the agent,
+    // then keep the shell open so its output stays visible.
+    const script = path.join(os.tmpdir(), `km-agent-${randomUUID()}.sh`);
+    const body = [
+      '#!/bin/bash',
+      `export KUBECONFIG=${shq(kubeconfigPath)}`,
+      `export KUBE_CONTEXT=${shq(currentContext || '')}`,
+      `echo "Cluster context: ${currentContext || '(default)'}"`,
+      launch,
+      `rm -f ${shq(kubeconfigPath)} ${shq(script)}`,
+      'exec $SHELL -l',
+    ].join('\n');
+    fs.writeFileSync(script, body, { mode: 0o700 });
+
+    if (process.platform === 'darwin') {
+      execFile('open', ['-a', 'Terminal', script], (err) => { /* fire and forget */ });
+    } else if (process.platform === 'linux') {
+      // Try a few common terminal emulators.
+      const term = ['x-terminal-emulator', 'gnome-terminal', 'konsole', 'xterm'];
+      const tryNext = (i) => {
+        if (i >= term.length) return;
+        execFile(term[i], ['-e', 'bash', script], (err) => { if (err) tryNext(i + 1); });
+      };
+      tryNext(0);
+    } else {
+      return res.status(400).json({ error: 'External terminal is only supported on macOS and Linux' });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Failed to launch external terminal' });
   }
 });
 
@@ -517,7 +956,8 @@ app.get('/api/logs/:namespace/:pod', async (req, res) => {
     const { namespace, pod } = req.params;
     const container = req.query.container || undefined;
     const tail = parseInt(req.query.tail) || undefined; // Get last N lines
-    const cacheKey = getCacheKey('logs', { namespace, pod, container, tail });
+    const timestamps = req.query.timestamps === 'true'; // prefix each line with an RFC3339 timestamp
+    const cacheKey = getCacheKey('logs', { namespace, pod, container, tail, timestamps });
 
     // Check cache
     const cachedData = getCache(cacheKey);
@@ -528,7 +968,7 @@ app.get('/api/logs/:namespace/:pod', async (req, res) => {
 
     const api = kubeConfig.makeApiClient(k8s.CoreV1Api);
     // client-node 2.0 returns the log body as a string directly.
-    let logs = await api.readNamespacedPodLog({ name: pod, namespace, container, tailLines: tail });
+    let logs = await api.readNamespacedPodLog({ name: pod, namespace, container, tailLines: tail, timestamps });
 
     if (Buffer.isBuffer(logs)) {
       logs = logs.toString('utf8');
@@ -2377,74 +2817,80 @@ wss.on('connection', async (browserWs, req) => {
   }
 
   const url = new URL(req.url, 'http://localhost');
-  const namespace = url.searchParams.get('namespace');
-  const pod = url.searchParams.get('pod');
-  const container = url.searchParams.get('container') || undefined;
-
-  if (!namespace || !pod) {
-    browserWs.close(1008, 'Missing namespace or pod');
-    return;
-  }
-
-  const exec = new k8s.Exec(kubeConfig);
-  const stdin = new PassThrough();
-  const toBrowser = (chunk) => {
-    if (browserWs.readyState === 1) browserWs.send(chunk.toString('utf-8'));
-  };
-  const stdout = new Writable({ write(chunk, enc, cb) { toBrowser(chunk); cb(); } });
-  const stderr = new Writable({ write(chunk, enc, cb) { toBrowser(chunk); cb(); } });
-
-  let k8sWs = null;
-
-  // Resize is sent to the k8s exec stream on channel 4 (v4/v5 binary protocol)
-  const sendResize = (cols, rows) => {
-    if (!k8sWs || k8sWs.readyState !== 1 || !cols || !rows) return;
-    try {
-      const payload = Buffer.from(JSON.stringify({ Width: cols, Height: rows }));
-      k8sWs.send(Buffer.concat([Buffer.from([4]), payload]));
-    } catch (e) { /* ignore */ }
-  };
-
-  try {
-    k8sWs = await exec.exec(
-      namespace,
-      pod,
-      container,
-      ['sh', '-c', 'exec $(command -v bash || command -v sh || echo /bin/sh)'],
-      stdout,
-      stderr,
-      stdin,
-      true, // tty
-      (status) => {
-        if (status?.status === 'Failure' && browserWs.readyState === 1) {
-          browserWs.send(`\r\n\x1b[31m${status.message || 'Shell exited'}\x1b[0m\r\n`);
-        }
-      }
-    );
-  } catch (err) {
-    if (browserWs.readyState === 1) {
-      browserWs.send(`\r\n\x1b[31mFailed to start shell: ${err.message}\x1b[0m\r\n`);
-    }
+  const send = (data) => { if (browserWs.readyState === 1) browserWs.send(data); };
+  if (!pty) {
+    send('\r\n\x1b[31mTerminal is unavailable on this server (node-pty failed to load).\x1b[0m\r\n');
     browserWs.close();
     return;
   }
 
-  k8sWs.on('close', () => { try { browserWs.close(); } catch (e) {} });
-  k8sWs.on('error', () => { try { browserWs.close(); } catch (e) {} });
+  const agentId = url.searchParams.get('agent');
+  let term, cleanup = () => {};
+
+  if (agentId) {
+    // ---- AI agent terminal: a login shell with the app's current cluster
+    // context pinned via a temp kubeconfig, then launch the chosen agent CLI. ----
+    const info = AI_AGENTS.find((a) => a.id === agentId);
+    const command = info ? info.command : (url.searchParams.get('command') || '').replace(/[^a-zA-Z0-9_./\s-]/g, '').trim();
+    if (!command) { send('\r\n\x1b[31mUnknown AI agent.\x1b[0m\r\n'); browserWs.close(); return; }
+
+    let kubeconfigPath = getKubeConfigPath();
+    try {
+      const tmp = path.join(os.tmpdir(), `km-agent-${randomUUID()}.yaml`);
+      fs.writeFileSync(tmp, kubeConfig.exportConfig(), { mode: 0o600 });
+      kubeconfigPath = tmp;
+      cleanup = () => { try { fs.unlinkSync(tmp); } catch { /* ignore */ } };
+    } catch { /* fall back to the default kubeconfig path */ }
+
+    const shell = process.env.SHELL || '/bin/bash';
+    try {
+      term = pty.spawn(shell, ['-l'], { name: 'xterm-256color', cols: 80, rows: 24, cwd: process.env.HOME || '/', env: { ...process.env, KUBECONFIG: kubeconfigPath, KUBE_CONTEXT: currentContext || '' } });
+    } catch (err) {
+      send(`\r\n\x1b[31mFailed to start terminal: ${err.message}\x1b[0m\r\n`);
+      browserWs.close();
+      return;
+    }
+    // Once the shell is ready, launch the agent (with an optional seed prompt).
+    const prompt = url.searchParams.get('prompt');
+    const shq = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
+    const launch = prompt ? `${command} ${shq(prompt)}\r` : `${command}\r`;
+    setTimeout(() => { try { term.write(launch); } catch { /* ignore */ } }, 700);
+  } else {
+    // ---- pod exec: bridge to `kubectl exec -it` in a real PTY (robust against
+    // exec-credential auth plugins that break client-node's WebSocket exec). ----
+    const namespace = url.searchParams.get('namespace');
+    const pod = url.searchParams.get('pod');
+    const container = url.searchParams.get('container') || undefined;
+    if (!namespace || !pod) { browserWs.close(1008, 'Missing namespace or pod'); return; }
+    const args = kctl('exec', '-it', '-n', namespace, ...(container ? ['-c', container] : []), pod, '--', 'sh', '-c', 'exec $(command -v bash || command -v sh || echo /bin/sh)');
+    try {
+      term = pty.spawn('kubectl', args, { name: 'xterm-256color', cols: 80, rows: 24, cwd: process.env.HOME || '/', env: process.env });
+    } catch (err) {
+      send(`\r\n\x1b[31mFailed to start shell: ${err.message}\x1b[0m\r\n`);
+      browserWs.close();
+      return;
+    }
+  }
+
+  term.onData((data) => send(data));
+  term.onExit(({ exitCode }) => {
+    if (browserWs.readyState === 1 && exitCode) send(`\r\n\x1b[90m[process exited with code ${exitCode}]\x1b[0m\r\n`);
+    try { browserWs.close(); } catch (e) {}
+  });
 
   browserWs.on('message', (raw) => {
     let msg;
     try { msg = JSON.parse(raw.toString()); } catch (e) { return; }
     if (msg.type === 'data') {
-      stdin.write(msg.data);
-    } else if (msg.type === 'resize') {
-      sendResize(msg.cols, msg.rows);
+      try { term.write(msg.data); } catch (e) {}
+    } else if (msg.type === 'resize' && msg.cols && msg.rows) {
+      try { term.resize(msg.cols, msg.rows); } catch (e) {}
     }
   });
 
   browserWs.on('close', () => {
-    try { stdin.end(); } catch (e) {}
-    try { k8sWs && k8sWs.close(); } catch (e) {}
+    try { term.kill(); } catch (e) {}
+    cleanup();
   });
 });
 

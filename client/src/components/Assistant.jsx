@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Icon from './Icons';
 import Markdown from './Markdown';
+import { isExternalAgent } from '../aiConfig';
 
 // Floating AI assistant. Streams a read-only, tool-using debugging session from
 // /api/assistant/chat (SSE) and renders tokens + tool-call chips live.
@@ -145,13 +146,18 @@ export default function Assistant({ context }) {
     const onAsk = (e) => {
       const prompt = e.detail?.prompt;
       if (!prompt) return;
+      if (isExternalAgent()) return; // an external CLI agent handles it instead
       setOpen(true);
       setMinimized(false);
       if (enabled) send(prompt);
       else setInput(prompt);
     };
+    // The AI-tool button opens the chat window directly (no prompt) when the
+    // built-in assistant is the chosen tool.
+    const onOpen = () => { setOpen(true); setMinimized(false); };
     window.addEventListener('assistant:ask', onAsk);
-    return () => window.removeEventListener('assistant:ask', onAsk);
+    window.addEventListener('assistant:open', onOpen);
+    return () => { window.removeEventListener('assistant:ask', onAsk); window.removeEventListener('assistant:open', onOpen); };
   }); // no deps: always use the latest send/enabled closures
 
   const toolLabel = (t) => {
@@ -162,9 +168,8 @@ export default function Assistant({ context }) {
 
   return (
     <>
-      <button className="assistant-fab" onClick={() => setOpen((o) => !o)} title="AI assistant" aria-label="AI assistant">
-        <Icon name={open ? 'close' : 'sparkles'} size={22} />
-      </button>
+      {/* The built-in chat opens from the AI-tool launcher (AiToolButton) via the
+          `assistant:open` event — no separate floating button of its own. */}
 
       {open && (
         <div className={`assistant-panel ${minimized ? 'minimized' : ''}`}>

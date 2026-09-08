@@ -4,6 +4,7 @@ import Icon from './Icons';
 import Loader from './Loader';
 import ContextMenu from './ContextMenu';
 import { useToast } from './Toast';
+import { askLabel } from '../aiConfig';
 
 // ArgoCD dashboard — auto-detected when the applications.argoproj.io CRD exists.
 // Sub-views: Dashboard, Applications, Application Sets, Projects. Applications
@@ -214,7 +215,7 @@ export default function ArgoCD({ refreshSignal = 0, view, onViewChange }) {
 
   // Ask AI → Summarize: fetch the app's condition and hand it to the assistant.
   const summarize = async (app) => {
-    toast.info(`Summarizing ${app.name}…`, { title: 'Ask AI' });
+    toast.info(`Summarizing ${app.name}…`, { title: askLabel() });
     let d = detail && isSel(app) ? detail : null;
     if (!d) {
       try { d = (await axios.get(`/api/argocd/application/${encodeURIComponent(app.namespace)}/${encodeURIComponent(app.name)}`)).data; }
@@ -236,7 +237,7 @@ export default function ArgoCD({ refreshSignal = 0, view, onViewChange }) {
 
   const menuItems = (app) => [
     { icon: 'details', label: 'Show details', onClick: () => setSelected(app) },
-    { icon: 'sparkles', label: 'Summarize (Ask AI)', onClick: () => summarize(app) },
+    { icon: 'sparkles', label: `Summarize (${askLabel()})`, onClick: () => summarize(app) },
     { icon: 'argocd', label: 'Sync', onClick: () => setSyncDialog({ app, prune: false, dryRun: false, applyOnly: false, force: false, replace: false }) },
     { icon: 'refresh', label: 'Refresh', onClick: () => doRefresh(app, false) },
     { icon: 'refresh', label: 'Hard refresh', onClick: () => doRefresh(app, true) },
@@ -559,7 +560,7 @@ export default function ArgoCD({ refreshSignal = 0, view, onViewChange }) {
               </div>
             </div>
             <div className="drawer-actions">
-              <button className="drawer-action-btn" title="Summarize (Ask AI)" onClick={() => summarize(selected)}><Icon name="sparkles" size={16} /></button>
+              <button className="drawer-action-btn" title={`Summarize (${askLabel()})`} onClick={() => summarize(selected)}><Icon name="sparkles" size={16} /></button>
               <button className="drawer-action-btn" title="Refresh" disabled={busy} onClick={() => doRefresh(selected)}><Icon name="refresh" size={16} /></button>
               <button className="drawer-action-btn argo-sync" title="Sync" disabled={busy} onClick={() => setSyncDialog({ app: selected, prune: false, dryRun: false, applyOnly: false, force: false, replace: false })}><Icon name="argocd" size={16} /></button>
               <button className="drawer-action-btn danger" title="Delete" disabled={busy} onClick={() => setConfirmDel({ app: selected, cascade: true })}><Icon name="delete" size={16} /></button>

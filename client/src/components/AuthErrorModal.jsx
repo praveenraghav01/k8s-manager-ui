@@ -22,7 +22,7 @@ const HINTS = {
   'exec-plugin': 'Install the auth helper CLI referenced by your kubeconfig and make sure it is on PATH, then retry.',
 };
 
-export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying, contexts = [], currentContext, onSwitchContext }) {
+export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying, contexts = [], contextsInfo, currentContext, onSwitchContext, onAddAzure, onAddAws }) {
   const reason = auth?.reason || 'error';
   const title = TITLES[reason] || TITLES.error;
   const hint = HINTS[reason];
@@ -59,8 +59,11 @@ export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying
             <span className="auth-switch-label">Switch to another cluster</span>
             <ContextSelector
               contexts={contexts}
+              contextsInfo={contextsInfo}
               currentContext={currentContext || auth?.currentContext}
               onChange={onSwitchContext}
+              onAddAzure={onAddAzure}
+              onAddAws={onAddAws}
             />
           </div>
         )}
@@ -69,6 +72,16 @@ export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying
           {onChangeConfig && (
             <button className="modal-btn" onClick={onChangeConfig} disabled={retrying}>
               Load different kubeconfig
+            </button>
+          )}
+          {onAddAzure && (
+            <button className="modal-btn" onClick={onAddAzure} disabled={retrying}>
+              <Icon name="azure" size={14} /> Azure sign-in / add clusters
+            </button>
+          )}
+          {onAddAws && (
+            <button className="modal-btn" onClick={onAddAws} disabled={retrying}>
+              <Icon name="aws" size={14} /> AWS sign-in / add clusters
             </button>
           )}
           <button className="modal-btn primary" onClick={onRetry} disabled={retrying}>

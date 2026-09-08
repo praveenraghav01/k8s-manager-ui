@@ -108,6 +108,49 @@ function Chips({ obj, max }) {
   );
 }
 
+// Annotations often hold huge blobs (e.g. last-applied-configuration). Render
+// each as a readable key → value pair, pretty-printing JSON and collapsing long
+// values behind a toggle so the panel stays scannable.
+function AnnotationItem({ name, value }) {
+  const [open, setOpen] = useState(false);
+  const raw = value == null ? '' : String(value);
+  const trimmed = raw.trim();
+  let pretty = null;
+  const looksJson = (trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'));
+  if (looksJson) { try { pretty = JSON.stringify(JSON.parse(trimmed), null, 2); } catch { /* not valid JSON */ } }
+  const display = pretty ?? raw;
+  const collapsible = pretty != null || display.length > 100 || display.includes('\n');
+  return (
+    <div className="anno-item">
+      <div className="anno-key" title={name}>{name}</div>
+      {collapsible ? (
+        <div className="anno-value">
+          <button className="anno-toggle" onClick={() => setOpen((o) => !o)}>
+            <Icon name={open ? 'chevronDown' : 'chevronRight'} size={12} strokeWidth={2.4} />
+            {open ? 'Hide' : (pretty != null ? 'Show JSON' : 'Show value')}
+            <span className="anno-size">{pretty != null ? 'JSON · ' : ''}{display.length.toLocaleString()} chars</span>
+          </button>
+          {open && <pre className="anno-pre">{display}</pre>}
+        </div>
+      ) : (
+        <div className="anno-value anno-inline">{raw}</div>
+      )}
+    </div>
+  );
+}
+
+function Annotations({ obj }) {
+  const entries = Object.entries(obj || {});
+  if (!entries.length) return null;
+  // Put the noisy last-applied-configuration last; it's rarely what you want.
+  entries.sort((a, b) => (a[0].includes('last-applied-configuration') ? 1 : 0) - (b[0].includes('last-applied-configuration') ? 1 : 0));
+  return (
+    <div className="drawer-annos">
+      {entries.map(([k, v]) => <AnnotationItem key={k} name={k} value={v} />)}
+    </div>
+  );
+}
+
 export default function ResourceDrawer({ resource, namespace, resourceType, onClose, onOpenTab, onNavigate, onAction, canScale, canRestart }) {
   const [obj, setObj] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -301,7 +344,12 @@ export default function ResourceDrawer({ resource, namespace, resourceType, onCl
                 </span>
               </Row>
               <Row label="Labels"><Chips obj={meta.labels} max={12} /></Row>
-              <Row label="Annotations"><Chips obj={meta.annotations} max={6} /></Row>
+              {meta.annotations && Object.keys(meta.annotations).length > 0 && (
+                <div className="drawer-annos-block">
+                  <span className="drawer-row-label">Annotations</span>
+                  <Annotations obj={meta.annotations} />
+                </div>
+              )}
             </div>
 
             <div className="drawer-section">
@@ -422,6 +470,55 @@ export default function ResourceDrawer({ resource, namespace, resourceType, onCl
             {/* Port forwarding (services only) */}
             {kind === 'Service' && (
               <ServicePortForward namespace={meta.namespace} name={meta.name} ports={spec.ports || []} />
+            )}
+
+            {/* PersistentVolume storage — link out to its StorageClass and bound PVC */}
+            {kind === 'PersistentVolume' && (
+              <div className="drawer-section">
+                <div className="drawer-section-title">Storage</div>
+                <Row label="Capacity">{spec.capacity?.storage}</Row>
+                <Row label="Access Modes">{(spec.accessModes || []).join(', ')}</Row>
+                <Row label="Reclaim Policy">{spec.persistentVolumeReclaimPolicy}</Row>
+                <Row label="Volume Mode">{spec.volumeMode}</Row>
+                <Row label="Storage Class">
+                  {spec.storageClassName ? (
+                    <span className="xlink" onClick={() => onNavigate?.toResource({ type: 'storageClass', name: spec.storageClassName })}>
+                      {spec.storageClassName}
+                    </span>
+                  ) : '—'}
+                </Row>
+                <Row label="Claim">
+                  {spec.claimRef?.name ? (
+                    <span className="xlink" onClick={() => onNavigate?.toResource({ type: 'persistentVolumeClaim', namespace: spec.claimRef.namespace, name: spec.claimRef.name })}>
+                      {spec.claimRef.namespace ? `${spec.claimRef.namespace}/` : ''}{spec.claimRef.name}
+                    </span>
+                  ) : '—'}
+                </Row>
+              </div>
+            )}
+
+            {/* PersistentVolumeClaim storage — link out to its StorageClass and bound PV */}
+            {kind === 'PersistentVolumeClaim' && (
+              <div className="drawer-section">
+                <div className="drawer-section-title">Storage</div>
+                <Row label="Capacity">{status.capacity?.storage || spec.resources?.requests?.storage}</Row>
+                <Row label="Access Modes">{(spec.accessModes || []).join(', ')}</Row>
+                <Row label="Volume Mode">{spec.volumeMode}</Row>
+                <Row label="Storage Class">
+                  {spec.storageClassName ? (
+                    <span className="xlink" onClick={() => onNavigate?.toResource({ type: 'storageClass', name: spec.storageClassName })}>
+                      {spec.storageClassName}
+                    </span>
+                  ) : '—'}
+                </Row>
+                <Row label="Volume">
+                  {spec.volumeName ? (
+                    <span className="xlink" onClick={() => onNavigate?.toResource({ type: 'persistentVolume', name: spec.volumeName })}>
+                      {spec.volumeName}
+                    </span>
+                  ) : '—'}
+                </Row>
+              </div>
             )}
 
             {/* Containers */}
