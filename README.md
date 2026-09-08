@@ -27,7 +27,7 @@ A modern web UI for browsing and operating a Kubernetes cluster using your local
 
 ## Prerequisites
 
-- **Node.js 18+** and npm
+- **Node.js 24+** and npm
 - **`kubectl`** on your `PATH` — the app shells out to it for metrics, topology, CRDs, port-forward, etc.
 - **`helm`** (v3) on your `PATH` — for the Helm releases view
 - A working **`kubeconfig`** (default `~/.kube/config`, or set `KUBECONFIG`) with access to a cluster

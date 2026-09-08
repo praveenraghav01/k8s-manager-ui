@@ -3,7 +3,7 @@
 # ============================================================
 # Stage 1 — build the React/Vite frontend
 # ============================================================
-FROM node:22-alpine AS client-build
+FROM node:24-alpine AS client-build
 WORKDIR /app/client
 COPY client/package*.json ./
 RUN npm ci
@@ -13,7 +13,7 @@ RUN npm run build
 # ============================================================
 # Stage 2 — install production backend dependencies
 # ============================================================
-FROM node:22-alpine AS server-deps
+FROM node:24-alpine AS server-deps
 WORKDIR /app
 # node-pty (pod terminal) has no Alpine/musl prebuild, so it compiles from
 # source here — needs python3 + a C/C++ toolchain. This stage is discarded;
@@ -25,7 +25,7 @@ RUN npm ci --omit=dev
 # ============================================================
 # Stage 3 — runtime image (Node + kubectl)
 # ============================================================
-FROM node:22-alpine AS runtime
+FROM node:24-alpine AS runtime
 WORKDIR /app
 
 # TARGETARCH is provided by BuildKit (amd64 / arm64); default to amd64

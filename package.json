@@ -4,6 +4,9 @@
   "description": "Kubernetes resource manager UI",
   "type": "module",
   "main": "electron/main.cjs",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "node server.js",
