@@ -515,6 +515,7 @@ function App() {
             onSelectArgoView={(v) => { setArgoView(v); setResourceType('argocd'); }}
             onAddAzure={() => setShowAzure(true)}
             onAddAws={() => setShowAws(true)}
+            onAddGke={() => setShowGke(true)}
             onOpenPreferences={() => openPreferences('general')}
           />
 
@@ -552,6 +553,7 @@ function App() {
               onChangeConfig={() => setForceConfigModal(true)}
               onAddAzure={() => setShowAzure(true)}
               onAddAws={() => setShowAws(true)}
+              onAddGke={() => setShowGke(true)}
               initialSection={prefSection}
               onClose={() => setResourceType(prefReturn || 'overview')}
             />
