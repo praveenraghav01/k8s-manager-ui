@@ -221,8 +221,10 @@ UI. **Read tools:** `list_contexts`, `switch_context`, `list_namespaces`,
 **write** tools (`apply_yaml`, `delete_resource`, `scale_workload`,
 `rollout_restart`, `sync_argocd_app`, `refresh_argocd_app`).
 
-Write tools are **off by default** — start the server with `MCP_ALLOW_WRITE=1`
-to let agents mutate the cluster.
+Write tools are **off by default**. Toggle them in the app under
+**Preferences → MCP Server → Write access** (persisted), or start the server with
+`MCP_ALLOW_WRITE=1`. Changes apply to new agent connections — reconnect the agent
+to pick up the new tool set.
 
 **HTTP transport** (recommended) — while the app is running, agents connect to:
 

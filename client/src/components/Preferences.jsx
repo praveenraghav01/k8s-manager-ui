@@ -342,6 +342,17 @@ function McpSection() {
     }
   };
 
+  const setWrite = async (allowWrite) => {
+    setInfo((p) => ({ ...(p || {}), allowWrite })); // optimistic
+    try {
+      const { data } = await axios.post('/api/mcp/config', { allowWrite });
+      setInfo((p) => ({ ...(p || {}), allowWrite: data.allowWrite }));
+    } catch (e) {
+      // revert on failure
+      axios.get('/api/mcp/info').then((r) => setInfo(r.data)).catch(() => {});
+    }
+  };
+
   const claudeCmd = `claude mcp add --transport http k8sight ${endpoint}`;
   const clientJson = `{
   "mcpServers": {
@@ -374,11 +385,19 @@ function McpSection() {
         </div>
       </Field>
 
-      <Field label="Write tools" hint="Off by default so an agent can't mutate the cluster.">
-        {info == null ? <span className="prefs-muted">…</span> : info.allowWrite ? (
-          <span className="prefs-muted"><b style={{ color: 'var(--amber, #ff9f0a)' }}>Enabled</b> — agents can apply, delete, scale and sync.</span>
-        ) : (
-          <span className="prefs-muted"><b>Read-only</b> — restart the server with <code>MCP_ALLOW_WRITE=1</code> to allow writes.</span>
+      <Field label="Write access" hint="Read-only is safest. Enabling lets agents apply, delete, scale and sync — mutating your cluster.">
+        {info == null ? <span className="prefs-muted">…</span> : (
+          <>
+            <div className="prefs-seg">
+              <button className={`prefs-seg-btn ${!info.allowWrite ? 'active' : ''}`} onClick={() => setWrite(false)}>Read-only</button>
+              <button className={`prefs-seg-btn ${info.allowWrite ? 'active' : ''}`} onClick={() => setWrite(true)}>Read &amp; write</button>
+            </div>
+            <p className="prefs-muted" style={{ marginTop: 8 }}>
+              {info.allowWrite
+                ? 'Write tools are exposed. Applies to new agent connections — reconnect your agent to pick them up.'
+                : 'Only read tools are exposed.'}
+            </p>
+          </>
         )}
       </Field>
 

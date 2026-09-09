@@ -15,9 +15,13 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
-export function createMcpServer({ baseURL, version } = {}) {
+export function createMcpServer({ baseURL, version, allowWrite } = {}) {
   const base = baseURL || process.env.MCP_API_BASE || `http://127.0.0.1:${process.env.PORT || 3001}`;
-  const allowWrite = ['1', 'true', 'yes'].includes(String(process.env.MCP_ALLOW_WRITE || '').toLowerCase());
+  // Prefer an explicit flag (the app's persisted UI setting); fall back to the
+  // MCP_ALLOW_WRITE env var when not supplied (e.g. `npm run mcp` standalone).
+  if (typeof allowWrite !== 'boolean') {
+    allowWrite = ['1', 'true', 'yes'].includes(String(process.env.MCP_ALLOW_WRITE || '').toLowerCase());
+  }
 
   // Minimal REST client over Node's built-in fetch (no extra backend dep).
   const req = async (method, urlPath, { params, body } = {}) => {

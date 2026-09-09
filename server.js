@@ -134,13 +134,34 @@ app.get('/api/version', (req, res) => {
   res.json({ version: getAppVersion() });
 });
 
+// Persisted app settings (small JSON in the user config dir). Used so the
+// desktop app can toggle MCP write tools from the UI instead of an env var.
+const SETTINGS_DIR = path.join(os.homedir(), '.config', 'k8s-manager');
+const SETTINGS_FILE = path.join(SETTINGS_DIR, 'settings.json');
+function readSettings() {
+  try { return JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')); } catch { return {}; }
+}
+function writeSettings(patch) {
+  const next = { ...readSettings(), ...patch };
+  try {
+    fs.mkdirSync(SETTINGS_DIR, { recursive: true });
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(next, null, 2), { mode: 0o600 });
+  } catch (e) { /* best-effort */ }
+  return next;
+}
+// MCP write tools: the persisted UI toggle wins; MCP_ALLOW_WRITE is the initial
+// default when nothing has been set yet.
+let mcpAllowWrite = (() => {
+  const s = readSettings();
+  if (typeof s.mcpAllowWrite === 'boolean') return s.mcpAllowWrite;
+  return ['1', 'true', 'yes'].includes(String(process.env.MCP_ALLOW_WRITE || '').toLowerCase());
+})();
+
 // MCP connection info for the Preferences → MCP section. The HTTP endpoint is
-// this same server at /mcp; write tools are gated by the MCP_ALLOW_WRITE env
-// var (read at startup, so this reflects the current process).
+// this same server at /mcp; write tools are gated by `mcpAllowWrite`.
 app.get('/api/mcp/info', (req, res) => {
-  const allowWrite = ['1', 'true', 'yes'].includes(String(process.env.MCP_ALLOW_WRITE || '').toLowerCase());
   res.json({
-    allowWrite,
+    allowWrite: mcpAllowWrite,
     readTools: [
       'list_contexts', 'switch_context', 'list_namespaces', 'list_resources',
       'get_resource', 'get_resource_yaml', 'get_pod_logs', 'get_events', 'get_topology',
@@ -156,6 +177,18 @@ app.get('/api/mcp/info', (req, res) => {
       'sync_argocd_app', 'refresh_argocd_app',
     ],
   });
+});
+
+// Toggle MCP write tools from the UI (persisted). Takes effect for new MCP
+// sessions — a connected agent must reconnect to pick up the new tool set.
+app.post('/api/mcp/config', (req, res) => {
+  const { allowWrite } = req.body || {};
+  if (typeof allowWrite !== 'boolean') {
+    return res.status(400).json({ error: 'allowWrite (boolean) is required' });
+  }
+  mcpAllowWrite = allowWrite;
+  writeSettings({ mcpAllowWrite: allowWrite });
+  res.json({ allowWrite: mcpAllowWrite });
 });
 
 app.get('/api/config/status', (req, res) => {
@@ -2788,7 +2821,7 @@ app.post('/mcp', async (req, res) => {
         onsessioninitialized: (id) => { mcpTransports[id] = transport; },
       });
       transport.onclose = () => { if (transport.sessionId) delete mcpTransports[transport.sessionId]; };
-      const mcp = createMcpServer({ version: getAppVersion() });
+      const mcp = createMcpServer({ version: getAppVersion(), allowWrite: mcpAllowWrite });
       await mcp.connect(transport);
     } else {
       return res.status(400).json({ jsonrpc: '2.0', error: { code: -32000, message: 'Bad Request: no valid session id (send an initialize request first)' }, id: null });
