@@ -22,16 +22,21 @@ const kubeconfigPath = () => process.env.KUBECONFIG || path.join(process.env.HOM
 
 const OAUTH_SCOPE = 'https://www.googleapis.com/auth/cloud-platform';
 
-// Shipped OAuth "Desktop app" client — lets every user sign in with their
-// browser (no service-account key, like Azure/AWS). Register one client once in
-// a GCP project you own (APIs & Services → Credentials → OAuth client ID →
-// Desktop app) and paste its id/secret here. For installed apps Google treats
-// the client secret as non-confidential (this is exactly what gcloud does), so
-// it is safe to ship. Env vars override, for anyone who wants their own client.
-const DEFAULT_CLIENT_ID = '';     // e.g. '1234567890-abc.apps.googleusercontent.com'
-const DEFAULT_CLIENT_SECRET = ''; // e.g. 'GOCSPX-...'
-const CLIENT_ID = process.env.GOOGLE_CLIENT_ID || DEFAULT_CLIENT_ID;
-const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || DEFAULT_CLIENT_SECRET;
+// OAuth "Desktop app" client for browser sign-in (keyless, like Azure/AWS).
+// The client id/secret are NOT committed. They come from, in order:
+//   1. GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET env vars, or
+//   2. a gitignored gke-oauth.json next to this file ({ clientId, clientSecret }),
+//      which `scripts/write-gke-oauth.mjs` generates from those env vars at build
+//      time so shipped installers embed the client without it living in git.
+// If neither is present, only the service-account-key sign-in is offered.
+// (Google treats installed-app client secrets as non-confidential — see
+//  docs/gke-oauth-setup.md.)
+function readOAuthFile() {
+  try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'gke-oauth.json'), 'utf8')); } catch { return {}; }
+}
+const oauthFile = readOAuthFile();
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID || oauthFile.clientId || '';
+const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || oauthFile.clientSecret || '';
 
 const b64url = (buf) => Buffer.from(buf).toString('base64url');
 

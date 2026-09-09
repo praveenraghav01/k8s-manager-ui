@@ -42,6 +42,10 @@ pnpm-debug.log*
 *.pem
 *.key
 
+# Google OAuth client for GKE browser sign-in — generated at build time from
+# GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET; never committed.
+gke-oauth.json
+
 # Never commit real kubeconfigs
 kubeconfig
 kubeconfig.*

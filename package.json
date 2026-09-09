@@ -15,7 +15,7 @@
     "server": "node server.js",
     "client": "cd client && npm run dev",
     "version:sync": "node scripts/sync-version.mjs",
-    "build": "npm run version:sync && cd client && npm run build",
+    "build": "node scripts/write-gke-oauth.mjs && npm run version:sync && cd client && npm run build",
     "start": "node server.js",
     "app": "electron .",
     "app:pack": "npm run build && electron-builder --dir --mac",
@@ -64,6 +64,7 @@
     "files": [
       "electron/**/*",
       "*.js",
+      "gke-oauth.json",
       "package.json",
       "client/dist/**/*"
     ],
