@@ -21,8 +21,17 @@ const CREDS_FILE = path.join(CONFIG_DIR, 'credentials.json');
 const kubeconfigPath = () => process.env.KUBECONFIG || path.join(process.env.HOME || os.homedir(), '.kube', 'config');
 
 const OAUTH_SCOPE = 'https://www.googleapis.com/auth/cloud-platform';
-const CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
-const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+
+// Shipped OAuth "Desktop app" client — lets every user sign in with their
+// browser (no service-account key, like Azure/AWS). Register one client once in
+// a GCP project you own (APIs & Services → Credentials → OAuth client ID →
+// Desktop app) and paste its id/secret here. For installed apps Google treats
+// the client secret as non-confidential (this is exactly what gcloud does), so
+// it is safe to ship. Env vars override, for anyone who wants their own client.
+const DEFAULT_CLIENT_ID = '';     // e.g. '1234567890-abc.apps.googleusercontent.com'
+const DEFAULT_CLIENT_SECRET = ''; // e.g. 'GOCSPX-...'
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID || DEFAULT_CLIENT_ID;
+const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || DEFAULT_CLIENT_SECRET;
 
 const b64url = (buf) => Buffer.from(buf).toString('base64url');
 
