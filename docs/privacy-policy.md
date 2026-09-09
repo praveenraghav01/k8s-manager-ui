@@ -59,4 +59,4 @@ We may update this policy from time to time. Material changes will be reflected 
 
 ## 10. Contact
 
-Questions about this policy? Open an issue at <https://github.com/praveenraghav01/k8s-manager-ui> or email **praveensinghraghav96@gmail.com**.
+Questions about this policy? Open an issue at <https://github.com/praveenraghav01/k8sight> or email **praveensinghraghav96@gmail.com**.

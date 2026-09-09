@@ -27,7 +27,7 @@ python3 -m http.server 4321 -d website
 - **AI assistant** band (read-only Claude assistant).
 - **Download section**:
   - macOS → **GitHub releases**
-    (`https://github.com/praveenraghav01/k8s-manager-ui/releases/latest`).
+    (`https://github.com/praveenraghav01/k8sight/releases/latest`).
   - Docker commands using the image **`praveenraghav/k8s-manager-ui`**
     (copy-to-clipboard buttons).
 
