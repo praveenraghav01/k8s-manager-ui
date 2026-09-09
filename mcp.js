@@ -166,6 +166,193 @@ export function createMcpServer({ baseURL, version } = {}) {
     return ok(data);
   }));
 
+  server.registerTool('get_cluster_summary', {
+    title: 'Get cluster summary',
+    description: 'Cluster overview: node & pod health, CPU/memory capacity and allocatable, Kubernetes version, node roles.',
+    inputSchema: {},
+  }, wrap(async () => {
+    const { data } = await api.get('/api/cluster/summary');
+    return ok(data);
+  }));
+
+  server.registerTool('list_nodes', {
+    title: 'List nodes',
+    description: 'List cluster nodes with status, roles, version and capacity.',
+    inputSchema: {},
+  }, wrap(async () => {
+    const { data } = await api.get('/api/nodes');
+    return ok(data.nodes ?? data);
+  }));
+
+  server.registerTool('get_node_pods', {
+    title: 'Get pods on a node',
+    description: 'List the pods scheduled on a given node.',
+    inputSchema: { name: z.string().describe('node name') },
+  }, wrap(async ({ name }) => {
+    const { data } = await api.get(`/api/nodes/${encodeURIComponent(name)}/pods`);
+    return ok(data.pods ?? data);
+  }));
+
+  server.registerTool('get_node_metrics', {
+    title: 'Get node metrics',
+    description: 'Live CPU/memory usage for a node (requires metrics-server).',
+    inputSchema: { name: z.string().describe('node name') },
+  }, wrap(async ({ name }) => {
+    const { data } = await api.get(`/api/metrics/node/${encodeURIComponent(name)}`);
+    return ok(data);
+  }));
+
+  server.registerTool('get_pod_metrics', {
+    title: 'Get pod metrics',
+    description: 'Live CPU/memory usage for a pod (requires metrics-server).',
+    inputSchema: { namespace: z.string(), pod: z.string() },
+  }, wrap(async ({ namespace, pod }) => {
+    const { data } = await api.get(`/api/metrics/pod/${encodeURIComponent(namespace)}/${encodeURIComponent(pod)}`);
+    return ok(data);
+  }));
+
+  server.registerTool('list_pod_metrics', {
+    title: 'List pod metrics',
+    description: 'Live CPU/memory usage for all pods in a namespace (or "all"). Requires metrics-server.',
+    inputSchema: { namespace: z.string().default('all') },
+  }, wrap(async ({ namespace = 'all' }) => {
+    const { data } = await api.get(`/api/metrics/pods/${encodeURIComponent(namespace)}`);
+    return ok(data.pods ?? data);
+  }));
+
+  server.registerTool('get_resource', {
+    title: 'Get resource detail',
+    description: 'Full detail for one resource (metadata, spec, status, conditions, containers) — richer than the raw YAML.',
+    inputSchema: {
+      namespace: z.string().describe('namespace ("-" for cluster-scoped kinds)'),
+      kind: z.string().describe('resource type: pod, deployment, service, node, …'),
+      name: z.string(),
+    },
+  }, wrap(async ({ namespace, kind, name }) => {
+    const { data } = await api.get(`/api/resource/${encodeURIComponent(namespace)}/${encodeURIComponent(kind)}/${encodeURIComponent(name)}`);
+    return ok(data);
+  }));
+
+  server.registerTool('list_storage', {
+    title: 'List storage',
+    description: 'PersistentVolumes, PersistentVolumeClaims and StorageClasses across the cluster.',
+    inputSchema: {},
+  }, wrap(async () => {
+    const { data } = await api.get('/api/storage');
+    return ok(data);
+  }));
+
+  server.registerTool('get_rbac', {
+    title: 'Get RBAC',
+    description: 'Roles, ClusterRoles, RoleBindings, ClusterRoleBindings and ServiceAccounts (access control).',
+    inputSchema: {},
+  }, wrap(async () => {
+    const { data } = await api.get('/api/rbac');
+    return ok(data);
+  }));
+
+  // ---- Helm ----
+  server.registerTool('list_helm_releases', {
+    title: 'List Helm releases',
+    description: 'All Helm releases with chart, version, status and namespace (read via the API — no helm CLI).',
+    inputSchema: {},
+  }, wrap(async () => {
+    const { data } = await api.get('/api/helm/releases');
+    return ok(data.releases ?? data);
+  }));
+
+  server.registerTool('get_helm_values', {
+    title: 'Get Helm release values',
+    description: 'The values a Helm release was installed with.',
+    inputSchema: { namespace: z.string(), name: z.string() },
+  }, wrap(async ({ namespace, name }) => {
+    const { data } = await api.get(`/api/helm/releases/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}/values`);
+    return ok(data.values ?? data);
+  }));
+
+  server.registerTool('get_helm_manifest', {
+    title: 'Get Helm release manifest',
+    description: 'The rendered Kubernetes manifest for a Helm release.',
+    inputSchema: { namespace: z.string(), name: z.string() },
+  }, wrap(async ({ namespace, name }) => {
+    const { data } = await api.get(`/api/helm/releases/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}/manifest`);
+    return ok(data.manifest ?? data);
+  }));
+
+  // ---- Custom Resources (CRDs) ----
+  server.registerTool('list_crds', {
+    title: 'List CRDs',
+    description: 'The custom resource definitions available on the cluster (group → kind), for use with list_custom_resources.',
+    inputSchema: {},
+  }, wrap(async () => {
+    const { data } = await api.get('/api/customresources');
+    return ok(data.groups ?? data);
+  }));
+
+  server.registerTool('list_custom_resources', {
+    title: 'List custom resources',
+    description: 'Instances of a custom resource. Get group/version/plural from list_crds.',
+    inputSchema: { group: z.string(), version: z.string(), plural: z.string() },
+  }, wrap(async ({ group, version, plural }) => {
+    const { data } = await api.get(`/api/customresources/${encodeURIComponent(group)}/${encodeURIComponent(version)}/${encodeURIComponent(plural)}`);
+    return ok(data.items ?? data);
+  }));
+
+  server.registerTool('get_custom_resource', {
+    title: 'Get custom resource',
+    description: 'Full detail of one custom resource instance.',
+    inputSchema: { group: z.string(), version: z.string(), plural: z.string(), name: z.string() },
+  }, wrap(async ({ group, version, plural, name }) => {
+    const { data } = await api.get(`/api/customresource/${encodeURIComponent(group)}/${encodeURIComponent(version)}/${encodeURIComponent(plural)}/${encodeURIComponent(name)}`);
+    return ok(data);
+  }));
+
+  // ---- ArgoCD (extended) ----
+  server.registerTool('get_argocd_status', {
+    title: 'Get ArgoCD status',
+    description: 'Whether ArgoCD is installed/detected on the cluster, and fleet-level sync/health counts.',
+    inputSchema: {},
+  }, wrap(async () => {
+    const { data } = await api.get('/api/argocd/status');
+    return ok(data);
+  }));
+
+  server.registerTool('list_argocd_projects', {
+    title: 'List ArgoCD projects',
+    description: 'ArgoCD AppProjects.',
+    inputSchema: {},
+  }, wrap(async () => {
+    const { data } = await api.get('/api/argocd/projects');
+    return ok(data.projects ?? data);
+  }));
+
+  server.registerTool('list_argocd_appsets', {
+    title: 'List ArgoCD ApplicationSets',
+    description: 'ArgoCD ApplicationSets.',
+    inputSchema: {},
+  }, wrap(async () => {
+    const { data } = await api.get('/api/argocd/applicationsets');
+    return ok(data.applicationSets ?? data.applicationsets ?? data);
+  }));
+
+  server.registerTool('list_argocd_repositories', {
+    title: 'List ArgoCD repositories',
+    description: 'Git/Helm repositories connected to ArgoCD.',
+    inputSchema: {},
+  }, wrap(async () => {
+    const { data } = await api.get('/api/argocd/repositories');
+    return ok(data.repositories ?? data);
+  }));
+
+  server.registerTool('list_argocd_clusters', {
+    title: 'List ArgoCD clusters',
+    description: 'Destination clusters registered with ArgoCD.',
+    inputSchema: {},
+  }, wrap(async () => {
+    const { data } = await api.get('/api/argocd/clusters');
+    return ok(data.clusters ?? data);
+  }));
+
   // ---------------------------------------------------------- write tools (gated)
   if (allowWrite) {
     server.registerTool('apply_yaml', {

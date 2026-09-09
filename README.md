@@ -210,11 +210,16 @@ artifacts without publishing a release.
 The app doubles as an [MCP](https://modelcontextprotocol.io) server, so any
 MCP-compatible AI agent (Claude Desktop, Claude Code, Cursor, …) can inspect and
 operate the cluster it's connected to. It exposes the same capabilities as the
-UI: `list_contexts`, `switch_context`, `list_namespaces`, `list_resources`,
-`get_resource_yaml`, `get_pod_logs`, `get_events`, `get_topology`,
-`list_argocd_apps`, `get_argocd_app`, plus **write** tools (`apply_yaml`,
-`delete_resource`, `scale_workload`, `rollout_restart`, `sync_argocd_app`,
-`refresh_argocd_app`).
+UI. **Read tools:** `list_contexts`, `switch_context`, `list_namespaces`,
+`list_resources`, `get_resource`, `get_resource_yaml`, `get_pod_logs`,
+`get_events`, `get_topology`, `get_cluster_summary`, `list_nodes`,
+`get_node_pods`, `get_node_metrics`, `get_pod_metrics`, `list_pod_metrics`,
+`list_storage`, `get_rbac`, `list_helm_releases`, `get_helm_values`,
+`get_helm_manifest`, `list_crds`, `list_custom_resources`, `get_custom_resource`,
+`get_argocd_status`, `list_argocd_apps`, `get_argocd_app`, `list_argocd_projects`,
+`list_argocd_appsets`, `list_argocd_repositories`, `list_argocd_clusters`. Plus
+**write** tools (`apply_yaml`, `delete_resource`, `scale_workload`,
+`rollout_restart`, `sync_argocd_app`, `refresh_argocd_app`).
 
 Write tools are **off by default** — start the server with `MCP_ALLOW_WRITE=1`
 to let agents mutate the cluster.

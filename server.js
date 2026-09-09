@@ -143,8 +143,13 @@ app.get('/api/mcp/info', (req, res) => {
     allowWrite,
     readTools: [
       'list_contexts', 'switch_context', 'list_namespaces', 'list_resources',
-      'get_resource_yaml', 'get_pod_logs', 'get_events', 'get_topology',
-      'list_argocd_apps', 'get_argocd_app',
+      'get_resource', 'get_resource_yaml', 'get_pod_logs', 'get_events', 'get_topology',
+      'get_cluster_summary', 'list_nodes', 'get_node_pods', 'get_node_metrics',
+      'get_pod_metrics', 'list_pod_metrics', 'list_storage', 'get_rbac',
+      'list_helm_releases', 'get_helm_values', 'get_helm_manifest',
+      'list_crds', 'list_custom_resources', 'get_custom_resource',
+      'get_argocd_status', 'list_argocd_apps', 'get_argocd_app',
+      'list_argocd_projects', 'list_argocd_appsets', 'list_argocd_repositories', 'list_argocd_clusters',
     ],
     writeTools: [
       'apply_yaml', 'delete_resource', 'scale_workload', 'rollout_restart',
