@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>k8sight — Documentation</title>
+<meta name="description" content="k8sight documentation — connect your AWS EKS, Azure AKS, and Google GKE clusters with no CLI required." />
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+<style>
+  :root {
+    /* Light palette (default) */
+    --bg: #ffffff;
+    --bg-2: #f5f5f7;
+    --panel: #ffffff;
+    --panel-2: #f5f5f7;
+    --border: #d2d2d7;
+    --border-2: #c7c7cc;
+    --text: #1d1d1f;
+    --text-dim: #6e6e73;
+    --text-mute: #86868b;
+    --brand-light: #1d1d1f;
+    --brand-dark: #6e6e73;
+    --accent: #0071e3;
+    --accent-hover: #0077ed;
+    /* Apple system colors */
+    --green: #34c759;
+    --amber: #ff9f0a;
+    --red: #ff3b30;
+    --purple: #af52de;
+    --cyan: #32ade6;
+    --radius: 18px;
+    --maxw: 1024px;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+    --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --ease-spring: cubic-bezier(0.34, 1.3, 0.64, 1);
+  }
+  :root[data-theme="dark"] {
+    --bg: #000000;
+    --bg-2: #0a0a0a;
+    --panel: #1d1d1f;
+    --panel-2: #161617;
+    --border: #333336;
+    --border-2: #48484a;
+    --text: #f5f5f7;
+    --text-dim: #a1a1a6;
+    --text-mute: #86868b;
+    --brand-light: #f5f5f7;
+    --brand-dark: #a1a1a6;
+    --accent: #2997ff;
+    --accent-hover: #47a5ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 17px;
+    line-height: 1.47059;
+    letter-spacing: -0.022em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  img { max-width: 100%; display: block; }
+  section { position: relative; }
+  code { font-family: var(--mono); font-size: 0.88em; }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 22px; }
+
+  .bg-glow {
+    position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background: radial-gradient(1200px 700px at 50% -10%, rgba(0,113,227,.05), transparent 60%);
+  }
+  :root[data-theme="dark"] .bg-glow {
+    background: radial-gradient(1200px 700px at 50% -10%, rgba(41,151,255,.10), transparent 60%);
+  }
+
+  /* ---------- Global nav (Apple thin translucent bar) ---------- */
+  header {
+    position: sticky; top: 0; z-index: 9000; height: 48px;
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    background: rgba(255,255,255,.72);
+    border-bottom: 1px solid rgba(0,0,0,.08);
+  }
+  :root[data-theme="dark"] header { background: rgba(22,22,23,.72); border-bottom-color: rgba(255,255,255,.1); }
+  header .wrap { max-width: 1024px; }
+  nav { display: flex; align-items: center; justify-content: space-between; height: 48px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; letter-spacing: -0.01em; color: var(--text); }
+  .brand:hover { text-decoration: none; }
+  .brand .logo { width: 26px; height: 26px; border-radius: 7px; }
+  .brand small { display: block; font-size: 9px; letter-spacing: .14em; color: var(--text-mute); font-weight: 500; }
+  .nav-right { display: flex; align-items: center; gap: 22px; }
+  .nav-links { display: flex; align-items: center; gap: 26px; }
+  .nav-links a { color: var(--text); opacity: .82; font-size: 12px; font-weight: 400; letter-spacing: -0.01em; transition: opacity .15s, color .15s; }
+  .nav-links a:hover { opacity: 1; color: var(--accent); text-decoration: none; }
+  .nav-links a.current { opacity: 1; color: var(--accent); }
+  .nav-cta {
+    background: var(--accent); color: #fff !important; opacity: 1;
+    padding: 5px 13px; border-radius: 980px; font-weight: 400; font-size: 12px;
+    transition: background .15s;
+  }
+  .nav-cta:hover { background: var(--accent-hover); color: #fff !important; text-decoration: none; }
+  .menu-btn { display: none; background: none; border: 0; color: var(--text); cursor: pointer; }
+  .theme-btn {
+    display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+    border: 1px solid var(--border); background: transparent; color: var(--text); cursor: pointer;
+    transition: border-color .15s, background .15s, transform .15s var(--ease-out);
+  }
+  .theme-btn:hover { border-color: var(--text-mute); }
+  .theme-btn:active { transform: scale(.9); }
+  .theme-btn svg { width: 15px; height: 15px; }
+  .theme-btn .ic-sun { display: none; }
+  .theme-btn .ic-moon { display: block; }
+  :root[data-theme="dark"] .theme-btn .ic-sun { display: block; }
+  :root[data-theme="dark"] .theme-btn .ic-moon { display: none; }
+
+  /* ---------- Docs hero ---------- */
+  .docs-hero { padding: 56px 0 8px; }
+  .docs-hero .wrap { max-width: 1024px; }
+  .docs-hero .eyebrow { color: var(--accent); font-size: 14px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 10px; }
+  .docs-hero h1 { font-size: clamp(34px, 5vw, 52px); line-height: 1.05; letter-spacing: -0.015em; font-weight: 700; margin-bottom: 12px; color: var(--text); }
+  .docs-hero p { color: var(--text-dim); font-size: 19px; max-width: 640px; line-height: 1.5; }
+
+  /* ---------- Docs layout: sticky sidebar + content ---------- */
+  .docs-layout { max-width: 1024px; margin: 0 auto; padding: 32px 22px 96px; display: grid; grid-template-columns: 210px 1fr; gap: 52px; align-items: start; }
+  .docs-side { position: sticky; top: 72px; }
+  .docs-side .side-title { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-mute); margin: 0 0 12px 12px; }
+  .docs-side nav { display: block; height: auto; }
+  .docs-side a { display: block; color: var(--text-dim); font-size: 14px; padding: 7px 12px; border-radius: 8px; border-left: 2px solid transparent; transition: color .15s, background .15s; }
+  .docs-side a:hover { color: var(--text); background: var(--bg-2); text-decoration: none; }
+  .docs-side a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 500; }
+  .docs-side a.sub { padding-left: 26px; font-size: 13px; }
+
+  .docs-content { min-width: 0; max-width: 720px; }
+  .docs-content article { scroll-margin-top: 64px; }
+  .docs-content article + article { margin-top: 8px; padding-top: 44px; border-top: 1px solid var(--border); }
+  .docs-content h2 { font-size: clamp(26px, 3.5vw, 32px); font-weight: 700; letter-spacing: -0.015em; margin: 0 0 6px; color: var(--text); scroll-margin-top: 64px; }
+  .docs-content .tagline { color: var(--text-mute); font-size: 15px; margin-bottom: 20px; }
+  .docs-content h3 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; margin: 34px 0 12px; color: var(--text); scroll-margin-top: 64px; }
+  .docs-content p { color: var(--text-dim); font-size: 16px; line-height: 1.62; margin-bottom: 14px; }
+  .docs-content strong { color: var(--text); font-weight: 600; }
+  .docs-content ul, .docs-content ol { color: var(--text-dim); margin: 0 0 16px 22px; }
+  .docs-content li { margin-bottom: 9px; line-height: 1.6; }
+  .docs-content code { font-family: var(--mono); font-size: 0.85em; color: var(--accent); background: var(--bg-2); padding: 2px 6px; border-radius: 5px; word-break: break-word; }
+  .docs-content pre { background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; overflow-x: auto; margin: 0 0 16px; }
+  .docs-content pre code { color: var(--text); background: none; padding: 0; font-size: 13.5px; line-height: 1.6; }
+  .docs-content a { color: var(--accent); }
+
+  /* Provider heading with logo pill */
+  .prov-head { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
+  .prov-badge { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--bg-2); border: 1px solid var(--border); flex: none; }
+  .prov-badge svg, .prov-badge img { width: 26px; height: 26px; }
+  .prov-badge .aws-word { fill: var(--text); }
+
+  /* Callout */
+  .callout { display: flex; gap: 12px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin: 0 0 18px; }
+  .callout .cico { flex: none; color: var(--amber); }
+  .callout.tip .cico { color: var(--accent); }
+  .callout p { margin: 0; font-size: 15px; color: var(--text-dim); }
+  .callout strong { color: var(--text); }
+
+  .method-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin: 0 0 18px; }
+  .method { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .method h4 { font-size: 15px; font-weight: 600; color: var(--text); margin: 0 0 5px; }
+  .method p { font-size: 14.5px; margin: 0; color: var(--text-dim); }
+  .method .rec { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); padding: 2px 7px; border-radius: 6px; margin-left: 8px; vertical-align: middle; }
+
+  /* ---------- Footer ---------- */
+  footer { border-top: 1px solid var(--border); padding: 28px 0 40px; background: var(--bg-2); }
+  footer .wrap { max-width: 1024px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  footer .brand { font-size: 13px; color: var(--text-mute); }
+  footer .brand small { color: var(--text-mute); }
+  footer .links { display: flex; gap: 22px; flex-wrap: wrap; }
+  footer .links a { color: var(--text-dim); font-size: 12px; }
+  footer .links a:hover { color: var(--text); text-decoration: underline; }
+  footer .copy { color: var(--text-mute); font-size: 12px; line-height: 1.5; width: 100%; padding-top: 14px; margin-top: 6px; border-top: 1px solid var(--border); }
+  footer .made { width: 100%; text-align: center; color: var(--text-mute); font-size: 12px; padding-top: 6px; }
+  footer .made a { color: var(--text-mute); }
+
+  @media (max-width: 860px) {
+    .docs-layout { grid-template-columns: 1fr; gap: 24px; }
+    .docs-side { position: static; top: auto; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--bg-2); }
+    .docs-side a.active { background: var(--panel); }
+    .nav-links { display: none; }
+    .menu-btn { display: block; }
+    .nav-links.open { display: flex; flex-direction: column; position: absolute; top: 48px; left: 0; right: 0; background: var(--bg); border-bottom: 1px solid var(--border); padding: 18px 22px; gap: 16px; z-index: 9000; }
+  }
+  @media (prefers-reduced-transparency: reduce) { header { background: var(--bg); backdrop-filter: none; } }
+  @media (prefers-contrast: more) { :root { --border: #86868b; --text-dim: #4a4a4f; } header { background: var(--bg); backdrop-filter: none; } }
+</style>
+<script>
+  // Set theme before first paint to avoid a flash.
+  try {
+    var t = localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    document.documentElement.dataset.theme = t;
+  } catch (e) { document.documentElement.dataset.theme = 'dark'; }
+</script>
+</head>
+<body>
+<div class="bg-glow"></div>
+<header>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="index.html">
+        <img class="logo" src="assets/icon.svg" alt="k8sight logo" />
+        <span>k8sight<small>KUBERNETES, IN SIGHT</small></span>
+      </a>
+      <div class="nav-right">
+        <div class="nav-links" id="navLinks">
+          <a href="index.html#features">Features</a>
+          <a href="index.html#cloud">Cloud</a>
+          <a href="docs.html" class="current">Docs</a>
+          <a href="index.html#download">Download</a>
+          <a class="nav-cta" href="index.html#download">Get k8sight</a>
+        </div>
+        <button class="theme-btn" id="themeBtn" aria-label="Toggle light and dark theme">
+          <svg class="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
+          <svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        </button>
+        <button class="menu-btn" id="menuBtn" aria-label="Menu">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<section class="docs-hero">
+  <div class="wrap">
+    <div class="eyebrow">Documentation</div>
+    <h1>Connect your clusters</h1>
+    <p>k8sight imports clusters straight from your cloud account — no <code>aws</code>, <code>az</code>, or <code>gcloud</code> CLI required. Pick your provider below.</p>
+  </div>
+</section>
+
+<div class="docs-layout">
+  <!-- Sticky sidebar TOC -->
+  <aside class="docs-side">
+    <div class="side-title">On this page</div>
+    <nav>
+      <a href="#aws" data-sect>AWS EKS</a>
+      <a href="#azure" data-sect>Azure AKS</a>
+      <a href="#gke" data-sect>Google GKE</a>
+      <a href="#gke-setup" data-sect class="sub">GKE OAuth setup</a>
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="terms.html">Terms of Service</a>
+    </nav>
+  </aside>
+
+  <div class="docs-content">
+    <!-- ============ AWS EKS ============ -->
+    <article id="aws">
+      <div class="prov-head">
+        <div class="prov-badge">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M6.8 9.6c0 .3 0 .6.1.8.1.2.2.4.3.6 0 .1.1.1.1.2 0 .1 0 .2-.1.2l-.5.3h-.2c-.1 0-.2 0-.2-.1-.1-.1-.2-.3-.3-.4l-.3-.6c-.6.7-1.4 1.1-2.3 1.1-.7 0-1.2-.2-1.6-.6-.4-.4-.6-.9-.6-1.5 0-.7.2-1.2.7-1.6.5-.4 1.1-.6 1.9-.6.3 0 .5 0 .8.1.3 0 .6.1.9.2v-.6c0-.6-.1-1-.4-1.2-.3-.2-.7-.4-1.3-.4-.3 0-.5 0-.8.1-.3.1-.5.1-.8.3-.1 0-.2.1-.3.1h-.1c-.1 0-.2-.1-.2-.3v-.4c0-.1 0-.2.1-.3 0-.1.1-.1.2-.2.3-.1.6-.3.9-.3.4-.1.7-.1 1.1-.1.9 0 1.5.2 1.9.6.4.4.6 1 .6 1.8v2.4zm-3.2 1.2c.3 0 .5 0 .8-.1.3-.1.5-.3.7-.5.1-.1.2-.3.3-.5 0-.2.1-.4.1-.7v-.3c-.2-.1-.5-.1-.7-.1-.2 0-.5-.1-.7-.1-.5 0-.9.1-1.1.3-.3.2-.4.5-.4.8 0 .3.1.6.3.7.1.3.4.5.7.5zm6.4.8c-.1 0-.2 0-.3-.1-.1-.1-.1-.2-.2-.3L7.8 5.2c0-.1-.1-.2-.1-.3 0-.1 0-.2.1-.2h.7c.1 0 .2 0 .3.1.1.1.1.2.2.3l1.3 5.2 1.2-5.2c0-.1.1-.2.1-.3.1-.1.2-.1.3-.1h.6c.1 0 .2 0 .3.1.1.1.1.2.2.3l1.2 5.3 1.4-5.3c0-.1.1-.2.2-.3.1-.1.2-.1.3-.1h.6c.1 0 .2.1.2.2v.1c0 .1 0 .1-.1.2l-1.9 6c0 .1-.1.2-.2.3-.1.1-.2.1-.3.1h-.6c-.1 0-.2 0-.3-.1-.1-.1-.1-.2-.2-.3l-1.2-5-1.2 5c0 .1-.1.2-.2.3-.1.1-.2.1-.3.1h-.6zm10.2.2c-.4 0-.7 0-1.1-.1-.3-.1-.6-.2-.8-.3-.1-.1-.2-.2-.2-.3v-.4c0-.2.1-.3.2-.3h.1c0 0 .1 0 .2.1.3.1.5.2.8.3.3.1.6.1.9.1.5 0 .8-.1 1.1-.3.3-.2.4-.4.4-.7 0-.2-.1-.4-.2-.5-.1-.1-.4-.3-.7-.4l-1-.3c-.5-.2-.9-.4-1.1-.7-.2-.3-.4-.6-.4-1 0-.3.1-.5.2-.8.1-.2.3-.4.5-.6.2-.2.5-.3.7-.4.3-.1.6-.1.9-.1.2 0 .3 0 .5.1.2 0 .3.1.5.1.1 0 .3.1.4.1.1.1.2.1.3.1.1.1.1.1.2.2 0 .1.1.2.1.3v.4c0 .2-.1.3-.2.3-.1 0-.2 0-.3-.1-.4-.2-.9-.3-1.4-.3-.4 0-.8.1-1 .2-.2.1-.4.4-.4.7 0 .2.1.4.2.5.2.1.4.3.8.4l1 .3c.5.2.9.4 1.1.7.2.3.3.6.3 1 0 .3-.1.6-.2.8-.1.2-.3.5-.5.6-.2.2-.5.3-.8.4-.3.2-.7.2-1.1.2z" fill="#252f3e" class="aws-word"/><path d="M21.7 16.2c-2.6 1.9-6.4 2.9-9.6 2.9-4.5 0-8.6-1.7-11.7-4.5-.2-.2 0-.5.3-.3 3.3 1.9 7.4 3.1 11.6 3.1 2.9 0 6-.6 8.9-1.8.5-.2.8.3.2.6z" fill="#f90"/><path d="M22.8 15c-.3-.4-2.2-.2-3-.1-.2 0-.3-.2-.1-.3 1.5-1 3.9-.7 4.2-.4.3.4-.1 2.8-1.5 3.9-.2.2-.4.1-.3-.1.3-.8 1-2.5.7-2.9z" fill="#f90"/></svg>
+        </div>
+        <h2>AWS EKS</h2>
+      </div>
+      <div class="tagline">Connect your Amazon EKS clusters — no <code>aws</code> CLI required.</div>
+
+      <p>k8sight imports <strong>Amazon EKS</strong> clusters with <strong>no <code>aws</code> CLI required</strong>. It's built on the AWS SDK, so sign-in, discovery, and even auth-token generation run in-process. Unlike GKE, there is <strong>nothing for a maintainer to register</strong> — you sign in with your own AWS identity.</p>
+
+      <div class="method-grid">
+        <div class="method">
+          <h4>AWS SSO (IAM Identity Center) <span class="rec">Recommended</span></h4>
+          <p>Enter your <strong>start URL</strong> (e.g. <code>https://my-org.awsapps.com/start</code>) or pick an existing profile; k8sight runs the device-authorization flow, then lets you choose an <strong>account + role</strong>.</p>
+        </div>
+        <div class="method">
+          <h4>Access keys (IAM user)</h4>
+          <p>An access key id + secret (and optional session token).</p>
+        </div>
+        <div class="method">
+          <h4>Assume-role</h4>
+          <p>A role ARN plus a source profile.</p>
+        </div>
+      </div>
+
+      <p>k8sight then discovers <strong>every EKS cluster across your accounts and regions</strong> and writes the ones you pick into your kubeconfig. Cluster auth is generated natively (the bundled <code>eks-token.js</code> signs an STS request), so <strong>using</strong> the clusters needs no <code>aws</code> binary either.</p>
+
+      <h3>Use it</h3>
+      <p><strong>Preferences → Cloud Integrations → Add AWS clusters</strong>, or the <strong>Add AWS</strong> button in the context dropdown.</p>
+      <ol>
+        <li>Pick a method:
+          <ul>
+            <li><strong>AWS SSO</strong> → enter your start URL → approve the device code in the browser → choose account + role.</li>
+            <li><strong>Access key</strong> → paste the key id / secret (open <em>Advanced options</em>).</li>
+            <li><strong>IAM role</strong> → enter the role ARN + source profile (open <em>Advanced options</em>).</li>
+          </ul>
+        </li>
+        <li>k8sight lists your EKS clusters across regions.</li>
+        <li>Select clusters → <strong>Add</strong> → they're written to your kubeconfig.</li>
+      </ol>
+      <p>An <strong>Add AWS</strong> option also appears on the "couldn't connect" screen for quick re-auth.</p>
+
+      <h3>Permissions you need</h3>
+      <p>Two separate layers — <strong>both</strong> are required:</p>
+      <p><strong>1. AWS IAM (to discover + import):</strong></p>
+      <ul>
+        <li><code>eks:ListClusters</code> and <code>eks:DescribeCluster</code> on the target regions/accounts.</li>
+        <li><code>sts:GetCallerIdentity</code> (always allowed) — used to mint the auth token.</li>
+        <li>For SSO: permission to list your assigned accounts/roles (handled by Identity Center).</li>
+      </ul>
+      <p><strong>2. Kubernetes access on the cluster (to actually use it):</strong> ⚠️ the classic EKS gotcha</p>
+      <p>Your IAM principal (user or assumed role) must be mapped to a Kubernetes group, or you'll authenticate but get <strong><code>Unauthorized</code> / <code>forbidden</code></strong>. Do this on the cluster with <strong>either</strong>:</p>
+      <ul>
+        <li>an <strong>EKS access entry</strong> (recommended, newer): <code>aws eks create-access-entry</code> + an access policy (e.g. <code>AmazonEKSClusterAdminPolicy</code>), or the console's <em>Access</em> tab; <strong>or</strong></li>
+        <li>the legacy <strong><code>aws-auth</code> ConfigMap</strong> in <code>kube-system</code>, mapping your ARN to <code>system:masters</code> (or a custom group with RBAC).</li>
+      </ul>
+      <div class="callout">
+        <span class="cico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></span>
+        <p>If a cluster imports but every request is forbidden, this RBAC mapping is what's missing — the <strong>#1 EKS issue</strong>.</p>
+      </div>
+
+      <h3>How auth works</h3>
+      <ul>
+        <li>Sign-in and discovery use the <strong>AWS SDK for JavaScript v3</strong> (EKS, STS, SSO/SSO-OIDC clients) — no <code>aws</code> binary.</li>
+        <li>Access keys / assume-role sign-ins are saved as an <code>~/.aws</code> <strong>profile</strong> so the token helper can read them at runtime; SSO role credentials are saved as a short-lived profile.</li>
+        <li>The kubeconfig <code>user</code> runs an <code>exec</code> plugin: <code>eks-token.js --cluster &lt;name&gt; --region &lt;region&gt;</code>, a drop-in for <code>aws eks get-token</code>. It <strong>presigns an STS <code>GetCallerIdentity</code></strong> request (with the <code>x-k8s-aws-id</code> header) and returns it as the <code>k8s-aws-v1.</code> bearer token EKS expects. Tokens are short-lived; clients refresh automatically.</li>
+      </ul>
+
+      <h3>Troubleshooting</h3>
+      <ul>
+        <li><strong>Cluster imports, but everything is <code>forbidden</code> / <code>Unauthorized</code></strong> → your IAM principal isn't mapped to Kubernetes RBAC. Add an <strong>EKS access entry</strong> or an <strong><code>aws-auth</code></strong> mapping (see permissions above).</li>
+        <li><strong>No clusters found</strong> → check the region(s), and that the identity has <code>eks:ListClusters</code>. SSO: confirm you picked an account/role that can see the clusters.</li>
+        <li><strong>SSO device code expired / "session expired"</strong> → re-run the SSO sign-in; tokens are short-lived.</li>
+        <li><strong>Assume-role fails</strong> → verify the role's trust policy allows your source profile/principal and that the source profile is valid.</li>
+        <li><strong>Wrong account</strong> → for SSO, pick a different account/role in the picker; for keys, use the correct key pair.</li>
+      </ul>
+    </article>
+
+    <!-- ============ Azure AKS ============ -->
+    <article id="azure">
+      <div class="prov-head">
+        <div class="prov-badge">
+          <svg viewBox="0 0 24 24" fill="none"><defs><linearGradient id="az" x1="6" y1="2" x2="10" y2="20" gradientUnits="userSpaceOnUse"><stop stop-color="#114A8B"/><stop offset="1" stop-color="#0669BC"/></linearGradient><linearGradient id="az2" x1="14" y1="12" x2="12.5" y2="12.6" gradientUnits="userSpaceOnUse"><stop stop-opacity=".3"/><stop offset=".07" stop-opacity=".2"/><stop offset=".32" stop-opacity=".1"/><stop offset=".62" stop-opacity=".05"/><stop offset="1" stop-opacity="0"/></linearGradient><linearGradient id="az3" x1="12.5" y1="2" x2="17" y2="20" gradientUnits="userSpaceOnUse"><stop stop-color="#3CCBF4"/><stop offset="1" stop-color="#2892DF"/></linearGradient></defs><path d="M8.1 2.3h4.2L7.9 15.4a.7.7 0 0 1-.64.45H4a.67.67 0 0 1-.63-.89L7.47 2.75a.67.67 0 0 1 .63-.45z" fill="url(#az)"/><path d="M14.2 11.1H7.5a.31.31 0 0 0-.21.54l4.3 4a.68.68 0 0 0 .46.18h3.77l-1.62-4.72z" fill="#0078D4"/><path d="M8.1 2.3a.66.66 0 0 0-.63.44L3.38 14.94a.67.67 0 0 0 .63.9h3.34a.72.72 0 0 0 .55-.46l.81-2.39 2.9 2.7a.69.69 0 0 0 .43.15h3.76l-1.63-4.72-4.75.01 2.9-8.55z" fill="url(#az2)"/><path d="M16.53 2.75a.67.67 0 0 0-.63-.45H8.15a.67.67 0 0 1 .63.45l4.1 12.21a.67.67 0 0 1-.63.89h7.75a.67.67 0 0 0 .63-.89L16.53 2.75z" fill="url(#az3)"/></svg>
+        </div>
+        <h2>Azure AKS</h2>
+      </div>
+      <div class="tagline">Connect your Azure AKS clusters — no <code>az</code> CLI required.</div>
+
+      <p>k8sight imports <strong>Azure AKS</strong> clusters with <strong>no <code>az</code> CLI required</strong> (though you can use it if you prefer). Unlike GKE, there is <strong>nothing for a maintainer to register</strong> — the browser flow reuses the Azure CLI's well-known <strong>public</strong> client id, so it works out of the box.</p>
+
+      <div class="method-grid">
+        <div class="method">
+          <h4>Browser <span class="rec">Recommended</span></h4>
+          <p>Azure AD authorization-code + PKCE in your system browser, then the Azure Resource Manager (ARM) REST API. Because sign-in happens in your real browser, it carries your device's compliance state, so it <strong>works with managed-device Conditional Access</strong> policies.</p>
+        </div>
+        <div class="method">
+          <h4>Azure CLI (<code>az</code>)</h4>
+          <p>If <code>az</code> is installed and you're already logged in (<code>az login</code>), k8sight can drive it instead. Useful if the browser flow is blocked.</p>
+        </div>
+      </div>
+
+      <p>Either way k8sight discovers <strong>every AKS cluster you can access across all subscriptions</strong> and writes the ones you pick into your kubeconfig.</p>
+
+      <h3>Use it</h3>
+      <p><strong>Preferences → Cloud Integrations → Add Azure clusters</strong>, or the <strong>Add Azure</strong> button in the context dropdown.</p>
+      <ol>
+        <li>Click <strong>Sign in with browser</strong> (or <em>Use the Azure CLI</em> if you prefer).</li>
+        <li>Pick your account and complete sign-in in the browser.</li>
+        <li>k8sight lists your AKS clusters across all subscriptions.</li>
+        <li>Select clusters → <strong>Add</strong> → they're written to your kubeconfig and appear in the context switcher.</li>
+      </ol>
+      <p>An <strong>Add Azure</strong> option also appears on the "couldn't connect" screen, so an expired Azure session is one click from re-auth.</p>
+
+      <h3>Permissions you need</h3>
+      <p>The signed-in identity needs, per the clusters you want:</p>
+      <ul>
+        <li><strong>List clusters:</strong> <em>Reader</em> (or any role that can read AKS resources) on the subscription(s) / resource group(s).</li>
+        <li><strong>Get user credentials</strong> (default): the <strong>Azure Kubernetes Service Cluster User Role</strong> on the cluster. Returns a normal, AAD-aware kubeconfig entry.</li>
+        <li><strong>Admin credentials</strong> (optional toggle, <code>--admin</code>): the <strong>Azure Kubernetes Service Cluster Admin Role</strong>. Returns cluster-admin client certificates that <strong>bypass Azure AD</strong> — handy when AAD/RBAC is in the way, but it's cluster-admin, so use sparingly.</li>
+      </ul>
+      <p>Then, in-cluster, your Kubernetes RBAC still applies as usual.</p>
+
+      <h3>AAD-integrated clusters</h3>
+      <p>If the AKS cluster uses <strong>Azure AD integration</strong> (no local accounts), the user kubeconfig it hands back authenticates via an exec plugin (<code>kubelogin</code>). k8sight merges that entry; <strong>using</strong> such a cluster then needs <code>kubelogin</code> on your <code>PATH</code> (or pick <strong>admin credentials</strong>, which use certs and need no plugin). Clusters with local accounts enabled work with no extra tooling.</p>
+
+      <h3>How auth works</h3>
+      <ul>
+        <li>Browser sign-in uses <strong>OAuth 2.0 authorization code + PKCE</strong> with a loopback redirect and the Azure CLI's public client id <code>04b07795-8ddb-461a-bbee-02f9e1bf7b46</code>, scope <code>https://management.azure.com/.default offline_access</code>.</li>
+        <li>Cluster discovery calls the <strong>ARM REST API</strong> (<code>management.azure.com</code>) — list subscriptions, then AKS managed clusters.</li>
+        <li>Import calls <code>listClusterUserCredential</code> (or <code>listClusterAdminCredential</code> with the admin toggle) and merges the returned kubeconfig into <code>~/.kube/config</code>.</li>
+        <li>No credentials are stored beyond the standard kubeconfig entry; the browser session's refresh token lives only for the sign-in.</li>
+      </ul>
+
+      <h3>Troubleshooting</h3>
+      <ul>
+        <li><strong>"Help us keep your device secure" / Conditional Access blocks it</strong> → use <strong>Sign in with browser</strong> (not device code) — it carries device compliance. If your org still blocks it, fall back to <strong>Use the Azure CLI</strong> after <code>az login</code> on a compliant session.</li>
+        <li><strong>No subscriptions / no clusters</strong> → the account needs at least <em>Reader</em> on the subscription; confirm you signed in with the right tenant/account (the flow shows an account picker).</li>
+        <li><strong>Cluster imports but <code>kubectl</code> fails with an exec error</strong> → it's an AAD cluster needing <code>kubelogin</code>; install it, or re-import with <strong>admin credentials</strong>.</li>
+        <li><strong>Wrong tenant</strong> → sign out of Azure in the browser (or use an incognito window) and retry so you can pick the correct account/tenant.</li>
+      </ul>
+    </article>
+
+    <!-- ============ Google GKE ============ -->
+    <article id="gke">
+      <div class="prov-head">
+        <div class="prov-badge">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M14.9 8.3l1.8-1.8.12-.76c-3.3-3-8.53-2.66-11.5.72A8.2 8.2 0 0 0 3.4 9.9l.64-.09 3.6-.6.28-.28a4 4 0 0 1 5.44-.44l.44.44z" fill="#EA4335"/><path d="M19.9 9.84a8.2 8.2 0 0 0-2.48-4l-2.53 2.53a4 4 0 0 1 1.48 3.16v.45a2 2 0 1 1 0 4h-4.5l-.45.46v2.7l.45.44h4.5a5.86 5.86 0 0 0 3.53-10.4z" fill="#4285F4"/><path d="M7.1 20.06h4.5v-3.6H7.1a1.98 1.98 0 0 1-.82-.18l-.64.18-1.82 1.8-.16.62a5.83 5.83 0 0 0 3.44 1.18z" fill="#34A853"/><path d="M7.1 8.3a5.86 5.86 0 0 0-3.53 10.5l2.6-2.6a2 2 0 1 1 2.65-2.65l2.6-2.6A5.85 5.85 0 0 0 7.1 8.3z" fill="#FBBC05"/></svg>
+        </div>
+        <h2>Google GKE</h2>
+      </div>
+      <div class="tagline">Connect your GKE clusters — browser sign-in or a service-account key.</div>
+
+      <p>k8sight can import <strong>Google GKE</strong> clusters two ways:</p>
+      <div class="method-grid">
+        <div class="method">
+          <h4>Browser sign-in <span class="rec">Recommended</span></h4>
+          <p>Click <em>Sign in with browser</em>, authenticate with your own Google account, and k8sight stores a refresh token and mints access tokens for the kubeconfig. <strong>No service-account key, no <code>gcloud</code>.</strong> This is the Azure/AWS-style experience.</p>
+        </div>
+        <div class="method">
+          <h4>Service-account key</h4>
+          <p>Paste a service-account key JSON. Works out of the box with no OAuth client; ideal for CI or orgs that block the browser flow.</p>
+        </div>
+      </div>
+
+      <h3>Use it</h3>
+      <p><strong>Preferences → Cloud Integrations → Add GKE clusters</strong>, or the <strong>Add GKE</strong> button in the context dropdown.</p>
+      <ol>
+        <li>Click <strong>Sign in with browser</strong> → your browser opens Google sign-in. (Or paste a service-account key JSON.)</li>
+        <li>Pick your account and approve.</li>
+        <li>k8sight discovers your GKE clusters across all accessible projects.</li>
+        <li>Select clusters → <strong>Add</strong> → they're written to your kubeconfig.</li>
+      </ol>
+      <p>Using the clusters needs no <code>gcloud</code>/<code>gke-gcloud-auth-plugin</code>: the bundled <code>gke-token.js</code> mints a fresh access token from the stored refresh token whenever <code>kubectl</code> / the app authenticates.</p>
+
+      <h3>Permissions you need</h3>
+      <p>The signed-in account needs at least <strong>Kubernetes Engine Viewer</strong> + <strong>Browser</strong> (or <strong>Viewer</strong>) IAM on the projects, and two APIs enabled in those projects:</p>
+      <ul>
+        <li><strong>Kubernetes Engine API</strong> (<code>container.googleapis.com</code>) — to list clusters</li>
+        <li><strong>Cloud Resource Manager API</strong> (<code>cloudresourcemanager.googleapis.com</code>) — to list projects</li>
+      </ul>
+
+      <h3>How auth works</h3>
+      <ul>
+        <li>Sign-in uses <strong>OAuth 2.0 authorization code + PKCE</strong> with a <strong>loopback</strong> redirect — Google's recommended flow for installed apps.</li>
+        <li>k8sight stores credentials at <code>~/.config/k8s-manager/gke/credentials.json</code> (mode <code>600</code>): browser sign-in → <code>{ type: 'authorized_user', … }</code>; service-account key → the key JSON.</li>
+        <li>The kubeconfig <code>user</code> runs an <code>exec</code> credential plugin: <code>gke-token.js --credentials &lt;path&gt;</code>, which prints an <code>ExecCredential</code> with a short-lived access token. Clients refresh automatically.</li>
+        <li>Users only ever get the access <strong>their own Google IAM allows</strong> — the shipped OAuth client is just the app's identity, not an authorization grant.</li>
+      </ul>
+
+      <h3>Troubleshooting</h3>
+      <ul>
+        <li><strong>"Sign in with browser" isn't shown</strong> → no OAuth client id is configured in this build; use the <strong>service-account key</strong> option, or set up a client (below).</li>
+        <li><strong><code>access_denied</code> / "app isn't verified"</strong> → add the account under <strong>Test users</strong>, or publish the consent screen.</li>
+        <li><strong><code>invalid_grant</code> / no refresh token</strong> → the flow requests <code>access_type=offline&amp;prompt=consent</code>; make sure you approved the consent screen. Remove <code>~/.config/k8s-manager/gke/credentials.json</code> and retry.</li>
+        <li><strong>No clusters found</strong> → confirm the IAM roles above and that both APIs are enabled in those projects.</li>
+        <li><strong>Private clusters</strong> → a cluster with no public endpoint can't be reached from a desktop; use its private endpoint over VPN/Connect Gateway, or import via a reachable endpoint.</li>
+      </ul>
+    </article>
+
+    <!-- ============ GKE OAuth setup (self-builders) ============ -->
+    <article id="gke-setup">
+      <h2>GKE browser sign-in — one-time OAuth setup</h2>
+      <div class="tagline">For maintainers building their own k8sight — enable browser sign-in.</div>
+
+      <div class="callout tip">
+        <span class="cico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span>
+        <p>Most people can skip this. It's only needed if you build k8sight yourself and want <strong>browser sign-in</strong> on by default. The service-account-key option needs none of this.</p>
+      </div>
+
+      <p>Browser sign-in needs a Google <strong>OAuth "Desktop app" client</strong>. You register <strong>one</strong> client (in a GCP project you own) and ship it with the app — then <em>every</em> user just signs in. This is exactly how <code>gcloud</code> and other desktop tools work, and Google explicitly treats desktop-app client secrets as <strong>non-confidential</strong>, so it is safe to embed. Takes ~5 minutes, once per app.</p>
+
+      <h3>1. Pick or create a GCP project</h3>
+      <p>Use any Google Cloud project you control — it only hosts the OAuth client's identity; it does <strong>not</strong> need to contain the clusters users connect to. <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">console.cloud.google.com</a> → project picker → <em>New Project</em>.</p>
+
+      <h3>2. Enable the required APIs</h3>
+      <p><strong>APIs &amp; Services → Library</strong>, then enable both:</p>
+      <ul>
+        <li><strong>Kubernetes Engine API</strong> (<code>container.googleapis.com</code>) — to list clusters</li>
+        <li><strong>Cloud Resource Manager API</strong> (<code>cloudresourcemanager.googleapis.com</code>) — to list projects</li>
+      </ul>
+
+      <h3>3. Configure the OAuth consent screen</h3>
+      <p><strong>APIs &amp; Services → OAuth consent screen</strong></p>
+      <ul>
+        <li><strong>User type:</strong> <em>External</em> (works for any Google account). <em>Internal</em> is fine if everyone is in your Workspace org.</li>
+        <li>Fill in the app name, support email, and developer contact email.</li>
+        <li><strong>Scopes:</strong> add <code>https://www.googleapis.com/auth/cloud-platform</code> (or leave default and let the flow request it).</li>
+        <li><strong>Test users:</strong> while the consent screen is in <em>Testing</em>, add the Google accounts that will sign in. Publishing to <em>Production</em> removes this limit but may trigger Google's verification review for sensitive scopes.</li>
+      </ul>
+
+      <h3>4. Create the OAuth client</h3>
+      <p><strong>APIs &amp; Services → Credentials → Create credentials → OAuth client ID</strong></p>
+      <ul>
+        <li><strong>Application type:</strong> <strong>Desktop app</strong></li>
+        <li>Name it (e.g. <code>k8sight desktop</code>)</li>
+        <li>Click <strong>Create</strong>, then copy the <strong>Client ID</strong> and <strong>Client secret</strong>.</li>
+      </ul>
+      <div class="callout tip">
+        <span class="cico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span>
+        <p>Desktop-app clients use a loopback redirect (<code>http://127.0.0.1:&lt;random-port&gt;/callback</code>) that k8sight opens automatically — you don't configure redirect URIs.</p>
+      </div>
+
+      <h3>5. Give it to k8sight at build time</h3>
+      <p>Set the client id and secret as environment variables before building. The build step writes them into the bundled app; they are never committed to git.</p>
+      <pre><code>export GOOGLE_CLIENT_ID='1234567890-abc.apps.googleusercontent.com'
+export GOOGLE_CLIENT_SECRET='GOCSPX-...'</code></pre>
+      <p>Restart k8sight after building, then use <strong>Preferences → Cloud Integrations → Add GKE clusters</strong> as described above.</p>
+    </article>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="index.html">
+      <img class="logo" src="assets/icon.svg" alt="" />
+      <span>k8sight<small>© 2026 · MIT-style open source</small></span>
+    </a>
+    <div class="links">
+      <a href="index.html">Home</a>
+      <a href="index.html#download">Download</a>
+      <a href="docs.html">Docs</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="https://github.com/praveenraghav01/k8sight" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <div class="copy">Built for developers and platform teams. Not affiliated with the Kubernetes project or the CNCF.</div>
+    <div class="made">
+      <a href="https://madewithloveinindia.org" target="_blank" rel="noopener">Made with <span aria-label="Love" style="color: #f43f5e">&hearts;</span> in India</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Theme toggle (light / dark) — persisted, defaults to system preference.
+  (function () {
+    const root = document.documentElement;
+    const btn = document.getElementById('themeBtn');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const next = root.dataset.theme === 'light' ? 'dark' : 'light';
+      root.dataset.theme = next;
+      try { localStorage.setItem('theme', next); } catch (e) {}
+    });
+  })();
+
+  // Mobile menu
+  const menuBtn = document.getElementById('menuBtn');
+  const navLinks = document.getElementById('navLinks');
+  menuBtn?.addEventListener('click', () => navLinks.classList.toggle('open'));
+  navLinks?.querySelectorAll('a').forEach(a => a.addEventListener('click', () => navLinks.classList.remove('open')));
+
+  // Sidebar scroll-spy: highlight the section currently in view.
+  (function () {
+    const links = Array.from(document.querySelectorAll('.docs-side a[data-sect]'));
+    const map = new Map();
+    links.forEach(l => { const el = document.querySelector(l.getAttribute('href')); if (el) map.set(el, l); });
+    if (!map.size) return;
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          links.forEach(l => l.classList.remove('active'));
+          map.get(e.target)?.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-64px 0px -70% 0px', threshold: 0 });
+    map.forEach((_, el) => obs.observe(el));
+  })();
+</script>
+</body>
+</html>
