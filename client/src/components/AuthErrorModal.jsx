@@ -22,7 +22,7 @@ const HINTS = {
   'exec-plugin': 'Install the auth helper CLI referenced by your kubeconfig and make sure it is on PATH, then retry.',
 };
 
-export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying, contexts = [], contextsInfo, currentContext, onSwitchContext, onAddAzure, onAddAws }) {
+export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying, contexts = [], contextsInfo, currentContext, onSwitchContext, onAddAzure, onAddAws, onAddGke }) {
   const reason = auth?.reason || 'error';
   const title = TITLES[reason] || TITLES.error;
   const hint = HINTS[reason];
@@ -64,6 +64,7 @@ export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying
               onChange={onSwitchContext}
               onAddAzure={onAddAzure}
               onAddAws={onAddAws}
+              onAddGke={onAddGke}
             />
           </div>
         )}
@@ -82,6 +83,11 @@ export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying
           {onAddAws && (
             <button className="modal-btn" onClick={onAddAws} disabled={retrying}>
               <Icon name="aws" size={14} /> AWS sign-in / add clusters
+            </button>
+          )}
+          {onAddGke && (
+            <button className="modal-btn" onClick={onAddGke} disabled={retrying}>
+              <Icon name="gcp" size={14} /> GKE sign-in / add clusters
             </button>
           )}
           <button className="modal-btn primary" onClick={onRetry} disabled={retrying}>

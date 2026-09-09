@@ -18,6 +18,7 @@ export default function Navigation({
   onSelectArgoView,
   onAddAzure,
   onAddAws,
+  onAddGke,
   onOpenPreferences
 }) {
   // Route context changes through the app-level switch so the new cluster's
@@ -140,6 +141,7 @@ export default function Navigation({
           onChange={handleContextChange}
           onAddAzure={onAddAzure}
           onAddAws={onAddAws}
+          onAddGke={onAddGke}
         />
       </div>
 

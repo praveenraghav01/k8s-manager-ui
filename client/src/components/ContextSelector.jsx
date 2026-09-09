@@ -4,13 +4,13 @@ import Icon from './Icons';
 const PROVIDERS = {
   aws: { label: 'AWS EKS', icon: 'aws', color: '#ff9900' },
   azure: { label: 'Azure AKS', icon: 'azure', color: '#3b96f0' },
-  gcp: { label: 'Google GKE', icon: 'cluster', color: '#4285f4' },
+  gcp: { label: 'Google GKE', icon: 'gcp', color: '#4285f4' },
   local: { label: 'Local', icon: 'box', color: '#8b949e' },
   other: { label: 'Other clusters', icon: 'cluster', color: '#8b8fa3' },
 };
 const ORDER = ['aws', 'azure', 'gcp', 'local', 'other'];
 
-export default function ContextSelector({ contexts = [], contextsInfo, currentContext, onChange, onAddAzure, onAddAws }) {
+export default function ContextSelector({ contexts = [], contextsInfo, currentContext, onChange, onAddAzure, onAddAws, onAddGke }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const ref = useRef(null);
@@ -79,7 +79,7 @@ export default function ContextSelector({ contexts = [], contextsInfo, currentCo
               </div>
             ))}
           </div>
-          {(onAddAzure || onAddAws) && (
+          {(onAddAzure || onAddAws || onAddGke) && (
             <div className="ctx-add-row">
               {onAddAzure && (
                 <button className="ctx-add-btn" onClick={() => { setOpen(false); onAddAzure(); }}>
@@ -89,6 +89,11 @@ export default function ContextSelector({ contexts = [], contextsInfo, currentCo
               {onAddAws && (
                 <button className="ctx-add-btn" onClick={() => { setOpen(false); onAddAws(); }}>
                   <Icon name="aws" size={14} style={{ color: PROVIDERS.aws.color }} /> Add AWS
+                </button>
+              )}
+              {onAddGke && (
+                <button className="ctx-add-btn" onClick={() => { setOpen(false); onAddGke(); }}>
+                  <Icon name="gcp" size={14} style={{ color: PROVIDERS.gcp.color }} /> Add GKE
                 </button>
               )}
             </div>
