@@ -387,17 +387,18 @@ function McpSection() {
 
       <Field label="Write access" hint="Read-only is safest. Enabling lets agents apply, delete, scale and sync — mutating your cluster.">
         {info == null ? <span className="prefs-muted">…</span> : (
-          <>
+          <div className="prefs-stack">
             <div className="prefs-seg">
               <button className={`prefs-seg-btn ${!info.allowWrite ? 'active' : ''}`} onClick={() => setWrite(false)}>Read-only</button>
               <button className={`prefs-seg-btn ${info.allowWrite ? 'active' : ''}`} onClick={() => setWrite(true)}>Read &amp; write</button>
             </div>
-            <p className="prefs-muted" style={{ marginTop: 8 }}>
+            <div className={`prefs-status ${info.allowWrite ? 'warn' : 'ok'}`}>
+              <span className="prefs-status-dot" />
               {info.allowWrite
-                ? 'Write tools are exposed. Applies to new agent connections — reconnect your agent to pick them up.'
+                ? 'Write tools exposed — reconnect your agent to pick them up.'
                 : 'Only read tools are exposed.'}
-            </p>
-          </>
+            </div>
+          </div>
         )}
       </Field>
 
