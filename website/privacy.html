@@ -131,8 +131,23 @@
   main strong { color: var(--text); font-weight: 600; }
   main ul { color: var(--text-dim); margin: 0 0 14px 22px; }
   main li { margin-bottom: 8px; line-height: 1.55; }
-  main code { font-family: var(--mono); font-size: 0.86em; color: var(--accent); background: var(--bg-2); padding: 2px 6px; border-radius: 5px; }
+  main code { font-family: var(--mono); font-size: 0.86em; color: var(--accent); background: var(--bg-2); padding: 2px 6px; border-radius: 5px; word-break: break-word; }
   main a { color: var(--accent); }
+  main ol { color: var(--text-dim); margin: 0 0 14px 22px; }
+  main h3 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin: 24px 0 10px; color: var(--text); }
+  .toc { background: var(--bg-2); border: 1px solid var(--border); border-radius: 14px; padding: 18px 22px; margin: 0 0 40px; }
+  .toc-title { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-mute); margin-bottom: 12px; }
+  .toc ol { columns: 2; column-gap: 32px; margin: 0 0 0 18px; }
+  .toc li { margin-bottom: 6px; font-size: 14.5px; }
+  .toc a { color: var(--text-dim); }
+  .toc a:hover { color: var(--accent); }
+  .tbl-wrap { overflow-x: auto; margin: 0 0 18px; border: 1px solid var(--border); border-radius: 12px; }
+  table.data { width: 100%; border-collapse: collapse; font-size: 14.5px; min-width: 520px; }
+  table.data th, table.data td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--text-dim); line-height: 1.5; }
+  table.data thead th { background: var(--bg-2); color: var(--text); font-weight: 600; font-size: 13px; }
+  table.data tr:last-child td { border-bottom: none; }
+  table.data td code { font-size: 0.82em; }
+  @media (max-width: 640px) { .toc ol { columns: 1; } }
   /* ---------- Footer (Apple fine-print) ---------- */
   footer { border-top: 1px solid var(--border); padding: 28px 0 40px; background: var(--bg-2); }
   footer .wrap { max-width: 1024px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
@@ -237,57 +252,147 @@
 
 <main>
   <h1>Privacy Policy</h1>
-  <div class="updated">Last updated: September 9, 2026</div>
+  <div class="updated">Last updated: September 9, 2026 · Effective: September 9, 2026</div>
 
-  <p class="lead"><strong>The short version:</strong> k8sight runs entirely on your own computer. We operate no servers, and we do <strong>not</strong> collect, store, receive, sell, or share your data.</p>
+  <p class="lead"><strong>The short version:</strong> k8sight is a desktop application that runs entirely on your own computer. We operate no servers and have no backend. We do <strong>not</strong> collect, receive, store, sell, rent, or share your personal data or your Google user data. Everything the app touches stays on your device or travels directly between your device and the services you choose to connect.</p>
 
-  <p>k8sight ("the app", "we", "our") is a free, open-source desktop application for browsing and operating Kubernetes clusters. This policy explains what data the app touches and how it is handled.</p>
+  <p>This Privacy Policy explains how the k8sight desktop application (the "app") and the k8sight website at <a href="https://k8sight.in" target="_blank" rel="noopener">k8sight.in</a> (the "website") handle information. In this policy, "k8sight", "we", "us", and "our" refer to the maintainers of the k8sight open-source project. "You" refers to the person who installs and uses the app or visits the website. k8sight is a free, open-source tool for browsing and operating Kubernetes clusters. By using the app or website, you agree to the practices described here.</p>
 
-  <h2>1. We collect nothing</h2>
-  <p>k8sight is a desktop application that runs locally on your machine. It has no backend owned by us, sends no telemetry or analytics, requires no account or sign-up, and transmits no usage data to us. All processing happens on your device.</p>
+  <div class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li><a href="#p1">Who we are &amp; scope</a></li>
+      <li><a href="#p2">Our core principle: local-first</a></li>
+      <li><a href="#p3">Information the app accesses</a></li>
+      <li><a href="#p4">Google user data &amp; OAuth scopes</a></li>
+      <li><a href="#p5">Limited Use disclosure</a></li>
+      <li><a href="#p6">AWS and Azure sign-in</a></li>
+      <li><a href="#p7">Optional AI assistant</a></li>
+      <li><a href="#p8">How data is stored &amp; secured</a></li>
+      <li><a href="#p9">How we share data</a></li>
+      <li><a href="#p10">Data retention &amp; deletion</a></li>
+      <li><a href="#p11">Your rights &amp; choices</a></li>
+      <li><a href="#p12">The website</a></li>
+      <li><a href="#p13">Children's privacy</a></li>
+      <li><a href="#p14">International users</a></li>
+      <li><a href="#p15">Changes to this policy</a></li>
+      <li><a href="#p16">Contact us</a></li>
+    </ol>
+  </div>
 
-  <h2>2. Data the app accesses (and where it stays)</h2>
-  <p>To do its job, k8sight works with data that either stays on your machine or travels <strong>directly</strong> between your machine and services you configure — never through us:</p>
+  <h2 id="p1">1. Who we are &amp; the scope of this policy</h2>
+  <p>k8sight is an open-source desktop application distributed for macOS, Windows, and Linux. It is not a hosted service and has no user accounts. This policy applies to the desktop app and to this informational website. It does <strong>not</strong> apply to the third-party services you connect the app to (such as your Kubernetes clusters, Amazon Web Services, Microsoft Azure, Google Cloud, or an AI model provider you configure); your use of those services is governed by their own privacy policies and your agreements with them.</p>
+
+  <h2 id="p2">2. Our core principle: local-first, no collection</h2>
+  <p>k8sight is architected so that we never see your data:</p>
   <ul>
-    <li><strong>Kubeconfig &amp; cluster data</strong> — read from your local kubeconfig (<code>~/.kube/config</code>). The app talks directly to your Kubernetes API servers to display resources, logs, metrics, topology, etc. This traffic is between your machine and your clusters.</li>
-    <li><strong>Cloud credentials</strong> — when you connect AWS, Azure, or Google clusters, credentials and tokens are stored <strong>locally</strong> (e.g. <code>~/.aws</code>, <code>~/.kube</code>, <code>~/.config/k8s-manager/…</code>) and used only to call that cloud provider's APIs directly from your machine.</li>
+    <li>The app runs <strong>entirely on your local machine</strong>. There is no k8sight server, cloud service, or database that receives your information.</li>
+    <li>The app sends <strong>no telemetry, analytics, crash reports, usage statistics, or diagnostic data</strong> to us or to any third party.</li>
+    <li>The app requires <strong>no account, registration, sign-up, or login with us</strong>.</li>
+    <li>All processing — reading configuration, talking to clusters, rendering resources, generating auth tokens — happens locally on your device.</li>
+  </ul>
+  <p>Because of this design, we do not "collect" personal data in the conventional sense. The sections below describe the data the app <em>accesses locally on your behalf</em> and the direct connections it makes to services you configure.</p>
+
+  <h2 id="p3">3. Information the app accesses (and where it stays)</h2>
+  <p>To perform its function, the app reads and works with the following categories of data. In every case the data stays on your machine or travels <strong>directly</strong> between your machine and a service you configured — never through us.</p>
+  <div class="tbl-wrap">
+    <table class="data">
+      <thead>
+        <tr><th>Data</th><th>Why the app accesses it</th><th>Where it is stored / sent</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Kubeconfig &amp; cluster resources</strong> — contexts, cluster endpoints, and the Kubernetes objects you view (pods, deployments, services, logs, events, metrics, etc.)</td>
+          <td>To display and let you operate your clusters.</td>
+          <td>Read from your local kubeconfig (<code>~/.kube/config</code>). Cluster traffic goes directly between your machine and your Kubernetes API servers.</td>
+        </tr>
+        <tr>
+          <td><strong>Cloud credentials &amp; tokens</strong> — AWS, Azure, and Google Cloud access/refresh tokens or keys you provide when connecting clusters</td>
+          <td>To discover your clusters and write kubeconfig entries so you can connect without a CLI.</td>
+          <td>Stored locally (e.g. <code>~/.aws</code>, <code>~/.kube</code>, <code>~/.config/k8s-manager/</code>) and used only to call that provider's APIs directly from your machine.</td>
+        </tr>
+        <tr>
+          <td><strong>App settings &amp; preferences</strong> — theme, chosen integrations, MCP read/write toggle, AI configuration</td>
+          <td>To remember your choices between sessions.</td>
+          <td>Stored locally in <code>~/.config/k8s-manager/settings.json</code> and browser local storage.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p>We do not receive, transmit, or retain any of the above. If you never connect a cloud provider or sign in with Google, none of that data is ever accessed.</p>
+
+  <h2 id="p4">4. Google user data &amp; the OAuth scopes we request</h2>
+  <p>Connecting Google GKE clusters is <strong>optional</strong>. It is only used if you explicitly choose "Sign in with browser" for Google. When you do, k8sight uses Google OAuth 2.0 and requests the following scope:</p>
+  <div class="tbl-wrap">
+    <table class="data">
+      <thead>
+        <tr><th>Google OAuth scope</th><th>What k8sight does with it</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>https://www.googleapis.com/auth/cloud-platform</code> (View and manage your Google Cloud data)</td>
+          <td>Used <strong>only</strong> to (a) list the Google Cloud projects and Google Kubernetes Engine (GKE) clusters your account can access, and (b) obtain short-lived access tokens so the app and <code>kubectl</code> can authenticate to those clusters on your behalf. k8sight does not create, modify, or delete Google Cloud resources through this scope; it reads project/cluster metadata and mints authentication tokens.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The specific Google user data the app accesses is limited to: your Google account identity for the sign-in, the list of Google Cloud <strong>projects</strong> and <strong>GKE clusters</strong> visible to your account, and OAuth <strong>tokens</strong> (a refresh token and derived access tokens).</p>
+  <p><strong>Storage and handling.</strong> The refresh token and derived credentials are stored <strong>only on your local device</strong> at <code>~/.config/k8s-manager/gke/credentials.json</code> with file permissions restricted to your user account (mode <code>600</code>). These tokens are <strong>never</strong> transmitted to us or to any third party; they are sent only to Google's own OAuth and API endpoints to authenticate you. We have no server that could receive them.</p>
+  <p><strong>Revoking access.</strong> You can revoke k8sight's access to your Google account at any time by: signing out inside the app; deleting <code>~/.config/k8s-manager/gke/credentials.json</code>; or visiting <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a> and removing k8sight. Revoking does not delete anything from your device automatically — remove the local file if you also want the local copy gone.</p>
+
+  <h2 id="p5">5. Limited Use disclosure</h2>
+  <p>k8sight's use and transfer of information received from Google APIs to any other app adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>, including the <strong>Limited Use</strong> requirements. Specifically, information received from Google APIs is:</p>
+  <ul>
+    <li>used <strong>only</strong> to provide and improve the cluster-connection features you explicitly invoke;</li>
+    <li><strong>not</strong> transferred to or sold to third parties, except as necessary to provide or improve those features, to comply with applicable law, or as part of a merger, acquisition, or sale of assets with user notice;</li>
+    <li><strong>not</strong> used or transferred for serving advertising, including retargeting, personalized, or interest-based advertising; and</li>
+    <li><strong>not</strong> read by any human, unless (i) you give affirmative agreement for specific data, (ii) it is necessary for security purposes (such as investigating abuse), or (iii) it is required to comply with applicable law.</li>
+  </ul>
+  <p>In practice, because k8sight has no servers, none of your Google user data ever reaches us — it stays on your device.</p>
+
+  <h2 id="p6">6. AWS and Azure sign-in</h2>
+  <p>Connecting Amazon EKS or Azure AKS clusters is also optional and works the same local-first way. AWS sign-in (IAM Identity Center / SSO, access keys, or assume-role) and Azure sign-in (in-browser OAuth or the <code>az</code> CLI) authenticate <strong>directly</strong> with those providers. The resulting credentials and tokens are stored locally and used only to discover clusters and write kubeconfig entries on your machine. None of it is sent to us. Your use of AWS and Azure is governed by their respective privacy policies.</p>
+
+  <h2 id="p7">7. Optional AI assistant (bring your own model)</h2>
+  <p>k8sight includes an optional AI assistant that is <strong>disabled until you configure it</strong> with your own OpenAI-compatible API endpoint and API key (for example OpenAI, Azure OpenAI, or a self-hosted gateway such as LiteLLM or TrueFoundry). If you enable and use it:</p>
+  <ul>
+    <li>Relevant, <strong>read-only</strong> cluster context needed to answer your question is sent <strong>directly to the endpoint you chose</strong> — never to us.</li>
+    <li>Values that look like secrets are <strong>redacted</strong> before the request is sent.</li>
+    <li>Your API key is stored <strong>locally</strong> on your device.</li>
+  </ul>
+  <p>That exchange is governed by the privacy policy of the AI provider you selected. We are not a party to it and cannot see the content.</p>
+
+  <h2 id="p8">8. How data is stored &amp; secured</h2>
+  <p>All data the app uses is stored on your own device using the operating system's file system and standard locations (<code>~/.kube</code>, <code>~/.aws</code>, <code>~/.config/k8s-manager/</code>). Sensitive credential files, such as Google tokens, are written with restrictive file permissions (owner-only, mode <code>600</code>). Because we operate no servers, there is no central store of user data for us to secure or for an attacker to breach through us. The security of the data on your device also depends on your own machine's security (disk encryption, account protection, and OS updates), which is under your control.</p>
+
+  <h2 id="p9">9. How we share data</h2>
+  <p>We do <strong>not</strong> sell, rent, trade, or share your personal data or Google user data with anyone, because we never receive it in the first place. The only "sharing" that occurs is the app, running on your device, communicating <strong>directly</strong> with the services you configure (your Kubernetes clusters, AWS, Azure, Google Cloud, or your chosen AI endpoint) to perform the actions you request. We are not an intermediary in those connections.</p>
+
+  <h2 id="p10">10. Data retention &amp; deletion</h2>
+  <p>Since we hold no data, there is nothing for us to retain or delete on our side. On your device, you remain in full control and can delete data at any time by:</p>
+  <ul>
+    <li>signing out of a provider inside the app;</li>
+    <li>deleting the relevant local files (for example <code>~/.config/k8s-manager/</code>, cloud credential files under <code>~/.aws</code>, or kubeconfig entries in <code>~/.kube/config</code>); or</li>
+    <li>uninstalling the app.</li>
   </ul>
 
-  <h2>3. Google user data (OAuth) — Limited Use</h2>
-  <p>If you choose to sign in with Google to import GKE clusters, k8sight requests the <code>https://www.googleapis.com/auth/cloud-platform</code> scope <strong>solely</strong> to:</p>
-  <ul>
-    <li>list the Google Cloud projects and GKE clusters you can access, and</li>
-    <li>obtain short-lived access tokens to authenticate to those clusters.</li>
-  </ul>
-  <p>k8sight's use of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>, including its <strong>Limited Use</strong> requirements. Specifically:</p>
-  <ul>
-    <li>Google user data is used <strong>only</strong> to provide the cluster-connection features you invoke.</li>
-    <li>It is <strong>not</strong> transferred to others except as necessary to provide those features, for security, or to comply with applicable law.</li>
-    <li>It is <strong>not</strong> used for advertising.</li>
-    <li>No humans read your Google user data.</li>
-  </ul>
-  <p>Google tokens are stored locally on your device (<code>~/.config/k8s-manager/gke/credentials.json</code>) and are never sent to us or any third party. You can revoke access at any time at <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a>, by signing out in the app, or by deleting that file.</p>
+  <h2 id="p11">11. Your rights &amp; choices</h2>
+  <p>Because all data stays on your device and we collect nothing, you already have direct and complete control over it. You can access, modify, export, or delete any of it using your own file system and the in-app sign-out controls, without needing to make a request to us. If you have connected Google, you can additionally revoke access as described in Section 4. Depending on where you live, you may have rights under laws such as the GDPR or CCPA; since we do not process your personal data, most such requests are satisfied by your own local controls, but you may still contact us with questions (Section 16).</p>
 
-  <h2>4. AWS and Azure</h2>
-  <p>AWS (SSO, access keys, or assume-role) and Azure (browser or <code>az</code> CLI) sign-ins authenticate <strong>directly</strong> with those providers. Credentials and tokens are stored locally and used only to discover clusters and write kubeconfig entries. Nothing is sent to us.</p>
+  <h2 id="p12">12. The website</h2>
+  <p>The k8sight website is a static informational site. It does not require an account and does not set advertising or cross-site tracking cookies. The site may load a third-party <strong>"Buy Me a Coffee"</strong> support widget; if you choose to interact with it, Buy Me a Coffee processes that interaction under its own privacy policy. Standard, short-lived server request logs kept by our hosting provider for reliability and security are not used by us to build profiles of visitors or for advertising.</p>
 
-  <h2>5. AI assistant (bring your own model)</h2>
-  <p>The optional AI assistant is <strong>off until you configure it</strong> with your own OpenAI-compatible API endpoint and key. When you use it, relevant <strong>read-only</strong> cluster context is sent to the endpoint <strong>you chose</strong> (e.g. OpenAI, Azure OpenAI, TrueFoundry, LiteLLM) so it can answer your question. Secret values are redacted before anything is sent, and your API key is stored locally. That exchange is governed by your chosen provider's privacy policy; we are not a party to it.</p>
+  <h2 id="p13">13. Children's privacy</h2>
+  <p>k8sight is a developer and operations tool intended for professional use. It is not directed to, and we do not knowingly collect information from, children under 13 (or the equivalent minimum age in your jurisdiction).</p>
 
-  <h2>6. The website</h2>
-  <p>This website is static. It may load a third-party <strong>Buy Me a Coffee</strong> widget; if you interact with it, Buy Me a Coffee processes that interaction under its own privacy policy. The site itself does not set tracking cookies or collect personal data. Standard server request logs kept by the hosting provider are not used by us for tracking or profiling.</p>
+  <h2 id="p14">14. International users</h2>
+  <p>k8sight is a locally installed application. Any connections it makes go directly from your device to the services you configure, which may be located in various countries. We do not control where those third-party services process data; please review their policies. We ourselves receive and transfer no user data.</p>
 
-  <h2>7. Data retention &amp; deletion</h2>
-  <p>Because everything lives on your machine, you are in control. You can remove data by signing out in the app, deleting the relevant local files (<code>~/.config/k8s-manager/</code>, cloud credential files, kubeconfig entries), or uninstalling the app.</p>
+  <h2 id="p15">15. Changes to this policy</h2>
+  <p>We may update this Privacy Policy from time to time to reflect changes to the app or to legal requirements. When we do, we will revise the "Last updated" date at the top of this page, and material changes will be described here. Your continued use of the app or website after an update constitutes acceptance of the revised policy.</p>
 
-  <h2>8. Children</h2>
-  <p>k8sight is a developer tool and is not directed to children under 13.</p>
-
-  <h2>9. Changes to this policy</h2>
-  <p>We may update this policy from time to time. Material changes will be reflected here with a new "Last updated" date.</p>
-
-  <h2>10. Contact</h2>
-  <p>Questions about this policy? Open an issue at <a href="https://github.com/praveenraghav01/k8sight" target="_blank" rel="noopener">github.com/praveenraghav01/k8sight</a> or email <strong>praveensinghraghav96@gmail.com</strong>.</p>
+  <h2 id="p16">16. Contact us</h2>
+  <p>If you have any questions, concerns, or requests regarding this Privacy Policy or your data, you can reach us by opening an issue at <a href="https://github.com/praveenraghav01/k8sight" target="_blank" rel="noopener">github.com/praveenraghav01/k8sight</a> or by emailing <strong>praveensinghraghav96@gmail.com</strong>. We aim to respond within a reasonable timeframe.</p>
 </main>
 
 <footer>
