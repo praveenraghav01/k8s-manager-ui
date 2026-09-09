@@ -134,6 +134,25 @@ app.get('/api/version', (req, res) => {
   res.json({ version: getAppVersion() });
 });
 
+// MCP connection info for the Preferences → MCP section. The HTTP endpoint is
+// this same server at /mcp; write tools are gated by the MCP_ALLOW_WRITE env
+// var (read at startup, so this reflects the current process).
+app.get('/api/mcp/info', (req, res) => {
+  const allowWrite = ['1', 'true', 'yes'].includes(String(process.env.MCP_ALLOW_WRITE || '').toLowerCase());
+  res.json({
+    allowWrite,
+    readTools: [
+      'list_contexts', 'switch_context', 'list_namespaces', 'list_resources',
+      'get_resource_yaml', 'get_pod_logs', 'get_events', 'get_topology',
+      'list_argocd_apps', 'get_argocd_app',
+    ],
+    writeTools: [
+      'apply_yaml', 'delete_resource', 'scale_workload', 'rollout_restart',
+      'sync_argocd_app', 'refresh_argocd_app',
+    ],
+  });
+});
+
 app.get('/api/config/status', (req, res) => {
   if (!kubeConfig) {
     const attemptedPath = getKubeConfigPath();
