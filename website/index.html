@@ -119,6 +119,11 @@
   .theme-btn:hover { border-color: var(--text-mute); }
   .theme-btn:active { transform: scale(.9); }
   .theme-btn svg { width: 15px; height: 15px; }
+  /* Show one icon per theme: moon in light (tap → dark), sun in dark (tap → light) */
+  .theme-btn .ic-sun { display: none; }
+  .theme-btn .ic-moon { display: block; }
+  :root[data-theme="dark"] .theme-btn .ic-sun { display: block; }
+  :root[data-theme="dark"] .theme-btn .ic-moon { display: none; }
 
   /* ---------- Hero (Apple product hero) ---------- */
   .hero { text-align: center; padding: 84px 0 44px; }
@@ -409,7 +414,7 @@
         </div>
         <button class="theme-btn" id="themeBtn" aria-label="Toggle light and dark theme">
           <svg class="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
-          <svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" hidden><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
         </button>
         <button class="menu-btn" id="menuBtn" aria-label="Menu">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -887,24 +892,16 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !scrim.hidden) close(); });
   })();
 
-  // Theme toggle (light / dark) — persisted, defaults to system preference
+  // Theme toggle (light / dark) — persisted, defaults to system preference.
+  // Which icon shows is handled entirely in CSS via [data-theme].
   (function () {
     const root = document.documentElement;
     const btn = document.getElementById('themeBtn');
     if (!btn) return;
-    const sun = btn.querySelector('.ic-sun');
-    const moon = btn.querySelector('.ic-moon');
-    const sync = () => {
-      const light = root.dataset.theme === 'light';
-      sun.hidden = light;   // dark theme shows the sun (tap to go light)
-      moon.hidden = !light;
-    };
-    sync();
     btn.addEventListener('click', () => {
       const next = root.dataset.theme === 'light' ? 'dark' : 'light';
       root.dataset.theme = next;
       try { localStorage.setItem('theme', next); } catch (e) {}
-      sync();
     });
   })();
 
