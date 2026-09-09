@@ -12,6 +12,7 @@ import CustomResourceDetail from './components/CustomResourceDetail';
 import Topology from './components/Topology';
 import AzureIntegration from './components/AzureIntegration';
 import AwsIntegration from './components/AwsIntegration';
+import GkeIntegration from './components/GkeIntegration';
 import Loader from './components/Loader';
 import Namespaces from './components/Namespaces';
 import KubeConfigModal from './components/KubeConfigModal';
@@ -96,6 +97,7 @@ function App() {
   const [argoView, setArgoView] = useState('dashboard');
   const [showAzure, setShowAzure] = useState(false);
   const [showAws, setShowAws] = useState(false);
+  const [showGke, setShowGke] = useState(false);
   const [prefSection, setPrefSection] = useState('general');
   const [prefReturn, setPrefReturn] = useState('overview');
   const [agentOpen, setAgentOpen] = useState(false);
@@ -453,6 +455,7 @@ function App() {
           onSwitchContext={switchContext}
           onAddAzure={() => setShowAzure(true)}
           onAddAws={() => setShowAws(true)}
+          onAddGke={() => setShowGke(true)}
         />
       )}
 
@@ -478,6 +481,13 @@ function App() {
       {showAws && (
         <AwsIntegration
           onClose={() => setShowAws(false)}
+          onImported={async () => { await fetchConfigStatus(); retryAuth(); }}
+        />
+      )}
+
+      {showGke && (
+        <GkeIntegration
+          onClose={() => setShowGke(false)}
           onImported={async () => { await fetchConfigStatus(); retryAuth(); }}
         />
       )}
