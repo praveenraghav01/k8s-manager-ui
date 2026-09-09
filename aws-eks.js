@@ -125,7 +125,7 @@ export async function ssoPollToken(session) {
   }
 }
 
-// Granular SSO steps (guided account → role → clusters flow, like Lens).
+// Granular SSO steps (guided account → role → clusters flow).
 export async function ssoListAccounts({ accessToken, ssoRegion }) {
   const sso = new SSOClient({ region: ssoRegion });
   const accounts = []; let nextToken;

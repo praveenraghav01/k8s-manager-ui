@@ -6,7 +6,7 @@ import {
   getAiConfig, setAiConfig, getAiExternalTerminal, setAiExternalTerminal,
 } from '../aiConfig';
 
-// Full-page Preferences view (Lens-style): a left sub-nav of sections and a
+// Full-page Preferences view: a left sub-nav of sections and a
 // content pane. Sections: General, Kubernetes, Cloud Integrations, External
 // Tools (bring-your-own AI agent), AI Assistant, About.
 
@@ -290,7 +290,7 @@ function AboutSection({ configStatus }) {
     <div className="prefs-section">
       <h2 className="prefs-h2">About</h2>
       <Field label="k8sight">{version ? <span className="prefs-muted">Version {version}</span> : null}</Field>
-      <p className="prefs-lead">A Lens-style Kubernetes management app — cluster overview, resources, topology, ArgoCD, one-click AKS/EKS, terminals and bring-your-own AI agents.</p>
+      <p className="prefs-lead">A native Kubernetes management app — cluster overview, resources, topology, ArgoCD, one-click AKS/EKS, terminals and bring-your-own AI agents.</p>
     </div>
   );
 }

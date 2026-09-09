@@ -446,7 +446,7 @@ app.get('/api/aws/sso-login/status', async (req, res) => {
 
 app.post('/api/aws/sso-login/cancel', (req, res) => { awsSession = null; res.json({ ok: true }); });
 
-// After SSO auth: choose an AWS account, then a role for it (Lens-style flow).
+// After SSO auth: choose an AWS account, then a role for it.
 app.get('/api/aws/sso-accounts', async (req, res) => {
   if (!awsSession?.sso?.accessToken) return res.status(400).json({ error: 'Not signed in to AWS SSO' });
   try { res.json({ accounts: await awsEks.ssoListAccounts(awsSession.sso) }); }
@@ -533,7 +533,7 @@ app.post('/api/aws/import', async (req, res) => {
 
 // ------------------------------------------------------------------
 // Bring-your-own AI agent — detect installed CLI agents and run them in a
-// terminal with the cluster context loaded (Lens-Prism style). No API key.
+// terminal with the cluster context loaded. No API key.
 // ------------------------------------------------------------------
 const AI_AGENTS = [
   { id: 'claude', name: 'Claude Code', command: 'claude', desc: 'The coding assistant by Anthropic', install: 'https://docs.anthropic.com/en/docs/claude-code' },
