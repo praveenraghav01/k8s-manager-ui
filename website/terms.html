@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>k8sight — Terms of Service</title>
+<meta name="description" content="k8sight terms of service — free, open-source, provided as-is; you are responsible for actions taken on your clusters." />
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+<style>
+  :root {
+    --bg: #ffffff; --bg-2: #f5f5f7; --text: #1d1d1f; --text-dim: #6e6e73; --text-mute: #86868b;
+    --border: #d2d2d7; --accent: #0071e3;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#000; --bg-2:#0a0a0a; --text:#f5f5f7; --text-dim:#a1a1a6; --text-mute:#86868b; --border:#333336; --accent:#2997ff; }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 17px; line-height: 1.6; letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { font-family: var(--mono); font-size: 0.86em; background: var(--bg-2); padding: 2px 6px; border-radius: 5px; }
+
+  header {
+    position: sticky; top: 0; z-index: 10; height: 48px; display: flex; align-items: center;
+    backdrop-filter: saturate(180%) blur(20px); background: color-mix(in srgb, var(--bg) 72%, transparent);
+    border-bottom: 1px solid var(--border);
+  }
+  header .wrap { max-width: 800px; margin: 0 auto; padding: 0 22px; width: 100%; display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; color: var(--text); }
+  .brand img { width: 26px; height: 26px; border-radius: 7px; }
+  header nav a { font-size: 13px; color: var(--text); opacity: .82; margin-left: 20px; }
+  header nav a:hover { opacity: 1; text-decoration: none; }
+
+  main { max-width: 800px; margin: 0 auto; padding: 56px 22px 80px; }
+  h1 { font-size: clamp(32px, 5vw, 48px); line-height: 1.06; letter-spacing: -0.015em; font-weight: 700; margin-bottom: 8px; }
+  .updated { color: var(--text-mute); font-size: 15px; margin-bottom: 32px; }
+  .lead { font-size: 19px; color: var(--text); background: var(--bg-2); border-radius: 14px; padding: 18px 20px; margin-bottom: 40px; }
+  h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; margin: 40px 0 12px; }
+  p { color: var(--text-dim); margin-bottom: 14px; }
+  p strong, li strong { color: var(--text); font-weight: 600; }
+  ul { color: var(--text-dim); margin: 0 0 14px 22px; }
+  li { margin-bottom: 8px; }
+
+  footer { border-top: 1px solid var(--border); background: var(--bg-2); }
+  footer .wrap { max-width: 800px; margin: 0 auto; padding: 24px 22px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  footer .links a { color: var(--text-dim); font-size: 13px; margin-right: 20px; }
+  footer .copy { color: var(--text-mute); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="index.html"><img src="assets/icon.svg" alt="" /> k8sight</a>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="https://github.com/praveenraghav01/k8sight" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <h1>Terms of Service</h1>
+  <div class="updated">Last updated: September 9, 2026</div>
+
+  <p class="lead"><strong>The short version:</strong> k8sight is free, open-source software provided <strong>as is</strong>. You connect your own clusters and accounts, and you are responsible for what you do with them.</p>
+
+  <p>These Terms govern your use of the k8sight application and website ("the app", "we", "our"). By downloading, installing, or using the app, you agree to these Terms and to our <a href="privacy.html">Privacy Policy</a>. If you do not agree, do not use the app.</p>
+
+  <h2>1. License</h2>
+  <p>k8sight is free, open-source software released under the <strong>MIT License</strong>. Your rights to use, copy, modify, and distribute the source code are governed by that license (see the <code>LICENSE</code> file in the repository). These Terms cover your use of the distributed app and this website.</p>
+
+  <h2>2. "As is" — no warranty</h2>
+  <p>The app is provided <strong>"AS IS" and "AS AVAILABLE", without warranty of any kind</strong>, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, and non-infringement. We do not warrant that the app will be error-free, uninterrupted, or secure. You use it at your own risk.</p>
+
+  <h2>3. Your responsibility</h2>
+  <p>k8sight operates on Kubernetes clusters and cloud accounts that <strong>you</strong> connect using <strong>your own</strong> credentials. You are solely responsible for the actions you take through the app — including creating, editing, scaling, restarting, deleting, or syncing resources — and for their consequences on your clusters and data. Review changes before applying them, and keep backups where appropriate.</p>
+
+  <h2>4. Third-party services</h2>
+  <p>The app interacts only with services you configure: your Kubernetes clusters, cloud providers (AWS, Azure, Google Cloud), and — if you enable it — an AI/LLM provider of your choice. Your use of those services is governed by their respective terms and policies. k8sight is not responsible for the availability, accuracy, or conduct of any third-party service.</p>
+
+  <h2>5. No affiliation</h2>
+  <p>k8sight is an independent project. It is <strong>not</strong> affiliated with, endorsed by, or sponsored by the Kubernetes project, the CNCF, Google, Amazon Web Services, Microsoft, Anthropic, or any other trademark holder referenced in the app or website. Product names and logos are the property of their respective owners and are used only to identify compatibility.</p>
+
+  <h2>6. Limitation of liability</h2>
+  <p>To the maximum extent permitted by law, the authors and contributors of k8sight shall <strong>not be liable</strong> for any indirect, incidental, special, consequential, or punitive damages, or for any loss of data, profits, or availability of your clusters, arising from or related to your use of (or inability to use) the app — even if advised of the possibility of such damages. This reflects the liability disclaimer of the MIT License under which the software is provided.</p>
+
+  <h2>7. Changes to these Terms</h2>
+  <p>We may update these Terms from time to time. Material changes will be reflected here with a new "Last updated" date. Continued use of the app after changes take effect constitutes acceptance of the revised Terms.</p>
+
+  <h2>8. Contact</h2>
+  <p>Questions about these Terms? Open an issue at <a href="https://github.com/praveenraghav01/k8sight" target="_blank" rel="noopener">github.com/praveenraghav01/k8sight</a> or email <strong>praveensinghraghav96@gmail.com</strong>.</p>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="links">
+      <a href="index.html">Home</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="https://github.com/praveenraghav01/k8sight" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <div class="copy">© 2026 k8sight · MIT-licensed open source</div>
+  </div>
+</footer>
+</body>
+</html>
