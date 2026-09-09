@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>k8sight — Privacy Policy</title>
+<meta name="description" content="k8sight privacy policy — the app runs entirely on your machine; we collect nothing." />
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+<style>
+  :root {
+    /* Light palette (default) */
+    --bg: #ffffff;
+    --bg-2: #f5f5f7;
+    --panel: #ffffff;
+    --panel-2: #f5f5f7;
+    --border: #d2d2d7;
+    --border-2: #c7c7cc;
+    --text: #1d1d1f;
+    --text-dim: #6e6e73;
+    --text-mute: #86868b;
+    --brand-light: #1d1d1f;
+    --brand-dark: #6e6e73;
+    --accent: #0071e3;
+    --accent-hover: #0077ed;
+    /* Apple system colors */
+    --green: #34c759;
+    --amber: #ff9f0a;
+    --red: #ff3b30;
+    --purple: #af52de;
+    --cyan: #32ade6;
+    --radius: 18px;
+    --maxw: 1024px;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+    --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --ease-spring: cubic-bezier(0.34, 1.3, 0.64, 1);
+  }
+  :root[data-theme="dark"] {
+    --bg: #000000;
+    --bg-2: #0a0a0a;
+    --panel: #1d1d1f;
+    --panel-2: #161617;
+    --border: #333336;
+    --border-2: #48484a;
+    --text: #f5f5f7;
+    --text-dim: #a1a1a6;
+    --text-mute: #86868b;
+    --brand-light: #f5f5f7;
+    --brand-dark: #a1a1a6;
+    --accent: #2997ff;
+    --accent-hover: #47a5ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 17px;
+    line-height: 1.47059;
+    letter-spacing: -0.022em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  img { max-width: 100%; display: block; }
+  section { position: relative; }
+  code { font-family: var(--mono); font-size: 0.88em; }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 22px; }
+
+  /* Apple keeps backgrounds clean — a whisper of a glow only */
+  .bg-glow {
+    position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background: radial-gradient(1200px 700px at 50% -10%, rgba(0,113,227,.05), transparent 60%);
+  }
+  :root[data-theme="dark"] .bg-glow {
+    background: radial-gradient(1200px 700px at 50% -10%, rgba(41,151,255,.10), transparent 60%);
+  }
+
+  /* ---------- Global nav (Apple thin translucent bar) ---------- */
+  header {
+    position: sticky; top: 0; z-index: 9000; height: 48px;
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    background: rgba(255,255,255,.72);
+    border-bottom: 1px solid rgba(0,0,0,.08);
+  }
+  :root[data-theme="dark"] header { background: rgba(22,22,23,.72); border-bottom-color: rgba(255,255,255,.1); }
+  header .wrap { max-width: 1024px; }
+  nav { display: flex; align-items: center; justify-content: space-between; height: 48px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; letter-spacing: -0.01em; color: var(--text); }
+  .brand:hover { text-decoration: none; }
+  .brand .logo { width: 26px; height: 26px; border-radius: 7px; }
+  .brand small { display: block; font-size: 9px; letter-spacing: .14em; color: var(--text-mute); font-weight: 500; }
+  .nav-right { display: flex; align-items: center; gap: 22px; }
+  .nav-links { display: flex; align-items: center; gap: 26px; }
+  .nav-links a { color: var(--text); opacity: .82; font-size: 12px; font-weight: 400; letter-spacing: -0.01em; transition: opacity .15s, color .15s; }
+  .nav-links a:hover { opacity: 1; color: var(--accent); text-decoration: none; }
+  .nav-cta {
+    background: var(--accent); color: #fff !important; opacity: 1;
+    padding: 5px 13px; border-radius: 980px; font-weight: 400; font-size: 12px;
+    transition: background .15s;
+  }
+  .nav-cta:hover { background: var(--accent-hover); color: #fff !important; text-decoration: none; }
+  .menu-btn { display: none; background: none; border: 0; color: var(--text); cursor: pointer; }
+  .theme-btn {
+    display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+    border: 1px solid var(--border); background: transparent; color: var(--text); cursor: pointer;
+    transition: border-color .15s, background .15s, transform .15s var(--ease-out);
+  }
+  .theme-btn:hover { border-color: var(--text-mute); }
+  .theme-btn:active { transform: scale(.9); }
+  .theme-btn svg { width: 15px; height: 15px; }
+  /* Show one icon per theme: moon in light (tap → dark), sun in dark (tap → light) */
+  .theme-btn .ic-sun { display: none; }
+  .theme-btn .ic-moon { display: block; }
+  :root[data-theme="dark"] .theme-btn .ic-sun { display: block; }
+  :root[data-theme="dark"] .theme-btn .ic-moon { display: none; }
+
+
+  main { max-width: 800px; margin: 0 auto; padding: 56px 22px 88px; }
+  main h1 { font-size: clamp(32px, 5vw, 48px); line-height: 1.06; letter-spacing: -0.015em; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+  .updated { color: var(--text-mute); font-size: 15px; margin-bottom: 32px; }
+  .lead { font-size: 19px; color: var(--text); background: var(--bg-2); border-radius: 14px; padding: 18px 20px; margin-bottom: 40px; }
+  main h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; margin: 40px 0 12px; color: var(--text); }
+  main p { color: var(--text-dim); font-size: 17px; line-height: 1.6; margin-bottom: 14px; }
+  main strong { color: var(--text); font-weight: 600; }
+  main ul { color: var(--text-dim); margin: 0 0 14px 22px; }
+  main li { margin-bottom: 8px; line-height: 1.55; }
+  main code { font-family: var(--mono); font-size: 0.86em; color: var(--accent); background: var(--bg-2); padding: 2px 6px; border-radius: 5px; }
+  main a { color: var(--accent); }
+  /* ---------- Footer (Apple fine-print) ---------- */
+  footer { border-top: 1px solid var(--border); padding: 28px 0 40px; background: var(--bg-2); }
+  footer .wrap { max-width: 1024px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  footer .brand { font-size: 13px; color: var(--text-mute); }
+  footer .brand small { color: var(--text-mute); }
+  footer .links { display: flex; gap: 22px; flex-wrap: wrap; }
+  footer .links a { color: var(--text-dim); font-size: 12px; }
+  footer .links a:hover { color: var(--text); text-decoration: underline; }
+  footer .copy { color: var(--text-mute); font-size: 12px; line-height: 1.5; width: 100%; padding-top: 14px; margin-top: 6px; border-top: 1px solid var(--border); }
+  footer .made { width: 100%; text-align: center; color: var(--text-mute); font-size: 12px; padding-top: 6px; }
+  footer .made a { color: var(--text-mute); }
+
+  /* ---------- Download / coffee modal ---------- */
+  .dl-modal-scrim {
+    position: fixed; inset: 0; z-index: 9500; display: grid; place-items: center; padding: 24px;
+    background: rgba(0,0,0,.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    opacity: 0; transition: opacity .25s var(--ease-out);
+  }
+  .dl-modal-scrim[hidden] { display: none; }
+  .dl-modal-scrim.show { opacity: 1; }
+  .dl-modal {
+    position: relative; width: 100%; max-width: 420px; text-align: center;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 22px; padding: 36px 32px 30px;
+    box-shadow: 0 40px 120px rgba(0,0,0,.3);
+    transform: scale(.94); opacity: 0;
+    transition: transform .3s var(--ease-spring), opacity .25s var(--ease-out);
+  }
+  .dl-modal-scrim.show .dl-modal { transform: scale(1); opacity: 1; }
+  .dl-modal .dl-emoji { line-height: 0; margin-bottom: 14px; }
+  .dl-modal .dl-emoji svg { width: 46px; height: 46px; display: inline-block; }
+  .dl-modal h3 { font-size: 21px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 10px; color: var(--text); }
+  .dl-modal p { color: var(--text-dim); font-size: 15px; line-height: 1.45; margin-bottom: 22px; }
+  .dl-modal .bmc { display: inline-block; transition: transform .15s var(--ease-out); }
+  .dl-modal .bmc:hover { transform: translateY(-2px) scale(1.02); }
+  .dl-modal .bmc:active { transform: scale(.98); }
+  .dl-modal .bmc img { height: 50px; width: auto; border-radius: 12px; }
+  .dl-count { margin-top: 24px; font-size: 13.5px; color: var(--text-mute); }
+  .dl-count b { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .dl-now { display: inline-block; margin-top: 12px; font-size: 13.5px; color: var(--accent); }
+  .dl-close {
+    position: absolute; top: 12px; right: 14px; width: 30px; height: 30px; border-radius: 50%;
+    border: none; background: var(--bg-2); color: var(--text-dim); font-size: 18px; line-height: 1; cursor: pointer;
+    transition: color .15s, background .15s;
+  }
+  .dl-close:hover { color: var(--text); background: var(--border); }
+  @media (prefers-reduced-motion: reduce) {
+    .dl-modal { transform: none; transition: opacity .15s; }
+    .dl-modal-scrim.show .dl-modal { transform: none; }
+  }
+  @media (prefers-reduced-transparency: reduce) { .dl-modal-scrim { background: rgba(0,0,0,.8); backdrop-filter: none; } }
+
+  /* ---------- Reveal ---------- */
+  .reveal { opacity: 0; transform: translateY(30px); transition: opacity .8s var(--ease-out), transform .8s var(--ease-out); }
+  .reveal.in { opacity: 1; transform: none; }
+
+  @media (max-width: 900px) {
+    .nav-links { display: none; }
+    .menu-btn { display: block; }
+    .nav-links.open { display: flex; flex-direction: column; position: absolute; top: 48px; left: 0; right: 0; background: var(--bg); border-bottom: 1px solid var(--border); padding: 18px 22px; gap: 16px; }
+  }
+  @media (prefers-reduced-transparency: reduce) { header { background: var(--bg); backdrop-filter: none; } }
+  @media (prefers-contrast: more) { :root { --border: #86868b; --text-dim: #4a4a4f; } header { background: var(--bg); backdrop-filter: none; } }
+</style>
+<script>
+<script>
+  // Set theme before first paint to avoid a flash.
+  try {
+    var t = localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    document.documentElement.dataset.theme = t;
+  } catch (e) { document.documentElement.dataset.theme = 'dark'; }
+</script>
+</script>
+</head>
+<body>
+<div class="bg-glow"></div>
+<header>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="index.html">
+        <img class="logo" src="assets/icon.svg" alt="k8sight logo" />
+        <span>k8sight<small>KUBERNETES, IN SIGHT</small></span>
+      </a>
+      <div class="nav-right">
+        <div class="nav-links" id="navLinks">
+          <a href="index.html#features">Features</a>
+          <a href="index.html#cloud">Cloud</a>
+          <a href="index.html#download">Download</a>
+          <a class="nav-cta" href="index.html#download">Get k8sight</a>
+        </div>
+        <button class="theme-btn" id="themeBtn" aria-label="Toggle light and dark theme">
+          <svg class="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
+          <svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        </button>
+        <button class="menu-btn" id="menuBtn" aria-label="Menu">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <h1>Privacy Policy</h1>
+  <div class="updated">Last updated: September 9, 2026</div>
+
+  <p class="lead"><strong>The short version:</strong> k8sight runs entirely on your own computer. We operate no servers, and we do <strong>not</strong> collect, store, receive, sell, or share your data.</p>
+
+  <p>k8sight ("the app", "we", "our") is a free, open-source desktop application for browsing and operating Kubernetes clusters. This policy explains what data the app touches and how it is handled.</p>
+
+  <h2>1. We collect nothing</h2>
+  <p>k8sight is a desktop application that runs locally on your machine. It has no backend owned by us, sends no telemetry or analytics, requires no account or sign-up, and transmits no usage data to us. All processing happens on your device.</p>
+
+  <h2>2. Data the app accesses (and where it stays)</h2>
+  <p>To do its job, k8sight works with data that either stays on your machine or travels <strong>directly</strong> between your machine and services you configure — never through us:</p>
+  <ul>
+    <li><strong>Kubeconfig &amp; cluster data</strong> — read from your local kubeconfig (<code>~/.kube/config</code>). The app talks directly to your Kubernetes API servers to display resources, logs, metrics, topology, etc. This traffic is between your machine and your clusters.</li>
+    <li><strong>Cloud credentials</strong> — when you connect AWS, Azure, or Google clusters, credentials and tokens are stored <strong>locally</strong> (e.g. <code>~/.aws</code>, <code>~/.kube</code>, <code>~/.config/k8s-manager/…</code>) and used only to call that cloud provider's APIs directly from your machine.</li>
+  </ul>
+
+  <h2>3. Google user data (OAuth) — Limited Use</h2>
+  <p>If you choose to sign in with Google to import GKE clusters, k8sight requests the <code>https://www.googleapis.com/auth/cloud-platform</code> scope <strong>solely</strong> to:</p>
+  <ul>
+    <li>list the Google Cloud projects and GKE clusters you can access, and</li>
+    <li>obtain short-lived access tokens to authenticate to those clusters.</li>
+  </ul>
+  <p>k8sight's use of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>, including its <strong>Limited Use</strong> requirements. Specifically:</p>
+  <ul>
+    <li>Google user data is used <strong>only</strong> to provide the cluster-connection features you invoke.</li>
+    <li>It is <strong>not</strong> transferred to others except as necessary to provide those features, for security, or to comply with applicable law.</li>
+    <li>It is <strong>not</strong> used for advertising.</li>
+    <li>No humans read your Google user data.</li>
+  </ul>
+  <p>Google tokens are stored locally on your device (<code>~/.config/k8s-manager/gke/credentials.json</code>) and are never sent to us or any third party. You can revoke access at any time at <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a>, by signing out in the app, or by deleting that file.</p>
+
+  <h2>4. AWS and Azure</h2>
+  <p>AWS (SSO, access keys, or assume-role) and Azure (browser or <code>az</code> CLI) sign-ins authenticate <strong>directly</strong> with those providers. Credentials and tokens are stored locally and used only to discover clusters and write kubeconfig entries. Nothing is sent to us.</p>
+
+  <h2>5. AI assistant (bring your own model)</h2>
+  <p>The optional AI assistant is <strong>off until you configure it</strong> with your own OpenAI-compatible API endpoint and key. When you use it, relevant <strong>read-only</strong> cluster context is sent to the endpoint <strong>you chose</strong> (e.g. OpenAI, Azure OpenAI, TrueFoundry, LiteLLM) so it can answer your question. Secret values are redacted before anything is sent, and your API key is stored locally. That exchange is governed by your chosen provider's privacy policy; we are not a party to it.</p>
+
+  <h2>6. The website</h2>
+  <p>This website is static. It may load a third-party <strong>Buy Me a Coffee</strong> widget; if you interact with it, Buy Me a Coffee processes that interaction under its own privacy policy. The site itself does not set tracking cookies or collect personal data. Standard server request logs kept by the hosting provider are not used by us for tracking or profiling.</p>
+
+  <h2>7. Data retention &amp; deletion</h2>
+  <p>Because everything lives on your machine, you are in control. You can remove data by signing out in the app, deleting the relevant local files (<code>~/.config/k8s-manager/</code>, cloud credential files, kubeconfig entries), or uninstalling the app.</p>
+
+  <h2>8. Children</h2>
+  <p>k8sight is a developer tool and is not directed to children under 13.</p>
+
+  <h2>9. Changes to this policy</h2>
+  <p>We may update this policy from time to time. Material changes will be reflected here with a new "Last updated" date.</p>
+
+  <h2>10. Contact</h2>
+  <p>Questions about this policy? Open an issue at <a href="https://github.com/praveenraghav01/k8sight" target="_blank" rel="noopener">github.com/praveenraghav01/k8sight</a> or email <strong>praveensinghraghav96@gmail.com</strong>.</p>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="index.html">
+      <img class="logo" src="assets/icon.svg" alt="" />
+      <span>k8sight<small>© 2026 · MIT-style open source</small></span>
+    </a>
+    <div class="links">
+      <a href="index.html">Home</a>
+      <a href="index.html#download">Download</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="https://github.com/praveenraghav01/k8sight" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <div class="copy">Built for developers and platform teams. Not affiliated with the Kubernetes project or the CNCF.</div>
+    <div class="made">
+      <a href="https://madewithloveinindia.org" target="_blank" rel="noopener">Made with <span aria-label="Love" style="color: #f43f5e">&hearts;</span> in India</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Theme toggle (light / dark) — persisted, defaults to system preference.
+  // Which icon shows is handled entirely in CSS via [data-theme].
+  (function () {
+    const root = document.documentElement;
+    const btn = document.getElementById('themeBtn');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const next = root.dataset.theme === 'light' ? 'dark' : 'light';
+      root.dataset.theme = next;
+      try { localStorage.setItem('theme', next); } catch (e) {}
+    });
+  })();
+
+  // Mobile menu
+  const menuBtn = document.getElementById('menuBtn');
+  const navLinks = document.getElementById('navLinks');
+  menuBtn?.addEventListener('click', () => navLinks.classList.toggle('open'));
+  navLinks?.querySelectorAll('a').forEach(a => a.addEventListener('click', () => navLinks.classList.remove('open')));
+
+</script>
+</body>
+</html>
