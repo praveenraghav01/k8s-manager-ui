@@ -254,7 +254,7 @@
   <div class="wrap">
     <div class="eyebrow">Documentation</div>
     <h1>k8sight docs</h1>
-    <p>A beautiful, native Kubernetes UI for your clusters — installed in seconds, no CLI required. Everything you need to install it, connect your clusters, and get productive.</p>
+    <p>A native Kubernetes UI for your clusters — installed in seconds, no CLI required. Everything you need to install it, connect your clusters, and get productive.</p>
   </div>
 </section>
 
@@ -306,7 +306,7 @@
     <article id="overview">
       <h2>Overview</h2>
       <div class="tagline">A native desktop &amp; web UI for Kubernetes — no CLI required.</div>
-      <p><strong>k8sight</strong> is a beautiful, fast Kubernetes management app: a native desktop build for <strong>macOS, Windows and Linux</strong>, plus a Docker image you can run anywhere. It reads your kubeconfig and gives you a live dashboard, resource browsing and editing, topology, logs, an in-pod terminal, ArgoCD, and one-click cloud onboarding — all without leaving the app.</p>
+      <p><strong>k8sight</strong> is a fast Kubernetes management app: a native desktop build for <strong>macOS, Windows and Linux</strong>, plus a Docker image you can run anywhere. It reads your kubeconfig and gives you a live dashboard, resource browsing and editing, topology, logs, an in-pod terminal, ArgoCD, and one-click cloud onboarding — all without leaving the app.</p>
       <h3>Highlights</h3>
       <ul>
         <li><strong>One-click cloud clusters</strong> — import AWS EKS and Azure AKS straight from your account, with <strong>no <code>aws</code>/<code>az</code> CLI required</strong>, at import <em>or</em> runtime.</li>
@@ -328,7 +328,7 @@
       <h2>Install</h2>
       <div class="tagline">Desktop app, Docker, or run from source.</div>
       <h3>Desktop app (recommended)</h3>
-      <p>Download the build for your OS from the <a href="index.html#download">downloads section</a> or the <a href="https://github.com/praveenraghav01/k8sight/releases" target="_blank" rel="noopener">GitHub releases</a> page — macOS (Apple Silicon &amp; Intel), Windows and Linux. It bundles everything it needs; just open it and it reads your <code>~/.kube/config</code>.</p>
+      <p>Download the build for your OS from the <a href="index.html#download">downloads section</a> or the <a href="https://github.com/praveenraghav01/k8sight/releases" target="_blank" rel="noopener">GitHub releases</a> page — macOS (Apple Silicon &amp; Intel), Windows and Linux. It bundles everything it needs; open it and it reads your <code>~/.kube/config</code>.</p>
       <h3>Docker</h3>
       <p>Run the published image and mount your kubeconfig. Publishing to <code>127.0.0.1</code> keeps the API off your network (see <a href="#security">Security</a>):</p>
       <pre><code>docker run --rm -p 127.0.0.1:8080:3001 \
@@ -447,7 +447,7 @@ npm start          # http://localhost:3001</code></pre>
       </div>
       <div class="tagline">Connect your Azure AKS clusters — no <code>az</code> CLI required.</div>
 
-      <p>k8sight imports <strong>Azure AKS</strong> clusters with <strong>no <code>az</code> CLI required</strong> (though you can use it if you prefer). There is <strong>nothing for a maintainer to register</strong> — the browser flow reuses the Azure CLI's well-known <strong>public</strong> client id, so it works out of the box.</p>
+      <p>k8sight imports <strong>Azure AKS</strong> clusters with <strong>no <code>az</code> CLI required</strong> (though you can use it if you prefer). There is <strong>nothing for a maintainer to register</strong> — the browser flow reuses the Azure CLI's well-known <strong>public</strong> client id, so it works with no setup.</p>
 
       <div class="method-grid">
         <div class="method">
@@ -519,7 +519,7 @@ npm start          # http://localhost:3001</code></pre>
         </div>
         <div class="method">
           <h4>Service-account key</h4>
-          <p>Paste a service-account key JSON. Works out of the box with no OAuth client; ideal for CI or orgs that block the browser flow.</p>
+          <p>Paste a service-account key JSON. Works with no OAuth client; ideal for CI or orgs that block the browser flow.</p>
         </div>
       </div>
 
