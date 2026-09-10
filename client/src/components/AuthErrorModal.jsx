@@ -52,12 +52,16 @@ function classify(auth) {
       fix: { kind: 'aws', command: extractAwsSso(raw) || 'aws sso login' },
     };
   }
-  // Missing exec-credential helper (kubelogin, aws-iam-authenticator, …)
+  // Missing exec-credential helper (kubelogin, aws-iam-authenticator, …).
+  // If we know the cloud provider, offer the in-app sign-in too: re-adding the
+  // cluster through the app's own flow replaces the broken exec-plugin entry
+  // with a working one, so it fixes this without installing anything.
   if (reason === 'exec-plugin' || /executable\s+\S+\s+not found|exec:.*not found|kubelogin|no such file/.test(s)) {
+    const note = 'Or install the helper this cluster needs (e.g. kubelogin, aws-iam-authenticator, or gke-gcloud-auth-plugin) and make sure it is on your PATH, then retry.';
     return {
       title: 'Auth helper not found',
       summary: "A credential helper CLI referenced by your kubeconfig isn't installed or isn't on PATH.",
-      fix: { kind: 'note', note: 'Install the helper this cluster needs (e.g. kubelogin, aws-iam-authenticator, or gke-gcloud-auth-plugin) and make sure it is on your PATH, then retry.' },
+      fix: (provider === 'aws' || provider === 'azure') ? { kind: provider, note } : { kind: 'note', note },
     };
   }
   // TLS / certificate
