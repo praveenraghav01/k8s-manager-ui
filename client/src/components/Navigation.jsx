@@ -67,6 +67,7 @@ export default function Navigation({
     { key: 'events', label: 'Events', icon: 'events' },
     { key: 'helm', label: 'Helm', icon: 'helm' },
     { key: 'accessControl', label: 'Access Control', icon: 'accessControl' },
+    { key: 'security', label: 'Security', icon: 'shield' },
   ];
 
   // ArgoCD sub-views — these mirror the tabs inside the ArgoCD view and only

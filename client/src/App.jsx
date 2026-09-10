@@ -17,6 +17,7 @@ import Namespaces from './components/Namespaces';
 import KubeConfigModal from './components/KubeConfigModal';
 import AuthErrorModal from './components/AuthErrorModal';
 import AccessControl from './components/AccessControl';
+import SecurityCenter from './components/SecurityCenter';
 import ArgoCD from './components/ArgoCD';
 import Assistant from './components/Assistant';
 import AgentPanel from './components/AgentPanel';
@@ -28,7 +29,7 @@ import { useToast } from './components/Toast';
 
 // Views that load their own data and should NOT trigger the shared resource fetch.
 // (Overview is intentionally excluded — its dashboard is built from the shared fetch.)
-const STANDALONE_RESOURCE_TYPES = ['cluster', 'nodes', 'namespaces', 'helm', 'customResources', 'accessControl', 'topology', 'argocd'];
+const STANDALONE_RESOURCE_TYPES = ['cluster', 'nodes', 'namespaces', 'helm', 'customResources', 'accessControl', 'topology', 'argocd', 'security'];
 
 // Maps a resourceType to the key it lives under in allResources.
 // Naive `type + 's'` breaks for a few types.
@@ -564,6 +565,8 @@ function App() {
             <CustomResourceDetail key={`cr-${refreshNonce}`} selection={crSelection} onSelect={setCrSelection} />
           ) : resourceType === 'accessControl' ? (
             <AccessControl key={`ac-${refreshNonce}`} onNavigate={nav} />
+          ) : resourceType === 'security' ? (
+            <SecurityCenter key={`sec-${refreshNonce}`} namespaces={namespaces} onNavigate={nav} />
           ) : resourceType === 'argocd' ? (
             <ArgoCD onNavigate={nav} refreshSignal={refreshNonce} view={argoView} onViewChange={setArgoView} />
           ) : resourceType === 'preferences' ? (

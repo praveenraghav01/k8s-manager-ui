@@ -1900,6 +1900,155 @@ const parseArgoApp = (a) => {
   };
 };
 
+// ------------------------------------------------------------------
+// Security Center — surfaces the Trivy Operator's report CRDs (image CVEs,
+// config-audit / best-practice checks, and RBAC risk assessment). The operator
+// (github.com/aquasecurity/trivy-operator) does the scanning in-cluster; we just
+// read and aggregate its reports, so there's nothing extra to install app-side.
+// ------------------------------------------------------------------
+const TRIVY_GROUP = 'aquasecurity.github.io';
+const TRIVY_VER = 'v1alpha1';
+const co = () => kubeConfig.makeApiClient(k8s.CustomObjectsApi);
+
+const listTrivy = async (plural, { cluster = false } = {}) => {
+  try {
+    // client-node 2.0 names the param `plural` on the cluster call but
+    // `resourcePlural` on the all-namespaces one.
+    const res = cluster
+      ? await co().listClusterCustomObject({ group: TRIVY_GROUP, version: TRIVY_VER, plural })
+      : await co().listCustomObjectForAllNamespaces({ group: TRIVY_GROUP, version: TRIVY_VER, resourcePlural: plural });
+    return res.items || [];
+  } catch (e) {
+    if (e?.code === 404 || e?.statusCode === 404) return null; // CRD not installed
+    throw e;
+  }
+};
+
+// Trivy labels the report with the scanned resource it belongs to.
+const trivyOwner = (r) => {
+  const l = r.metadata?.labels || {};
+  return {
+    kind: l['trivy-operator.resource.kind'] || r.metadata?.ownerReferences?.[0]?.kind || '',
+    name: l['trivy-operator.resource.name'] || r.metadata?.ownerReferences?.[0]?.name || r.metadata?.name || '',
+    namespace: r.metadata?.namespace || '',
+    container: l['trivy-operator.container.name'] || '',
+  };
+};
+const sev = (s) => (s || 'UNKNOWN').toUpperCase();
+const emptySummary = () => ({ CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0, UNKNOWN: 0 });
+const addSummary = (into, s = {}) => {
+  into.CRITICAL += s.criticalCount || 0; into.HIGH += s.highCount || 0;
+  into.MEDIUM += s.mediumCount || 0; into.LOW += s.lowCount || 0; into.UNKNOWN += s.unknownCount || s.noneCount || 0;
+  return into;
+};
+
+app.get('/api/security/status', async (req, res) => {
+  if (!kubeConfig) return res.json({ installed: false });
+  try {
+    const api = kubeConfig.makeApiClient(k8s.ApiextensionsV1Api);
+    const { items } = await api.listCustomResourceDefinition();
+    const names = new Set(items.map((c) => c.metadata?.name));
+    const has = (n) => names.has(`${n}.${TRIVY_GROUP}`);
+    const installed = [...names].some((n) => n?.endsWith(`.${TRIVY_GROUP}`));
+    res.json({
+      installed,
+      reports: {
+        vulnerability: has('vulnerabilityreports'),
+        configAudit: has('configauditreports'),
+        rbac: has('rbacassessmentreports') || has('clusterrbacassessmentreports'),
+        exposedSecret: has('exposedsecretreports'),
+      },
+    });
+  } catch (e) {
+    res.json({ installed: false, error: firstLine(e.message) });
+  }
+});
+
+// Image vulnerability reports → grouped by image, with severity + CVE detail.
+app.get('/api/security/vulnerabilities', async (req, res) => {
+  try {
+    const items = await listTrivy('vulnerabilityreports');
+    if (items === null) return res.json({ installed: false, images: [], summary: emptySummary() });
+    const ns = req.query.namespace && req.query.namespace !== 'all' ? req.query.namespace : null;
+    const total = emptySummary();
+    const byImage = new Map();
+    for (const r of items) {
+      const owner = trivyOwner(r);
+      if (ns && owner.namespace !== ns) continue;
+      const rep = r.report || {};
+      const art = rep.artifact || {};
+      const reg = rep.registry?.server || '';
+      const image = `${reg ? reg + '/' : ''}${art.repository || '?'}${art.tag ? ':' + art.tag : (art.digest ? '@' + String(art.digest).slice(0, 19) : '')}`;
+      addSummary(total, rep.summary);
+      if (!byImage.has(image)) byImage.set(image, {
+        image, repository: art.repository || '', tag: art.tag || '', os: `${rep.os?.family || ''} ${rep.os?.name || ''}`.trim(),
+        summary: emptySummary(), workloads: [], vulnerabilities: [], _seen: new Set(),
+      });
+      const g = byImage.get(image);
+      addSummary(g.summary, rep.summary);
+      g.workloads.push({ kind: owner.kind, name: owner.name, namespace: owner.namespace, container: owner.container });
+      for (const v of (rep.vulnerabilities || [])) {
+        const key = v.vulnerabilityID + '|' + v.resource + '|' + v.installedVersion;
+        if (g._seen.has(key)) continue; g._seen.add(key);
+        g.vulnerabilities.push({
+          id: v.vulnerabilityID, severity: sev(v.severity), pkg: v.resource || '',
+          installedVersion: v.installedVersion || '', fixedVersion: v.fixedVersion || '',
+          title: v.title || '', link: v.primaryLink || (v.links || [])[0] || '', score: v.score,
+        });
+      }
+    }
+    const order = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, UNKNOWN: 4 };
+    const images = [...byImage.values()].map((g) => {
+      delete g._seen;
+      g.vulnerabilities.sort((a, b) => order[a.severity] - order[b.severity] || (b.score || 0) - (a.score || 0));
+      return g;
+    }).sort((a, b) => (b.summary.CRITICAL - a.summary.CRITICAL) || (b.summary.HIGH - a.summary.HIGH));
+    res.json({ installed: true, images, summary: total, reportCount: items.length });
+  } catch (e) {
+    res.status(500).json({ error: firstLine(e.message) });
+  }
+});
+
+// Config-audit (resource best-practice) + RBAC assessment reports. `kind` picks
+// which: 'config' (configauditreports) or 'rbac' (rbac + cluster rbac).
+app.get('/api/security/checks', async (req, res) => {
+  try {
+    const which = req.query.kind === 'rbac' ? 'rbac' : 'config';
+    let items;
+    if (which === 'config') {
+      items = await listTrivy('configauditreports');
+      if (items === null) return res.json({ installed: false, resources: [], summary: emptySummary() });
+    } else {
+      const nsR = await listTrivy('rbacassessmentreports');
+      const clR = await listTrivy('clusterrbacassessmentreports', { cluster: true });
+      if (nsR === null && clR === null) return res.json({ installed: false, resources: [], summary: emptySummary() });
+      items = [...(nsR || []), ...(clR || [])];
+    }
+    const ns = req.query.namespace && req.query.namespace !== 'all' ? req.query.namespace : null;
+    const total = emptySummary();
+    const order = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, UNKNOWN: 4 };
+    const resources = [];
+    for (const r of items) {
+      const owner = trivyOwner(r);
+      if (ns && owner.namespace && owner.namespace !== ns) continue;
+      const rep = r.report || {};
+      addSummary(total, rep.summary);
+      const failed = (rep.checks || []).filter((c) => c.success === false).map((c) => ({
+        id: c.checkID || c.id || '', title: c.title || '', severity: sev(c.severity),
+        category: c.category || '', message: (c.messages || [])[0] || c.description || '', remediation: c.remediation || '',
+      })).sort((a, b) => order[a.severity] - order[b.severity]);
+      if (!failed.length) continue;
+      resources.push({ kind: owner.kind || 'Cluster', name: owner.name, namespace: owner.namespace, summary: rep.summary && {
+        CRITICAL: rep.summary.criticalCount || 0, HIGH: rep.summary.highCount || 0, MEDIUM: rep.summary.mediumCount || 0, LOW: rep.summary.lowCount || 0, UNKNOWN: 0,
+      } || emptySummary(), checks: failed });
+    }
+    resources.sort((a, b) => (b.summary.CRITICAL - a.summary.CRITICAL) || (b.summary.HIGH - a.summary.HIGH));
+    res.json({ installed: true, resources, summary: total, reportCount: items.length });
+  } catch (e) {
+    res.status(500).json({ error: firstLine(e.message) });
+  }
+});
+
 // Applications that aren't fully Synced+Healthy — the "Needs attention" panel.
 const needsAttention = (a) => a.syncStatus !== 'Synced' || (a.healthStatus !== 'Healthy' && a.healthStatus !== 'Unknown');
 

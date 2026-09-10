@@ -327,6 +327,13 @@ const ICONS = {
     </>
   ),
   send: <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z" />,
+  shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
+  shieldCheck: (
+    <>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="M9 12l2 2 4-4" />
+    </>
+  ),
   monitor: (
     <>
       <rect x="2" y="3" width="20" height="14" rx="2" />
