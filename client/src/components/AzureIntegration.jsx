@@ -88,6 +88,15 @@ export default function AzureIntegration({ onClose, onImported }) {
     onClose();
   };
 
+  // Signed in but not importing anything — e.g. the user only needed to refresh
+  // an expired Azure token to fix the current cluster. Re-check auth (so the
+  // fresh token takes effect) and close.
+  const skip = () => {
+    clearInterval(pollRef.current);
+    onImported?.();
+    onClose();
+  };
+
   const q = filter.toLowerCase();
   const visible = clusters.filter((c) => !q || c.name.toLowerCase().includes(q) || (c.subscriptionName || '').toLowerCase().includes(q) || (c.location || '').toLowerCase().includes(q));
   const selectableVisible = visible.filter((c) => !c.imported);
@@ -192,6 +201,9 @@ export default function AzureIntegration({ onClose, onImported }) {
               Use admin credentials (<code>--admin</code>) — cluster-admin certs, bypasses Azure AD
             </label>
             <div className="action-modal-actions">
+              <button className="action-modal-btn ghost" style={{ marginRight: 'auto' }} onClick={skip} title="Continue without adding clusters">
+                Skip
+              </button>
               <button className="action-modal-btn" onClick={cancelAndClose}>Cancel</button>
               <button className="action-modal-btn primary" disabled={selCount === 0} onClick={doImport}>
                 Add {selCount} cluster{selCount === 1 ? '' : 's'}

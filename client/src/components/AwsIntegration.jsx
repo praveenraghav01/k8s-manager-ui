@@ -151,6 +151,14 @@ export default function AwsIntegration({ onClose, onImported }) {
     onClose();
   };
 
+  // Signed in but not importing — e.g. the user only needed to refresh expired
+  // AWS credentials to fix the current cluster. Re-check auth and close.
+  const skip = () => {
+    clearInterval(pollRef.current);
+    onImported?.();
+    onClose();
+  };
+
   const q = filter.toLowerCase();
   const visible = clusters.filter((c) => !q || c.name.toLowerCase().includes(q) || c.region.toLowerCase().includes(q));
   const selectable = visible.filter((c) => !c.imported);
@@ -324,6 +332,7 @@ export default function AwsIntegration({ onClose, onImported }) {
               )}
             </div>
             <div className="action-modal-actions">
+              <button className="action-modal-btn ghost" style={{ marginRight: 'auto' }} onClick={skip} title="Continue without adding clusters">Skip</button>
               <button className="action-modal-btn" onClick={cancelAndClose}>Cancel</button>
               <button className="action-modal-btn primary" disabled={sel.size === 0} onClick={doImport}>Add {sel.size} cluster{sel.size === 1 ? '' : 's'}</button>
             </div>

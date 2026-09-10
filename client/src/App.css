@@ -2513,6 +2513,9 @@ span.xlink.resource-name-cell { color: var(--accent); }
 .action-modal-btn.primary { background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; }
 .action-modal-btn.primary:hover:not(:disabled) { filter: brightness(1.08); color: #fff; }
 .action-modal-btn.primary.danger { background: var(--red); border-color: var(--red); }
+/* Tertiary action (e.g. "Skip") — quieter than Cancel */
+.action-modal-btn.ghost { background: transparent; border-color: transparent; color: var(--text-muted); }
+.action-modal-btn.ghost:hover:not(:disabled) { background: var(--bg-hover); color: var(--text); border-color: transparent; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
 /* floating bulk-action bar (shown when rows are checkbox-selected) */
