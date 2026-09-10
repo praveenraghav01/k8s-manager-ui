@@ -1,17 +1,17 @@
 # k8sight
 
-[![Build & Release](https://github.com/praveenraghav01/k8s-manager-ui/actions/workflows/release.yml/badge.svg)](https://github.com/praveenraghav01/k8s-manager-ui/actions/workflows/release.yml)
-[![Latest release](https://img.shields.io/github/v/release/praveenraghav01/k8s-manager-ui?sort=semver)](https://github.com/praveenraghav01/k8s-manager-ui/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/praveenraghav01/k8s-manager-ui/total)](https://github.com/praveenraghav01/k8s-manager-ui/releases)
+[![Build & Release](https://github.com/praveenraghav01/k8sight/actions/workflows/release.yml/badge.svg)](https://github.com/praveenraghav01/k8sight/actions/workflows/release.yml)
+[![Latest release](https://img.shields.io/github/v/release/praveenraghav01/k8sight?sort=semver)](https://github.com/praveenraghav01/k8sight/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/praveenraghav01/k8sight/total)](https://github.com/praveenraghav01/k8sight/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-informational)
 ![Built with Electron](https://img.shields.io/badge/built%20with-Electron-47848F?logo=electron&logoColor=white)
 
-A beautiful, native **desktop app** (macOS · Windows · Linux) — and a Docker image — for browsing and operating any Kubernetes cluster from your local `kubeconfig`.
+A native **desktop app** (macOS · Windows · Linux) — and a Docker image — for browsing and operating any Kubernetes cluster from your local `kubeconfig`.
 
 ![k8sight — cluster dashboard](docs/screenshot-dashboard.png)
 
-> **Download:** grab the latest macOS `.dmg`, Windows `.exe`, or Linux `.AppImage`/`.deb` from the [**Releases**](https://github.com/praveenraghav01/k8s-manager-ui/releases/latest) page. See [Run — Desktop app](#run--desktop-app-electron) to build it yourself, or [Run — Docker](#run--docker) to run it anywhere.
+> **Download:** grab the latest macOS `.dmg`, Windows `.exe`, or Linux `.AppImage`/`.deb` from the [**Releases**](https://github.com/praveenraghav01/k8sight/releases/latest) page. See [Run — Desktop app](#run--desktop-app-electron) to build it yourself, or [Run — Docker](#run--docker) to run it anywhere.
 
 ## Features
 
@@ -27,7 +27,7 @@ A beautiful, native **desktop app** (macOS · Windows · Linux) — and a Docker
 - **Namespaces** — searchable list; click a namespace to filter its workloads
 - **Topology** — interactive pan/zoom graph of Deployment → ReplicaSet → Pod → Service relationships
 - **Custom Resources** — lazy-loaded sidebar tree (group → kind → instance) with YAML details
-- **ArgoCD** — auto-detected when its CRDs are present. A GitOps dashboard (fleet-health status bar, summary cards, "Needs attention", recent activity) plus **Applications / View / ApplicationSets / Projects / Settings → Repositories / Clusters** views and an "Open Argo CD UI" link. The **View** tab is a Topology-style, pan/zoom resource graph: pick a namespace + application to see the Application and all of its managed resources as an interactive tree (Deployment → ReplicaSet → Pod inferred), colour-coded by sync/health — a single view for tracking one app. The dashboard's Applications card and the Applications-tab selection both open a **Sync / Refresh** dialog with per-app checkboxes, all / out-of-sync / none presets, prune, and normal/hard refresh. Application drawer shows properties, source (clickable repo), destination, sync policy, last operation, a resource tree, deploy history, and events; actions include Sync (prune/dry-run/force/replace, two-step confirm), Refresh (normal or hard), roll-back-to-revision, and Delete (cascade or orphan, two-step confirm)
+- **ArgoCD** — auto-detected when its CRDs are present. A GitOps dashboard (fleet-health status bar, summary cards, "Needs attention", recent activity) plus **Applications / View / ApplicationSets / Projects / Settings → Repositories / Clusters** views and an "Open Argo CD UI" link. The **View** tab is a Topology-style, pan/zoom resource graph: pick a namespace + application to see the Application and all of its managed resources as an interactive tree (Deployment → ReplicaSet → Pod inferred), colour-coded by sync/health. The dashboard's Applications card and the Applications-tab selection both open a **Sync / Refresh** dialog with per-app checkboxes, all / out-of-sync / none presets, prune, and normal/hard refresh. Application drawer shows properties, source (clickable repo), destination, sync policy, last operation, a resource tree, deploy history, and events; actions include Sync (prune/dry-run/force/replace, two-step confirm), Refresh (normal or hard), roll-back-to-revision, and Delete (cascade or orphan, two-step confirm)
 - **Ask AI → Summarize** — right-click any ArgoCD Application (or use the drawer) to hand the resource to the built-in assistant, which analyzes its sync/health condition using cluster context and suggests fixes
 - **Edit & apply** — edit any resource's YAML and apply it; per-row and drawer actions for Scale, Rollout restart, and Delete (two-step confirm)
 - **Helm** — releases with values and rendered manifest
@@ -137,7 +137,7 @@ host, then restart the container.
 
 ## Run — Desktop app (Electron)
 
-k8sight ships as a native desktop app. Most people just [download a build](https://github.com/praveenraghav01/k8s-manager-ui/releases/latest); to build it yourself:
+k8sight ships as a native desktop app. Most people just [download a build](https://github.com/praveenraghav01/k8sight/releases/latest); to build it yourself:
 
 ```bash
 npm ci                     # installs Electron + electron-builder (first time)
