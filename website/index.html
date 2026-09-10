@@ -4,14 +4,14 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>k8sight — a beautiful desktop UI for Kubernetes</title>
-<meta name="description" content="k8sight is a native desktop app for browsing and operating any Kubernetes cluster from your local kubeconfig. Live dashboards, pod logs, interactive shells, topology, Helm, Argo CD, cloud clusters (EKS/AKS), an AI assistant and docked coding agents. Download for macOS, Windows and Linux." />
+<meta name="description" content="k8sight is a native desktop app for browsing and operating any Kubernetes cluster from your local kubeconfig. Live dashboards, pod logs, interactive shells, topology, Helm, Argo CD, cloud clusters (EKS/AKS), a built-in Security Center (image CVEs, config & RBAC audit), an AI assistant and docked coding agents. Download for macOS, Windows and Linux." />
 <link rel="canonical" href="https://k8sight.in/" />
 <!-- Open Graph -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="k8sight" />
 <meta property="og:url" content="https://k8sight.in/" />
 <meta property="og:title" content="k8sight — a beautiful desktop UI for Kubernetes" />
-<meta property="og:description" content="A beautiful native desktop UI for browsing and operating your Kubernetes clusters — live dashboards, logs, shells, topology, Helm & Argo CD, plus EKS, AKS and GKE with no CLI. macOS, Windows and Linux." />
+<meta property="og:description" content="A beautiful native desktop UI for browsing and operating your Kubernetes clusters — live dashboards, logs, shells, topology, Helm, Argo CD & a built-in Security Center, plus EKS, AKS and GKE with no CLI. macOS, Windows and Linux." />
 <meta property="og:image" content="https://k8sight.in/assets/og-image.png" />
 <meta property="og:image:secure_url" content="https://k8sight.in/assets/og-image.png" />
 <meta property="og:image:type" content="image/png" />
@@ -426,6 +426,7 @@
           <a href="#assistant">AI</a>
           <a href="#cloud">Cloud</a>
           <a href="#argocd">Argo CD</a>
+          <a href="#security">Security</a>
           <a href="docs.html">Docs</a>
           <a class="nav-cta" href="#download">Download</a>
         </div>
@@ -445,7 +446,7 @@
 <section class="hero" id="top">
   <div class="wrap">
     <h1>See your whole cluster in <span class="grad">one beautiful</span> window</h1>
-    <p class="sub">k8sight is a native desktop app for browsing and operating any Kubernetes cluster from your local <code>kubeconfig</code> — live metrics, pod logs, interactive shells, topology, Helm, Argo CD, one-click EKS &amp; AKS clusters, a built-in AI assistant and docked coding agents.</p>
+    <p class="sub">k8sight is a native desktop app for browsing and operating any Kubernetes cluster from your local <code>kubeconfig</code> — live metrics, pod logs, interactive shells, topology, Helm, Argo CD, one-click EKS &amp; AKS clusters, a built-in security scanner, an AI assistant and docked coding agents.</p>
     <div class="cta-row">
       <a class="btn btn-primary" href="#download">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
@@ -726,6 +727,64 @@
         <h3>AI-assisted triage</h3>
         <p>One click hands an app&rsquo;s sync/health condition and failing resources to the assistant for a root-cause read <span style="color:var(--text-mute)">(needs your own LLM subscription)</span>.</p>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECURITY -->
+<section class="sec" id="security" style="padding-top:0;">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="kicker">Security &amp; posture</span>
+      <h2>A Security Center built right in</h2>
+      <p>Scan your workloads&rsquo; container images for CVEs, audit resource configurations against best practices, and analyse RBAC risk &mdash; all from one dashboard. k8sight reads <b>Trivy&nbsp;Operator</b> reports if you already run them, or ships a <b>bundled Trivy scanner</b> so you can scan a cluster with <em>nothing</em> installed in it.</p>
+    </div>
+
+    <div class="reveal" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:-32px auto 46px; max-width:820px;">
+      <span style="display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-dim); background:var(--panel); border:1px solid var(--border); padding:6px 12px; border-radius:999px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--red);"></span> Critical</span>
+      <span style="display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-dim); background:var(--panel); border:1px solid var(--border); padding:6px 12px; border-radius:999px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--amber);"></span> High</span>
+      <span style="display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-dim); background:var(--panel); border:1px solid var(--border); padding:6px 12px; border-radius:999px;"><span style="width:8px;height:8px;border-radius:50%;background:#e3b341;"></span> Medium</span>
+      <span style="display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-dim); background:var(--panel); border:1px solid var(--border); padding:6px 12px; border-radius:999px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--cyan);"></span> Low</span>
+      <span style="display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-dim); background:var(--panel); border:1px solid var(--border); padding:6px 12px; border-radius:999px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--green);"></span> No issues</span>
+    </div>
+
+    <div class="grid">
+      <div class="card i-red reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z"/><path d="M12 9v4M12 16h.01"/></svg></div>
+        <h3>Image vulnerabilities</h3>
+        <p>Every image grouped with its CVEs by severity &mdash; Critical, High, Medium, Low &mdash; with fixed-in versions, package details and a per-image drawer you can filter by severity.</p>
+      </div>
+      <div class="card i-amber reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+        <h3>Configuration audit</h3>
+        <p>Resource configs checked against security best practices, so risky manifests surface before they cause an incident &mdash; each finding with its severity and the rule it tripped.</p>
+      </div>
+      <div class="card i-purple reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="8" cy="15" r="4"/><path d="M10.85 12.15 19 4l2 2M18 7l1.5 1.5"/></svg></div>
+        <h3>RBAC risk analysis</h3>
+        <p>Roles and cluster-roles assessed for over-broad permissions, with the exact subjects and rules flagged &mdash; a clear read on who can do what, and where it&rsquo;s too much.</p>
+      </div>
+      <div class="card i-cyan reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg></div>
+        <h3>Zero-install scanning</h3>
+        <p>No Trivy Operator? k8sight bundles the Trivy binary (auto-downloading if needed) and scans your running images in the background &mdash; nothing to deploy into the cluster.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <h3>Exposed secrets</h3>
+        <p>Surfaces credentials and tokens baked into image layers, so a leaked key in a base image doesn&rsquo;t slip through unnoticed.</p>
+      </div>
+      <div class="card i-green reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M12 12l5-3M12 3v9"/></svg></div>
+        <h3>Overview &amp; history</h3>
+        <p>At-a-glance donut summaries across images, configs and roles, with results persisted locally so you keep the last scan after you close and reopen the app.</p>
+      </div>
+    </div>
+
+    <div class="prereq reveal">
+      <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z"/></svg> Works with your existing Trivy&nbsp;Operator reports</span>
+      <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg> Or a bundled scanner &mdash; nothing to install in-cluster</span>
+      <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><path d="M5 12h14M12 5v14"/></svg> Scans run in the background &mdash; keep working while they finish</span>
     </div>
   </div>
 </section>
