@@ -19,7 +19,7 @@ A beautiful, native **desktop app** (macOS · Windows · Linux) — and a Docker
 - **Command palette (⌘K)** — a Spotlight-style palette to jump to any view, cluster, or action from the keyboard.
 - **Built-in AI assistant (bring your own LLM)** — a read-only, tool-using debugging session over live cluster data; connect any OpenAI-compatible endpoint (TrueFoundry, OpenAI, Azure OpenAI, LiteLLM, …). Secrets are redacted before anything leaves the app.
 - **Docked coding agents** — detects **Claude Code, GitHub Copilot CLI, Gemini CLI, Codex and opencode** on your `PATH` and opens the one you pick in a panel beside the pod terminal. External tools are shown with their official logos.
-- **One-click Azure AKS integration** — two sign-in methods: **Browser** (CLI-free — Azure AD auth-code + PKCE in your system browser + the ARM REST API; works with managed-device Conditional Access, since the browser carries the device's compliance state) or the **Azure CLI (`az`)** if you prefer it or the browser flow is blocked. Either way, auto-discover every AKS cluster you can access across all subscriptions and add the ones you pick to your kubeconfig in one step. Also offered on the "could not connect" screen, so an expired Azure session is one click from re-auth.
+- **One-click Azure AKS integration** — two sign-in methods: **Browser** (CLI-free — Azure AD auth-code + PKCE in your system browser + the ARM REST API; works with managed-device Conditional Access, since the browser carries the device's compliance state) or the **Azure CLI (`az`)** if you prefer it or the browser flow is blocked. Either way, auto-discover every AKS cluster you can access across all subscriptions and add the ones you pick to your kubeconfig in one step. Clusters added via the browser flow authenticate natively too — a bundled `azure-token.js` helper mints AAD tokens, so *using* them needs no `az` or `kubelogin`. Also offered on the "could not connect" screen, so an expired Azure session is one click from re-auth.
 - **One-click AWS EKS integration** — the same, for EKS, and **no `aws` CLI required**: it's built on the AWS SDK, so sign-in and discovery run in-process. Sign in via **AWS SSO** (IAM Identity Center device flow — enter your start URL or pick a profile), **access keys** (IAM user), or an **assume-role** profile, then auto-discover every EKS cluster across **all accounts and regions** and add the ones you pick. Cluster auth is generated natively (a bundled `eks-token.js` helper signs the STS request), so even *using* the imported clusters needs no `aws` binary.
 - **Cluster overview** — live dashboard (node/pod health donuts, workload charts, capacity)
 - **Workloads** — Pods, Deployments, StatefulSets, DaemonSets, Services, etc. with live CPU/memory (metrics-server), per-container status boxes, and cross-links (namespace → node → pod → owner)
@@ -89,10 +89,12 @@ your kubeconfig under **`/home/node/.kube`**.
 **Run the published image** (from GitHub Container Registry):
 
 ```bash
-docker run --rm -p 8080:3001 \
+docker run --rm -p 127.0.0.1:8080:3001 \
   -v "$HOME/.kube:/home/node/.kube:ro" \
   praveenraghav/k8s-manager-ui:latest
 ```
+
+> Publishing to `127.0.0.1:8080` keeps the unauthenticated API off your network. The image binds `0.0.0.0` inside the container (needed for the published port); drop the `127.0.0.1:` prefix only if you intend to expose it and have put an authenticating proxy in front — see [Security](#security).
 
 **Or build it locally:**
 
@@ -108,7 +110,7 @@ Open **http://localhost:8080**.
 
 Notes:
 - Mount your kubeconfig at `/home/node/.kube/config` (as above) or pass `-e KUBECONFIG=/path/inside/container`.
-- If your kubeconfig references cloud auth plugins (EKS/GKE/AKS exec credentials), those CLIs must be available inside the container too, or use a static-token kubeconfig.
+- Clusters added through the app's **AWS/Azure integration** authenticate via the bundled token helpers (no `aws`/`az`/`kubelogin` needed). Kubeconfigs created externally (`aws eks update-kubeconfig`, `az aks get-credentials`, GKE) reference their own exec plugins, so those CLIs must be on `PATH` inside the container, or use a static-token kubeconfig.
 - **Local clusters (Docker Desktop / kind / minikube):** their API server listens on `127.0.0.1`, which inside a container points at the container itself — so the config loads but the connection fails. Reach the host instead: add `--add-host=host.docker.internal:host-gateway` and set the context's `server:` to `https://host.docker.internal:<port>` with `insecure-skip-tls-verify: true` — or simply use the native desktop app / `npm start` for local clusters.
 - The build auto-selects `amd64`/`arm64` via BuildKit's `TARGETARCH`.
 
@@ -267,14 +269,24 @@ context** — switch clusters from the UI, the `switch_context` tool, or a pin.
 | `LLM_MODEL` | Model name the assistant requests | — |
 | `MCP_ALLOW_WRITE` | Enable MCP write/destructive tools (`apply_yaml`, `delete_resource`, `scale_workload`, `rollout_restart`) | `0` (read-only) |
 | `MCP_API_BASE` | API base URL the stdio MCP bridge targets | `http://127.0.0.1:3001` |
+| `HOST` | Interface the backend binds | `127.0.0.1` (loopback; the Docker image sets `0.0.0.0`) |
+| `ALLOWED_ORIGINS` | Extra browser origins allowed to call `/api` and `/mcp`, comma-separated (for a reverse proxy whose Origin host differs from the request Host) | — |
 
-The backend always listens on port **3001**; map it to any host port with Docker (`-p <host>:3001`).
+The backend listens on port **3001**; map it to any host port with Docker (`-p <host>:3001`).
+
+### Security
+
+The API and the `/ws/exec` shell carry your kubeconfig's full read/write access with no per-request auth, so the backend is locked down to the local machine:
+
+- **Loopback by default** — it binds `127.0.0.1`, so other hosts on your network can't reach it. Set `HOST=0.0.0.0` to expose it deliberately (the Docker image does this so its published port works).
+- **Same-origin only** — a browser page on another origin can't drive the API or the exec WebSocket (a strict origin check replaces the old permissive CORS). Non-browser MCP clients are unaffected.
+- **When exposing it** (Docker, or `HOST=0.0.0.0`), publish to loopback and/or put it behind an authenticating proxy — e.g. `docker run -p 127.0.0.1:8080:3001 …`. Add proxy origins via `ALLOWED_ORIGINS`.
 
 ## Architecture
 
 - **Backend** (`server.js`) — Express + `@kubernetes/client-node`. Reads the kubeconfig, exposes a REST API and a `/ws/exec` WebSocket for interactive shells, and shells out to `kubectl`/`helm` for features without a clean typed-API path. Responses are cached with short TTLs; in production it also serves the built frontend.
 - **Frontend** (`client/`) — React + Vite. Same-origin calls to `/api/*` and `/ws/exec`, xterm.js terminal, token-driven theming, a ⌘K command palette, and a native top toolbar.
-- **Cloud** (`aws-eks.js`, `azure-aks.js`, `eks-token.js`) — CLI-free EKS/AKS discovery and kubeconfig merge, built on the AWS SDK and Azure AD + ARM REST.
+- **Cloud** (`aws-eks.js`, `azure-aks.js`, `eks-token.js`, `azure-token.js`) — CLI-free EKS/AKS discovery, kubeconfig merge, **and runtime auth**: clusters added through the app exec the bundled token helpers (`eks-token.js` / `azure-token.js`) instead of `aws`/`az`/`kubelogin`, so they authenticate with only Node. Built on the AWS SDK and Azure AD + ARM REST.
 - **Desktop** (`electron/`) — Electron shell (`main.cjs`) that runs the backend as a utility process and packages the app for macOS/Windows/Linux with electron-builder; `after-pack.cjs` ad-hoc signs the macOS build.
 
 ## Troubleshooting
