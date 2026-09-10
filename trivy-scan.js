@@ -26,12 +26,14 @@ const CACHE_DIR = path.join(os.homedir(), '.config', 'k8s-manager', 'bin');
 const CACHED_TRIVY = path.join(CACHE_DIR, process.platform === 'win32' ? 'trivy.exe' : 'trivy');
 const TRIVY_FALLBACK_VERSION = '0.58.1';
 
-// Candidate locations for a bundled binary (electron unpacks to resources/bin).
+// Candidate locations for a shipped binary: TRIVY_BIN, the repo/dev ./bin
+// (populated by scripts/fetch-trivy.mjs), and the packaged app's resources/bin
+// (electron-builder extraResources). Platform-aware name (trivy.exe on Windows).
+const TRIVY_NAME = process.platform === 'win32' ? 'trivy.exe' : 'trivy';
 const BUNDLED = [
   process.env.TRIVY_BIN,
-  path.join(__dirname, 'bin', 'trivy'),
-  path.join(__dirname, 'bin', process.platform === 'win32' ? 'trivy.exe' : 'trivy'),
-  process.resourcesPath && path.join(process.resourcesPath, 'bin', 'trivy'),
+  path.join(__dirname, 'bin', TRIVY_NAME),
+  process.resourcesPath && path.join(process.resourcesPath, 'bin', TRIVY_NAME),
 ].filter(Boolean);
 
 let _bin = null;

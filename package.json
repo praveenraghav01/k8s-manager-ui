@@ -15,12 +15,13 @@
     "server": "node server.js",
     "client": "cd client && npm run dev",
     "version:sync": "node scripts/sync-version.mjs",
+    "fetch:trivy": "node scripts/fetch-trivy.mjs",
     "build": "npm run version:sync && cd client && npm run build",
     "start": "node server.js",
     "app": "electron .",
-    "app:pack": "npm run build && electron-builder --dir --mac",
-    "app:dist": "npm run build && electron-builder --mac",
-    "dist": "npm run build && electron-builder --publish never",
+    "app:pack": "npm run fetch:trivy && npm run build && electron-builder --dir --mac",
+    "app:dist": "npm run fetch:trivy && npm run build && electron-builder --mac",
+    "dist": "npm run fetch:trivy && npm run build && electron-builder --publish never",
     "mcp": "node mcp-stdio.js"
   },
   "dependencies": {
@@ -66,6 +67,15 @@
       "*.js",
       "package.json",
       "client/dist/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "bin",
+        "to": "bin",
+        "filter": [
+          "trivy*"
+        ]
+      }
     ],
     "mac": {
       "category": "public.app-category.developer-tools",

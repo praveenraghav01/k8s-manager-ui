@@ -195,6 +195,14 @@ auto-generated notes. Keep the tag in sync with `version` in `package.json`. You
 can also run the workflow manually from the **Actions** tab to produce build
 artifacts without publishing a release.
 
+**Bundled `trivy`** — each packaging run (`npm run dist` / `app:dist` / `app:pack`)
+first runs `npm run fetch:trivy`, which downloads the `trivy` binary for the host
+platform into `./bin` (gitignored, not committed); electron-builder ships it in
+the app's `resources/bin`. This powers the Security Center's built-in image scan
+with no in-cluster operator. `TRIVY_VERSION=<v>` pins a version; `--all` fetches
+every platform into `bin/<os>-<arch>/`. The Docker image installs `trivy`
+directly instead.
+
 ## Usage
 
 1. **Command palette** — press **⌘K** (Ctrl+K) to jump to any view, cluster, or action; use the top toolbar's back/forward arrows to retrace your steps.
