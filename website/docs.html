@@ -4,20 +4,20 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>k8sight — Documentation</title>
-<meta name="description" content="k8sight documentation — connect your AWS EKS, Azure AKS, and Google GKE clusters with no CLI required." />
+<meta name="description" content="k8sight documentation — connect your AWS EKS and Azure AKS clusters with no CLI required." />
 <link rel="canonical" href="https://k8sight.in/docs" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="k8sight" />
 <meta property="og:url" content="https://k8sight.in/docs" />
 <meta property="og:title" content="k8sight — Documentation" />
-<meta property="og:description" content="Connect your AWS EKS, Azure AKS, and Google GKE clusters with no CLI required." />
+<meta property="og:description" content="Connect your AWS EKS and Azure AKS clusters with no CLI required." />
 <meta property="og:image" content="https://k8sight.in/assets/og-image.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="k8sight — a beautiful native desktop UI for your Kubernetes clusters" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="k8sight — Documentation" />
-<meta name="twitter:description" content="Connect your AWS EKS, Azure AKS, and Google GKE clusters with no CLI required." />
+<meta name="twitter:description" content="Connect your AWS EKS and Azure AKS clusters with no CLI required." />
 <meta name="twitter:image" content="https://k8sight.in/assets/og-image.png" />
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
 <style>
@@ -271,9 +271,7 @@
     <nav>
       <a href="#aws" data-sect>AWS EKS</a>
       <a href="#azure" data-sect>Azure AKS</a>
-      <a href="#gke" data-sect>Google GKE</a>
       <a href="#local" data-sect>Local &amp; other</a>
-      <a href="#gke-setup" data-sect class="sub">GKE OAuth setup</a>
     </nav>
     <div class="side-group">Using k8sight</div>
     <nav>
@@ -311,7 +309,7 @@
       <p><strong>k8sight</strong> is a beautiful, fast Kubernetes management app: a native desktop build for <strong>macOS, Windows and Linux</strong>, plus a Docker image you can run anywhere. It reads your kubeconfig and gives you a live dashboard, resource browsing and editing, topology, logs, an in-pod terminal, ArgoCD, and one-click cloud onboarding — all without leaving the app.</p>
       <h3>Highlights</h3>
       <ul>
-        <li><strong>One-click cloud clusters</strong> — import AWS EKS, Azure AKS and Google GKE straight from your account, with <strong>no <code>aws</code>/<code>az</code>/<code>gcloud</code> CLI required</strong>, at import <em>or</em> runtime.</li>
+        <li><strong>One-click cloud clusters</strong> — import AWS EKS and Azure AKS straight from your account, with <strong>no <code>aws</code>/<code>az</code> CLI required</strong>, at import <em>or</em> runtime.</li>
         <li><strong>Live cluster overview</strong> — node/pod health, workload charts, capacity, and per-container status.</li>
         <li><strong>Full resource management</strong> — browse, search, edit YAML, scale, restart and delete across all common kinds, with cross-links (namespace → node → pod → owner).</li>
         <li><strong>Topology, ArgoCD, Helm, Custom Resources</strong> — interactive graphs and GitOps views.</li>
@@ -321,7 +319,7 @@
       </ul>
       <div class="callout tip">
         <span class="cico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span>
-        <p>New here? <a href="#install">Install k8sight</a>, then jump to your cloud: <a href="#aws">AWS</a>, <a href="#azure">Azure</a> or <a href="#gke">GKE</a>. For local clusters (Docker Desktop, kind, minikube), see <a href="#local">Local &amp; other</a>.</p>
+        <p>New here? <a href="#install">Install k8sight</a>, then jump to your cloud: <a href="#aws">AWS</a> or <a href="#azure">Azure</a>. For local clusters (Docker Desktop, kind, minikube), see <a href="#local">Local &amp; other</a>.</p>
       </div>
     </article>
 
@@ -369,7 +367,7 @@ npm start          # http://localhost:3001</code></pre>
       </div>
       <div class="tagline">Connect your Amazon EKS clusters — no <code>aws</code> CLI required.</div>
 
-      <p>k8sight imports <strong>Amazon EKS</strong> clusters with <strong>no <code>aws</code> CLI required</strong>. It's built on the AWS SDK, so sign-in, discovery, and even auth-token generation run in-process. Unlike GKE, there is <strong>nothing for a maintainer to register</strong> — you sign in with your own AWS identity.</p>
+      <p>k8sight imports <strong>Amazon EKS</strong> clusters with <strong>no <code>aws</code> CLI required</strong>. It's built on the AWS SDK, so sign-in, discovery, and even auth-token generation run in-process. There is <strong>nothing for a maintainer to register</strong> — you sign in with your own AWS identity.</p>
 
       <div class="method-grid">
         <div class="method">
@@ -449,7 +447,7 @@ npm start          # http://localhost:3001</code></pre>
       </div>
       <div class="tagline">Connect your Azure AKS clusters — no <code>az</code> CLI required.</div>
 
-      <p>k8sight imports <strong>Azure AKS</strong> clusters with <strong>no <code>az</code> CLI required</strong> (though you can use it if you prefer). Unlike GKE, there is <strong>nothing for a maintainer to register</strong> — the browser flow reuses the Azure CLI's well-known <strong>public</strong> client id, so it works out of the box.</p>
+      <p>k8sight imports <strong>Azure AKS</strong> clusters with <strong>no <code>az</code> CLI required</strong> (though you can use it if you prefer). There is <strong>nothing for a maintainer to register</strong> — the browser flow reuses the Azure CLI's well-known <strong>public</strong> client id, so it works out of the box.</p>
 
       <div class="method-grid">
         <div class="method">
@@ -503,8 +501,8 @@ npm start          # http://localhost:3001</code></pre>
       </ul>
     </article>
 
-    <!-- ============ Google GKE ============ -->
-    <article id="gke">
+    <!-- ============ Google GKE (hidden for now — remove `hidden` + restore sidebar links to re-enable) ============ -->
+    <article id="gke" hidden>
       <div class="prov-head">
         <div class="prov-badge">
           <svg viewBox="0 0 24 24" fill="none"><path d="M14.9 8.3l1.8-1.8.12-.76c-3.3-3-8.53-2.66-11.5.72A8.2 8.2 0 0 0 3.4 9.9l.64-.09 3.6-.6.28-.28a4 4 0 0 1 5.44-.44l.44.44z" fill="#EA4335"/><path d="M19.9 9.84a8.2 8.2 0 0 0-2.48-4l-2.53 2.53a4 4 0 0 1 1.48 3.16v.45a2 2 0 1 1 0 4h-4.5l-.45.46v2.7l.45.44h4.5a5.86 5.86 0 0 0 3.53-10.4z" fill="#4285F4"/><path d="M7.1 20.06h4.5v-3.6H7.1a1.98 1.98 0 0 1-.82-.18l-.64.18-1.82 1.8-.16.62a5.83 5.83 0 0 0 3.44 1.18z" fill="#34A853"/><path d="M7.1 8.3a5.86 5.86 0 0 0-3.53 10.5l2.6-2.6a2 2 0 1 1 2.65-2.65l2.6-2.6A5.85 5.85 0 0 0 7.1 8.3z" fill="#FBBC05"/></svg>
@@ -576,8 +574,8 @@ npm start          # http://localhost:3001</code></pre>
       <p>Contexts that authenticate with <code>kubectl oidc-login</code> (kubelogin) work — the Docker image bundles the plugin. Since a container can't open a browser, log in on the host first (<code>kubectl get nodes</code> triggers the browser login and caches a token under <code>~/.kube/cache/oidc-login/</code>), then mount <code>~/.kube</code> <strong>read-write</strong> so kubelogin can refresh from inside the container.</p>
     </article>
 
-    <!-- ============ GKE OAuth setup (self-builders) ============ -->
-    <article id="gke-setup">
+    <!-- ============ GKE OAuth setup (self-builders) — hidden for now ============ -->
+    <article id="gke-setup" hidden>
       <h2>GKE browser sign-in — one-time OAuth setup</h2>
       <div class="tagline">For maintainers building their own k8sight — enable browser sign-in.</div>
 
