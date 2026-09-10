@@ -46,6 +46,8 @@ function App() {
   // Cluster auth pre-check: { checked, ok, reason, message, currentContext, server }
   const [authState, setAuthState] = useState({ checked: false, ok: false });
   const [authRetrying, setAuthRetrying] = useState(false);
+  const [autoRecovering, setAutoRecovering] = useState(false);
+  const autoRecoverRef = useRef(null); // context we've already auto-retried, so we try once
   const [forceConfigModal, setForceConfigModal] = useState(false);
   const [selectedNamespaces, setSelectedNamespaces] = useState(['all']);
   const [namespaces, setNamespaces] = useState([]);
@@ -95,6 +97,11 @@ function App() {
   // Which ArgoCD sub-view the sidebar is pointing at (dashboard/applications/…).
   const [argoView, setArgoView] = useState('dashboard');
   const [showAzure, setShowAzure] = useState(false);
+  // When the failing cluster uses kubelogin/azurecli, the fix is `az login` (the
+  // browser OAuth flow doesn't refresh the CLI token that kubelogin reads), so
+  // the auth-error "Sign in to Azure" opens the modal in CLI-login mode.
+  const [azureMode, setAzureMode] = useState(null); // null | 'az'
+  const openAzure = (mode) => { setAzureMode(mode === 'az' ? 'az' : null); setShowAzure(true); };
   const [showAws, setShowAws] = useState(false);
   const [prefSection, setPrefSection] = useState('general');
   const [prefReturn, setPrefReturn] = useState('overview');
@@ -169,9 +176,33 @@ function App() {
   const retryAuth = async () => {
     setAuthRetrying(true);
     if (serverUnreachable) await fetchConfigStatus();
+    // Reload the kubeconfig first so a fresh cloud login (in-app sign-in, or an
+    // external `az login` / `aws sso login`) is actually picked up — the backend
+    // caches exec-credential tokens on the loaded kubeconfig otherwise, and a
+    // plain re-check would keep failing with the stale token.
+    try { await axios.post('/api/config/reload'); } catch { /* non-fatal — fall back to a plain re-check */ }
     await checkAuth();
     setAuthRetrying(false);
   };
+
+  // Auto-recover: if the selected context's auth is expired but the credential
+  // looks refreshable (a rejected/expired token — not a missing CLI, TLS, or
+  // network fault), silently reload + re-check once before showing the error
+  // modal. This transparently picks up refreshed tokens for the CLI-free AKS/EKS
+  // helpers and still-valid cloud sessions, so a routine token expiry no longer
+  // interrupts the user. One attempt per context avoids a retry loop.
+  useEffect(() => {
+    if (authOk) { autoRecoverRef.current = null; return; }
+    if (forceConfigModal || serverUnreachable) return;
+    if (!authState.checked || authRetrying || autoRecovering) return;
+    const recoverable = authState.reason === 'unauthorized' || authState.reason === 'error';
+    const ctx = authState.currentContext || configStatus.currentContext;
+    if (recoverable && ctx && autoRecoverRef.current !== ctx) {
+      autoRecoverRef.current = ctx;
+      setAutoRecovering(true);
+      Promise.resolve(retryAuth()).finally(() => setAutoRecovering(false));
+    }
+  }, [authState, authOk, authRetrying, autoRecovering, forceConfigModal, serverUnreachable, configStatus.currentContext]);
 
   // Switch the active cluster/context (from the pinned rail or the selector).
   const switchContext = async (ctx) => {
@@ -410,8 +441,8 @@ function App() {
 
   // ---- gate: what to render before the app is ready ----
   const showConfigModal = configChecked && !serverUnreachable && (!configStatus.loaded || forceConfigModal);
-  const checkingAuth = configStatus.loaded && !forceConfigModal && !authState.checked;
-  const showAuthError = configStatus.loaded && !forceConfigModal && authState.checked && !authState.ok;
+  const checkingAuth = configStatus.loaded && !forceConfigModal && (!authState.checked || autoRecovering);
+  const showAuthError = configStatus.loaded && !forceConfigModal && authState.checked && !authState.ok && !autoRecovering;
 
   return (
     <div className="app-shell">
@@ -451,7 +482,7 @@ function App() {
           contextsInfo={configStatus.contextsInfo}
           currentContext={configStatus.currentContext}
           onSwitchContext={switchContext}
-          onAddAzure={() => setShowAzure(true)}
+          onAddAzure={(mode) => openAzure(mode)}
           onAddAws={() => setShowAws(true)}
         />
       )}
@@ -470,7 +501,8 @@ function App() {
 
       {showAzure && (
         <AzureIntegration
-          onClose={() => setShowAzure(false)}
+          initialLogin={azureMode}
+          onClose={() => { setShowAzure(false); setAzureMode(null); }}
           onImported={async () => { await fetchConfigStatus(); retryAuth(); }}
         />
       )}
@@ -503,7 +535,7 @@ function App() {
             argocdInstalled={argocdInstalled}
             argoView={resourceType === 'argocd' ? argoView : null}
             onSelectArgoView={(v) => { setArgoView(v); setResourceType('argocd'); }}
-            onAddAzure={() => setShowAzure(true)}
+            onAddAzure={() => openAzure()}
             onAddAws={() => setShowAws(true)}
             onOpenPreferences={() => openPreferences('general')}
           />
@@ -540,7 +572,7 @@ function App() {
               theme={theme}
               onSetTheme={setTheme}
               onChangeConfig={() => setForceConfigModal(true)}
-              onAddAzure={() => setShowAzure(true)}
+              onAddAzure={() => openAzure()}
               onAddAws={() => setShowAws(true)}
               initialSection={prefSection}
               onClose={() => setResourceType(prefReturn || 'overview')}
@@ -572,7 +604,7 @@ function App() {
         </div>
       ) : checkingAuth ? (
         <div className="loading-state">
-          <Loader label="Checking cluster authentication…" size={36} />
+          <Loader label={autoRecovering ? 'Reconnecting — refreshing credentials…' : 'Checking cluster authentication…'} size={36} />
         </div>
       ) : (
         // A modal (config / auth / server error) is overlaid above; keep a

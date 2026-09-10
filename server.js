@@ -1,10 +1,9 @@
 import express from 'express';
-import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
-import { execSync, spawnSync, spawn, execFile } from 'child_process';
+import { execFileSync, spawnSync, spawn, execFile } from 'child_process';
 import { promisify } from 'util';
 
 const execFileAsync = promisify(execFile);
@@ -40,6 +39,9 @@ const app = express();
 // with `docker run -p <host>:3001`.
 const PORT = 3001;
 const CLIENT_DIST = path.join(__dirname, 'client', 'dist');
+// CLI-free AKS token helper — app-imported AAD clusters exec this instead of
+// kubelogin, so neither `az` nor `kubelogin` is needed at runtime.
+const AZURE_TOKEN_HELPER = path.join(__dirname, 'azure-token.js');
 
 // Response caching with TTL
 const cache = new Map();
@@ -65,7 +67,46 @@ const getCache = (key) => {
 };
 
 app.use(compression());
-app.use(cors());
+
+// ------------------------------------------------------------------
+// Origin guard (replaces the old wildcard CORS). The backend exposes a
+// read/write cluster API and an exec WebSocket with no per-request auth, so a
+// browser page on another origin must not be able to drive it with the user's
+// ambient credentials. Paired with the loopback bind below (LAN protection),
+// this closes the drive-by / cross-site vector without any frontend change.
+//
+//   • No Origin header  → allowed. Non-browser clients (curl, MCP over stdio,
+//     the server's own self-HTTP MCP calls) never send one; same-origin GET
+//     navigations may omit it too.
+//   • Origin host == Host header → allowed. Covers same-origin production,
+//     packaged Electron (127.0.0.1:PORT) and any Docker/reverse-proxy host,
+//     with no host list to maintain.
+//   • Dev origins (Vite proxy forwards the browser's localhost:3000 Origin
+//     while the Host becomes localhost:PORT) and any ALLOWED_ORIGINS entries
+//     → allowed.
+//   • Anything else with an Origin → 403.
+const DEV_ORIGINS = new Set([
+  'http://localhost:3000', 'http://127.0.0.1:3000',
+  `http://localhost:${PORT}`, `http://127.0.0.1:${PORT}`,
+]);
+const EXTRA_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
+  .split(',').map((s) => s.trim()).filter(Boolean);
+for (const o of EXTRA_ORIGINS) DEV_ORIGINS.add(o);
+
+const isAllowedOrigin = (origin, host) => {
+  if (!origin) return true; // non-browser client, or same-origin request with no Origin
+  if (DEV_ORIGINS.has(origin)) return true;
+  try { return new URL(origin).host === host; } catch { return false; }
+};
+
+// Guard the API and MCP surface. Static assets (the built UI) are intentionally
+// not guarded — they carry no cluster capability.
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api') && !req.path.startsWith('/mcp')) return next();
+  if (isAllowedOrigin(req.headers.origin, req.headers.host)) return next();
+  return res.status(403).json({ error: 'Cross-origin request rejected' });
+});
+
 app.use(express.json());
 
 // Serve the built frontend in production (when client/dist exists)
@@ -79,10 +120,10 @@ let kubeConfig = null;
 // The app switches context in-memory (kubeConfig.setCurrentContext); the on-disk
 // kubeconfig that `kubectl` reads does NOT reflect that. So every kubectl
 // shell-out must be told which context to use, or it silently targets a
-// different cluster after the user switches. kctl() = args form; kctlStr() =
-// string form for the few execSync string commands.
+// different cluster after the user switches. kctl() builds the argv form — the
+// only form used now, so the context name is never interpolated into a shell
+// string (which would allow injection from a hostile kubeconfig's context name).
 const kctl = (...args) => (currentContext ? ['--context', currentContext, ...args] : args);
-const kctlStr = () => (currentContext ? `--context ${currentContext} ` : '');
 
 const getKubeConfigPath = () => {
   const envPath = process.env.KUBECONFIG;
@@ -276,6 +317,23 @@ app.post('/api/config/context', (req, res) => {
   }
 });
 
+// Reload the kubeconfig from disk, preserving the in-memory selected context.
+// Building a fresh KubeConfig drops any cached exec-credential token, so after
+// an external re-login (`az login`, `aws sso login`, or the in-app sign-in flow)
+// the next auth check picks up the new token instead of reusing the stale one.
+app.post('/api/config/reload', (req, res) => {
+  const p = getKubeConfigPath();
+  if (!fs.existsSync(p)) return res.status(400).json({ error: 'No kubeconfig found' });
+  const prev = currentContext;
+  if (!loadKubeConfig(p)) return res.status(500).json({ error: 'Failed to reload kubeconfig' });
+  if (prev && kubeConfig?.contexts.some((c) => c.name === prev)) {
+    kubeConfig.setCurrentContext(prev);
+    currentContext = prev;
+  }
+  cache.clear();
+  res.json({ success: true, currentContext });
+});
+
 // ------------------------------------------------------------------
 // Azure AKS integration — two sign-in methods.
 //
@@ -396,6 +454,31 @@ app.get('/api/azure/clusters', async (req, res) => {
 
 // Merge a fetched kubeconfig (YAML string) into an on-disk kubeconfig object,
 // de-duplicating clusters/users/contexts by name.
+// Rewrite an AAD cluster's kubeconfig user so it authenticates via our bundled
+// azure-token.js (CLI-free) instead of the kubelogin exec that ARM/az returns.
+// Cert-based users (non-AAD / --admin) have no exec and pass through untouched.
+// The well-known AKS AAD server app id is used when the source omits --server-id.
+const AKS_AAD_SERVER_ID = '6dae42f8-4368-4678-94ff-3960e28e3630';
+function nativizeAksExec(kcYaml) {
+  const kc = yaml.load(kcYaml) || {};
+  for (const u of (kc.users || [])) {
+    const exec = u?.user?.exec;
+    if (!exec) continue; // cert-based user — already CLI-free
+    const args = Array.isArray(exec.args) ? exec.args : [];
+    const getArg = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
+    const serverId = getArg('--server-id') || AKS_AAD_SERVER_ID;
+    const tenant = getArg('--tenant-id') || getArg('--tenant') || azure.getTenant() || 'organizations';
+    u.user.exec = {
+      apiVersion: 'client.authentication.k8s.io/v1beta1',
+      command: process.execPath, // node
+      args: [AZURE_TOKEN_HELPER, '--server-id', serverId, '--tenant', tenant],
+      interactiveMode: 'Never',
+      provideClusterInfo: false,
+    };
+  }
+  return yaml.dump(kc);
+}
+
 function mergeKubeconfigYaml(existingPath, incomingYaml) {
   let base = { apiVersion: 'v1', kind: 'Config', clusters: [], users: [], contexts: [], 'current-context': '' };
   try { if (fs.existsSync(existingPath)) base = { ...base, ...(yaml.load(fs.readFileSync(existingPath, 'utf-8')) || {}) }; } catch { /* start fresh */ }
@@ -429,8 +512,11 @@ app.post('/api/azure/import', async (req, res) => {
         if (admin) args.push('--admin');
         await runAz(args, 90000);
       } else {
-        // Browser/REST: fetch the kubeconfig and merge it in ourselves.
-        const kc = await azure.getClusterKubeconfig(c.subscriptionId, c.resourceGroup, c.name, admin);
+        // Browser/REST: fetch the kubeconfig and merge it in ourselves. For AAD
+        // clusters (non-admin), rewrite the kubelogin exec to our bundled
+        // azure-token.js so the cluster needs neither `az` nor `kubelogin`.
+        const raw = await azure.getClusterKubeconfig(c.subscriptionId, c.resourceGroup, c.name, admin);
+        const kc = admin ? raw : nativizeAksExec(raw);
         const merged = mergeKubeconfigYaml(p, kc);
         fs.mkdirSync(path.dirname(p), { recursive: true }); // persist incrementally
         fs.writeFileSync(p, yaml.dump(merged), { mode: 0o600 });
@@ -659,7 +745,7 @@ app.post('/api/ai-agents/launch-external', (req, res) => {
       '#!/bin/bash',
       `export KUBECONFIG=${shq(kubeconfigPath)}`,
       `export KUBE_CONTEXT=${shq(currentContext || '')}`,
-      `echo "Cluster context: ${currentContext || '(default)'}"`,
+      `echo ${shq(`Cluster context: ${currentContext || '(default)'}`)}`,
       launch,
       `rm -f ${shq(kubeconfigPath)} ${shq(script)}`,
       'exec $SHELL -l',
@@ -1410,7 +1496,7 @@ app.get('/api/events/:namespace?', async (req, res) => {
 
 const fetchNodesWithKubectl = () => {
   try {
-    const output = execSync(`kubectl ${kctlStr()}get nodes -o json`, {
+    const output = execFileSync('kubectl', kctl('get', 'nodes', '-o', 'json'), {
       encoding: 'utf-8',
       maxBuffer: 10 * 1024 * 1024,
       timeout: 5000
@@ -1485,8 +1571,9 @@ app.get('/api/nodes', async (req, res) => {
 
 const fetchPodsForNodeWithKubectl = (nodeName) => {
   try {
-    const output = execSync(
-      `kubectl get pods --all-namespaces --field-selector=spec.nodeName=${nodeName} -o json`,
+    const output = execFileSync(
+      'kubectl',
+      ['get', 'pods', '--all-namespaces', `--field-selector=spec.nodeName=${nodeName}`, '-o', 'json'],
       {
         encoding: 'utf-8',
         maxBuffer: 10 * 1024 * 1024,
@@ -2210,14 +2297,17 @@ app.get('/api/cluster/summary', async (req, res) => {
       return res.json(cachedData);
     }
 
-    // Kubernetes version
+    // Kubernetes version — read it in-process via the API server's /version
+    // endpoint instead of shelling out to `kubectl version`, which prints a
+    // "client/server version skew" warning when the local kubectl binary is more
+    // than one minor off the cluster, and needs a matching kubectl at all.
     let serverVersion = 'unknown';
     let platform = '';
     try {
-      const v = JSON.parse(execSync(`kubectl ${kctlStr()}version -o json`, { encoding: 'utf-8', maxBuffer: 4 * 1024 * 1024, timeout: 8000 }));
-      serverVersion = v.serverVersion?.gitVersion || 'unknown';
-      platform = v.serverVersion?.platform || '';
-    } catch (e) { /* ignore */ }
+      const info = await kubeConfig.makeApiClient(k8s.VersionApi).getCode();
+      serverVersion = info.gitVersion || 'unknown';
+      platform = info.platform || '';
+    } catch (e) { /* version is best-effort */ }
 
     // Nodes (reuse existing helpers)
     const nodes = fetchNodesWithKubectl().map(formatNode);
@@ -2247,8 +2337,9 @@ app.get('/api/cluster/summary', async (req, res) => {
     const podPhases = { Running: 0, Pending: 0, Succeeded: 0, Failed: 0, Unknown: 0 };
     let podTotal = 0;
     try {
-      const out = execSync(
-        `kubectl get pods -A -o jsonpath='{range .items[*]}{.status.phase}{"\\n"}{end}'`,
+      const out = execFileSync(
+        'kubectl',
+        kctl('get', 'pods', '-A', '-o', 'jsonpath={range .items[*]}{.status.phase}{"\\n"}{end}'),
         { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 12000 }
       );
       out.split('\n').filter(Boolean).forEach(p => {
@@ -2260,8 +2351,9 @@ app.get('/api/cluster/summary', async (req, res) => {
     // Namespace count
     let namespaceCount = 0;
     try {
-      const out = execSync(
-        `kubectl get ns -o jsonpath='{range .items[*]}{.metadata.name}{"\\n"}{end}'`,
+      const out = execFileSync(
+        'kubectl',
+        kctl('get', 'ns', '-o', 'jsonpath={range .items[*]}{.metadata.name}{"\\n"}{end}'),
         { encoding: 'utf-8', maxBuffer: 4 * 1024 * 1024, timeout: 8000 }
       );
       namespaceCount = out.split('\n').filter(Boolean).length;
@@ -2305,7 +2397,7 @@ const parseCpuMilli = (s) => {
 };
 
 const fetchMetricsRaw = (path) => {
-  const out = execSync(`kubectl ${kctlStr()}get --raw "${path}"`, {
+  const out = execFileSync('kubectl', kctl('get', '--raw', path), {
     encoding: 'utf-8',
     maxBuffer: 30 * 1024 * 1024,
     timeout: 10000
@@ -2406,8 +2498,9 @@ app.get('/api/metrics/node/:name', async (req, res) => {
 
     let cpuCap = '0', memCap = '0', cpuAlloc = '0', memAlloc = '0';
     try {
-      const out = execSync(
-        `kubectl get node ${name} -o jsonpath='{.status.capacity.cpu}|{.status.capacity.memory}|{.status.allocatable.cpu}|{.status.allocatable.memory}'`,
+      const out = execFileSync(
+        'kubectl',
+        ['get', 'node', name, '-o', 'jsonpath={.status.capacity.cpu}|{.status.capacity.memory}|{.status.allocatable.cpu}|{.status.allocatable.memory}'],
         { encoding: 'utf-8', maxBuffer: 4 * 1024 * 1024, timeout: 8000 }
       );
       [cpuCap, memCap, cpuAlloc, memAlloc] = out.split('|');
@@ -2865,7 +2958,15 @@ registerAssistant(app, {
 // Interactive shell over WebSocket (real TTY via k8s exec)
 // ============================================================
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server, path: '/ws/exec' });
+// WebSocket handshakes are NOT subject to CORS, so a malicious page could open
+// /ws/exec directly and get a shell in a pod. Reject cross-origin upgrades with
+// the same rule the REST guard uses (browsers always send Origin on WS
+// handshakes; non-browser clients that omit it are allowed).
+const wss = new WebSocketServer({
+  server,
+  path: '/ws/exec',
+  verifyClient: (info) => isAllowedOrigin(info.origin, info.req.headers.host),
+});
 
 wss.on('connection', async (browserWs, req) => {
   if (!kubeConfig) {
@@ -2967,6 +3068,11 @@ const handleServerError = (err) => {
 server.on('error', handleServerError);
 wss.on('error', handleServerError);
 
-server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+// Bind to loopback by default so the API/exec surface is not reachable from
+// other hosts on the LAN. Set HOST=0.0.0.0 to expose it (the Docker image does
+// this so its published port works); prefer `-p 127.0.0.1:8080:3001` there.
+const HOST = process.env.HOST || '127.0.0.1';
+server.listen(PORT, HOST, () => {
+  const shown = HOST === '0.0.0.0' ? 'localhost' : HOST;
+  console.log(`Server running on http://${shown}:${PORT}${HOST === '0.0.0.0' ? ' (bound 0.0.0.0)' : ''}`);
 });

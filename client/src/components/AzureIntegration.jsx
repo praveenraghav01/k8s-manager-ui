@@ -7,7 +7,7 @@ const keyOf = (c) => `${c.subscriptionId}/${c.name}`;
 
 // One-click Azure AKS integration: sign in with `az`, discover every AKS cluster
 // across all subscriptions, and merge the chosen ones into the kubeconfig.
-export default function AzureIntegration({ onClose, onImported }) {
+export default function AzureIntegration({ onClose, onImported, initialLogin }) {
   const [phase, setPhase] = useState('checking'); // checking | not-installed | login | listing | list | importing | done
   const [signingIn, setSigningIn] = useState(false);
   const [azInstalled, setAzInstalled] = useState(false);
@@ -30,6 +30,10 @@ export default function AzureIntegration({ onClose, onImported }) {
       const { data } = await axios.get('/api/azure/status');
       setAzInstalled(!!data.azInstalled);
       if (!data.installed) setPhase('not-installed');
+      // Opened to fix a kubelogin/azurecli cluster: force an `az login` so the
+      // Azure CLI token kubelogin reads is actually refreshed (a browser sign-in,
+      // or a still-valid ARM session, would not touch it).
+      else if (initialLogin === 'az' && data.azInstalled) { setPhase('login'); startLogin('az'); }
       else if (!data.loggedIn) setPhase('login');
       else loadClusters();
     } catch (e) { setError(e.message); setPhase('not-installed'); }
@@ -85,6 +89,15 @@ export default function AzureIntegration({ onClose, onImported }) {
   const cancelAndClose = () => {
     clearInterval(pollRef.current);
     if (phase === 'login') axios.post('/api/azure/login/cancel').catch(() => {});
+    onClose();
+  };
+
+  // Signed in but not importing anything — e.g. the user only needed to refresh
+  // an expired Azure token to fix the current cluster. Re-check auth (so the
+  // fresh token takes effect) and close.
+  const skip = () => {
+    clearInterval(pollRef.current);
+    onImported?.();
     onClose();
   };
 
@@ -192,6 +205,9 @@ export default function AzureIntegration({ onClose, onImported }) {
               Use admin credentials (<code>--admin</code>) — cluster-admin certs, bypasses Azure AD
             </label>
             <div className="action-modal-actions">
+              <button className="action-modal-btn ghost" style={{ marginRight: 'auto' }} onClick={skip} title="Continue without adding clusters">
+                Skip
+              </button>
               <button className="action-modal-btn" onClick={cancelAndClose}>Cancel</button>
               <button className="action-modal-btn primary" disabled={selCount === 0} onClick={doImport}>
                 Add {selCount} cluster{selCount === 1 ? '' : 's'}

@@ -65,9 +65,16 @@ COPY mcp.js ./
 COPY mcp-stdio.js ./
 COPY aws-eks.js ./
 COPY eks-token.js ./
+COPY azure-aks.js ./
+COPY azure-token.js ./
 COPY --from=client-build /app/client/dist ./client/dist
 
-ENV NODE_ENV=production
+# The server binds 127.0.0.1 by default (so a local install isn't exposed to the
+# LAN). Inside a container it must bind all interfaces for the published port to
+# work, so set HOST here. When you run the image, prefer publishing to loopback
+# on the host too: `docker run -p 127.0.0.1:8080:3001 …`.
+ENV NODE_ENV=production \
+    HOST=0.0.0.0
 
 EXPOSE 3001
 

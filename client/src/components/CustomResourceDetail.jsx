@@ -32,7 +32,11 @@ function InstanceView({ sel, onSelect }) {
   }, [sel.group, sel.version, sel.plural, sel.name, sel.namespace]);
 
   const highlighted = () => {
-    try { return hljs.highlight(yaml, { language: 'yaml' }).value; } catch { return yaml; }
+    // hljs.highlight() HTML-escapes its output. On the error path, escape the raw
+    // YAML too — it goes into dangerouslySetInnerHTML and can contain arbitrary
+    // cluster-supplied strings, so returning it unescaped would be an XSS sink.
+    try { return hljs.highlight(yaml, { language: 'yaml' }).value; }
+    catch { return String(yaml || '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
   };
 
   return (
