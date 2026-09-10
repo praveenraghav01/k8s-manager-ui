@@ -124,14 +124,12 @@ export default function SecurityCenter({ namespaces = [], onNavigate }) {
   // tabs and watch partial results stream in — the scan keeps running server-side.
 
   const nsList = namespaces.filter((n) => n !== 'all');
-  const count = useMemo(() => {
-    if (tab === 'resources' || tab === 'roles') {
-      const list = (tab === 'resources' ? config : rbac)?.resources || [];
-      return (ns === 'all' ? list : list.filter((r) => r.namespace === ns)).length;
-    }
-    const imgs = vuln?.images || [];
-    return (ns === 'all' ? imgs : imgs.filter((im) => im.namespace === ns || (im.workloads || []).some((w) => w.namespace === ns))).length;
-  }, [tab, ns, vuln, config, rbac]);
+  // Plain expression (NOT a hook) — this runs after the early returns above, so a
+  // useMemo here would break the Rules of Hooks and blank the page.
+  const countList = tab === 'resources' ? (config?.resources || [])
+    : tab === 'roles' ? (rbac?.resources || []) : (vuln?.images || []);
+  const count = (ns === 'all' ? countList
+    : countList.filter((r) => r.namespace === ns || (r.workloads || []).some((w) => w.namespace === ns))).length;
 
   return (
     <div className="sec-view">
