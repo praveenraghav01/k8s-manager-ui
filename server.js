@@ -2297,14 +2297,17 @@ app.get('/api/cluster/summary', async (req, res) => {
       return res.json(cachedData);
     }
 
-    // Kubernetes version
+    // Kubernetes version — read it in-process via the API server's /version
+    // endpoint instead of shelling out to `kubectl version`, which prints a
+    // "client/server version skew" warning when the local kubectl binary is more
+    // than one minor off the cluster, and needs a matching kubectl at all.
     let serverVersion = 'unknown';
     let platform = '';
     try {
-      const v = JSON.parse(execFileSync('kubectl', kctl('version', '-o', 'json'), { encoding: 'utf-8', maxBuffer: 4 * 1024 * 1024, timeout: 8000 }));
-      serverVersion = v.serverVersion?.gitVersion || 'unknown';
-      platform = v.serverVersion?.platform || '';
-    } catch (e) { /* ignore */ }
+      const info = await kubeConfig.makeApiClient(k8s.VersionApi).getCode();
+      serverVersion = info.gitVersion || 'unknown';
+      platform = info.platform || '';
+    } catch (e) { /* version is best-effort */ }
 
     // Nodes (reuse existing helpers)
     const nodes = fetchNodesWithKubectl().map(formatNode);
