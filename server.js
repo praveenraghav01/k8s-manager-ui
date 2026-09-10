@@ -21,6 +21,7 @@ import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { randomUUID } from 'crypto';
 import { createMcpServer } from './mcp.js';
 import * as awsEks from './aws-eks.js';
+import * as trivyScan from './trivy-scan.js';
 
 // node-pty powers the pod terminal (a real PTY bridged to `kubectl exec`). Load
 // it defensively so a missing/unbuildable native module never crashes the whole
@@ -2069,6 +2070,39 @@ app.get('/api/security/checks', async (req, res) => {
     res.status(500).json({ error: firstLine(e.message) });
   }
 });
+
+// ---- Built-in image scanning (bundled Trivy, no in-cluster operator) ----
+const scanResultShape = () => {
+  const s = trivyScan.scanState;
+  return {
+    running: s.running, done: s.done, total: s.total, scanned: s.scanned,
+    startedAt: s.startedAt, finishedAt: s.finishedAt, error: s.error,
+    installed: !!s.images, images: s.images || [], summary: s.summary,
+    results: s.results, notScanned: null, source: 'trivy-builtin',
+  };
+};
+
+app.get('/api/security/scan/status', async (req, res) => {
+  const t = await trivyScan.trivyAvailable();
+  res.json({ ...t, running: trivyScan.scanState.running, done: trivyScan.scanState.done, hasResult: !!trivyScan.scanState.images });
+});
+
+app.post('/api/security/scan', async (req, res) => {
+  if (!kubeConfig) return res.status(400).json({ error: 'No kubeconfig loaded' });
+  const t = await trivyScan.trivyAvailable();
+  if (!t.available) return res.status(400).json({ error: 'The bundled trivy binary is not available.' });
+  if (trivyScan.scanState.running) return res.json({ started: false, ...scanResultShape() });
+  try {
+    const pods = await kubeConfig.makeApiClient(k8s.CoreV1Api).listPodForAllNamespaces({ limit: 5000 });
+    const byImage = trivyScan.listClusterImages(pods.items || [], req.body?.namespace);
+    await trivyScan.startScan(byImage);
+    res.json({ started: true, ...scanResultShape() });
+  } catch (e) {
+    res.status(500).json({ error: firstLine(e.message) });
+  }
+});
+
+app.get('/api/security/scan', (req, res) => res.json(scanResultShape()));
 
 // Applications that aren't fully Synced+Healthy — the "Needs attention" panel.
 const needsAttention = (a) => a.syncStatus !== 'Synced' || (a.healthStatus !== 'Healthy' && a.healthStatus !== 'Unknown');

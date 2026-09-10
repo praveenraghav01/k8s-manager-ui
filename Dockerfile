@@ -50,6 +50,9 @@ RUN apk upgrade --no-cache \
   && mv /tmp/kubelogin/kubelogin /usr/local/bin/kubectl-oidc_login \
   && chmod +x /usr/local/bin/kubectl-oidc_login \
   && rm -rf /tmp/kubelogin /tmp/kubelogin.zip \
+  # trivy powers the Security Center's built-in image scan (no in-cluster
+  # operator required); the official installer picks the right arch.
+  && curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin \
   && apk del .build-deps \
   # npm/npx/corepack aren't used at runtime (the app runs `node server.js`);
   # removing them drops the CVEs in npm's bundled dependencies.
@@ -67,6 +70,7 @@ COPY aws-eks.js ./
 COPY eks-token.js ./
 COPY azure-aks.js ./
 COPY azure-token.js ./
+COPY trivy-scan.js ./
 COPY --from=client-build /app/client/dist ./client/dist
 
 # The server binds 127.0.0.1 by default (so a local install isn't exposed to the

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
 import Icon from './Icons';
 import Loader from './Loader';
@@ -66,25 +66,63 @@ export default function SecurityCenter({ namespaces = [], onNavigate }) {
   const [config, setConfig] = useState(null);
   const [rbac, setRbac] = useState(null);
   const [detail, setDetail] = useState(null); // { type:'image'|'checks', data }
+  const [scan, setScan] = useState(null);     // built-in scan state/result
+  const [scanAvail, setScanAvail] = useState(null); // { available, version }
+  const pollRef = useRef(null);
+
+  const operatorMode = !!status?.installed;
+  const scanMode = !operatorMode;
 
   useEffect(() => {
     axios.get('/api/security/status').then((r) => setStatus(r.data)).catch(() => setStatus({ installed: false }));
+    return () => clearInterval(pollRef.current);
   }, []);
 
   const get = (path, extra = {}) => axios.get(path, { params: { ...(ns !== 'all' ? { namespace: ns } : {}), ...extra } }).then((r) => r.data);
 
+  // Operator mode: read the report CRDs.
   useEffect(() => {
-    if (!status?.installed) return;
+    if (!operatorMode) return;
     setDetail(null); setLoading(true);
     const done = () => setLoading(false);
     if (tab === 'overview' || tab === 'images') { get('/api/security/vulnerabilities').then(setVuln).catch(() => {}).finally(done); }
     else if (tab === 'resources') { get('/api/security/checks', { kind: 'config' }).then(setConfig).catch(() => {}).finally(done); }
     else if (tab === 'roles') { get('/api/security/checks', { kind: 'rbac' }).then(setRbac).catch(() => {}).finally(done); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, ns, status?.installed]);
+  }, [tab, ns, operatorMode]);
 
-  if (status && !status.installed) return <SetupState error={status.error} />;
+  // Scan mode: check trivy availability + load any prior scan result.
+  useEffect(() => {
+    if (status == null || operatorMode) return;
+    axios.get('/api/security/scan/status').then((r) => setScanAvail(r.data)).catch(() => setScanAvail({ available: false }));
+    axios.get('/api/security/scan').then((r) => { if (r.data.images?.length || r.data.running) { setScan(r.data); setVuln(r.data); if (r.data.running) poll(); } }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, operatorMode]);
+
+  const poll = () => {
+    clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      try {
+        const { data } = await axios.get('/api/security/scan');
+        setScan(data); setVuln(data);
+        if (!data.running) { clearInterval(pollRef.current); }
+      } catch { clearInterval(pollRef.current); }
+    }, 2000);
+  };
+  const runScan = async () => {
+    setScan({ running: true, scanned: 0, total: 0 });
+    try { const { data } = await axios.post('/api/security/scan', { namespace: ns !== 'all' ? ns : undefined }); setScan(data); setVuln(data); poll(); }
+    catch (e) { setScan({ running: false, error: e.response?.data?.error || 'Scan failed to start' }); }
+  };
+
   if (!status) return <div className="sec-center"><Loader label="Checking Security Center…" /></div>;
+  // No operator, and no scan run yet → the setup / run-scan screen.
+  if (scanMode && !scan?.images?.length && !scan?.running) {
+    return <SetupState error={status.error} scanAvail={scanAvail} onScan={runScan} scanError={scan?.error} />;
+  }
+  if (scanMode && scan?.running && !scan?.images?.length) {
+    return <ScanProgress scan={scan} />;
+  }
 
   const nsList = namespaces.filter((n) => n !== 'all');
   const count = tab === 'resources' ? (config?.resources || []).length
@@ -115,12 +153,13 @@ export default function SecurityCenter({ namespaces = [], onNavigate }) {
 
       <div className="sec-main">
         <div className="sec-body">
+          {scanMode && scan && <ScanBanner scan={scan} onRescan={runScan} />}
           {loading ? <div className="sec-center"><Loader label="Loading reports…" /></div> : (
             <>
               {tab === 'overview' && <ImagesView vuln={vuln} q={q} onSelect={(d) => setDetail({ type: 'image', data: d })} selected={detail?.data} criticalOnly />}
               {tab === 'images' && <ImagesView vuln={vuln} q={q} onSelect={(d) => setDetail({ type: 'image', data: d })} selected={detail?.data} />}
-              {tab === 'resources' && <ChecksView data={config} q={q} onSelect={(d) => setDetail({ type: 'checks', data: d })} selected={detail?.data} label="resource" />}
-              {tab === 'roles' && <ChecksView data={rbac} q={q} onSelect={(d) => setDetail({ type: 'checks', data: d })} selected={detail?.data} label="role" />}
+              {tab === 'resources' && (scanMode ? <OperatorNote feature="Resource best-practice checks" /> : <ChecksView data={config} q={q} onSelect={(d) => setDetail({ type: 'checks', data: d })} selected={detail?.data} label="resource" />)}
+              {tab === 'roles' && (scanMode ? <OperatorNote feature="RBAC risk analysis" /> : <ChecksView data={rbac} q={q} onSelect={(d) => setDetail({ type: 'checks', data: d })} selected={detail?.data} label="role" />)}
             </>
           )}
         </div>
@@ -293,24 +332,68 @@ function ChecksDetail({ d }) {
   );
 }
 
-/* ---------- Setup ---------- */
-function SetupState({ error }) {
+/* ---------- Setup / run-scan ---------- */
+function SetupState({ error, scanAvail, onScan, scanError }) {
   return (
     <div className="sec-view">
       <div className="sec-head"><div className="sec-title"><Icon name="shield" size={20} /> <h1>Security</h1></div></div>
       <div className="sec-setup">
         <div className="sec-setup-icon"><Icon name="shield" size={40} /></div>
-        <h2>Security Center needs the Trivy Operator</h2>
-        <p>The Security Center reads image-CVE, resource best-practice, and RBAC-risk reports produced by the <strong>Trivy Operator</strong> running in your cluster. It isn't installed here yet — deploy it once and its scans light up this view automatically. Nothing else to configure.</p>
+        <h2>Scan your cluster for vulnerabilities</h2>
+        {scanAvail?.available ? (
+          <>
+            <p>Run a <strong>built-in image scan</strong> right now — k8sight scans every image your cluster is running with the bundled Trivy{scanAvail.version ? ` (${scanAvail.version})` : ''}. <strong>Nothing to install in your cluster.</strong> The first scan downloads Trivy's vulnerability database and may take a few minutes.</p>
+            <button className="sec-run-btn" onClick={onScan}><Icon name="shieldCheck" size={16} /> Run built-in scan</button>
+            {scanError && <div className="sec-dim" style={{ marginTop: 12, color: 'var(--red)' }}>{scanError}</div>}
+            <p className="sec-dim" style={{ marginTop: 18 }}>For continuous scanning plus resource best-practice and RBAC checks, install the Trivy Operator in-cluster (below).</p>
+          </>
+        ) : (
+          <p>The Security Center reads image-CVE, best-practice and RBAC reports from the <strong>Trivy Operator</strong> in your cluster{scanAvail && !scanAvail.available ? ', or scans on demand with a bundled trivy binary (not found in this build)' : ''}. Install the operator once and its scans light up this view automatically.</p>
+        )}
         <div className="sec-setup-cmd">
           <pre><code>helm repo add aqua https://aquasecurity.github.io/helm-charts/
 helm install trivy-operator aqua/trivy-operator \
   --namespace trivy-system --create-namespace</code></pre>
         </div>
-        <p className="sec-dim">The operator scans your workloads on a schedule and writes VulnerabilityReport, ConfigAuditReport and RbacAssessmentReport resources. This page refreshes when you revisit it.</p>
         <a className="sec-link" href="https://aquasecurity.github.io/trivy-operator/latest/getting-started/installation/helm/" target="_blank" rel="noreferrer">Trivy Operator install guide <Icon name="externalLink" size={12} /></a>
         {error && <div className="sec-dim" style={{ marginTop: 14 }}>Note: {error}</div>}
       </div>
+    </div>
+  );
+}
+
+function ScanProgress({ scan }) {
+  const pct = scan.total ? Math.round((scan.scanned / scan.total) * 100) : 0;
+  return (
+    <div className="sec-view">
+      <div className="sec-head"><div className="sec-title"><Icon name="shieldCheck" size={20} /> <h1>Security</h1></div></div>
+      <div className="sec-setup">
+        <div className="sec-setup-icon"><Loader size={40} /></div>
+        <h2>Scanning cluster images…</h2>
+        <p>Trivy is scanning the images your workloads run. This runs from k8sight — nothing is installed in your cluster.</p>
+        <div className="sec-progress"><div className="sec-progress-bar" style={{ width: `${pct}%` }} /></div>
+        <p className="sec-dim">{scan.scanned} of {scan.total || '…'} images{scan.total ? ` · ${pct}%` : ''}</p>
+      </div>
+    </div>
+  );
+}
+
+function ScanBanner({ scan, onRescan }) {
+  return (
+    <div className="sec-banner">
+      <Icon name="shieldCheck" size={15} />
+      <span>{scan.running ? `Scanning… ${scan.scanned}/${scan.total || '…'}` : `Built-in Trivy scan · ${(scan.images || []).length} images`}{scan.finishedAt ? ` · ${rel(scan.finishedAt)}` : ''}</span>
+      <button className="sec-banner-btn" onClick={onRescan} disabled={scan.running}><Icon name="refresh" size={13} /> {scan.running ? 'Scanning' : 'Re-scan'}</button>
+    </div>
+  );
+}
+
+function OperatorNote({ feature }) {
+  return (
+    <div className="sec-empty">
+      <Icon name="shield" size={28} />
+      <p><strong>{feature}</strong> needs the Trivy Operator.</p>
+      <p className="sec-dim" style={{ maxWidth: 420, textAlign: 'center' }}>The built-in scan covers image vulnerabilities. Install the Trivy Operator in-cluster to also get resource best-practice and RBAC checks.</p>
     </div>
   );
 }
