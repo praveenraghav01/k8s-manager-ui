@@ -14,6 +14,11 @@ import {
 
 const require = createRequire(import.meta.url);
 const isWindows = process.platform === 'win32';
+// node-pty's `spawn-helper` binary (and the "posix_spawnp failed" bug it caused)
+// is macOS-only — Linux uses forkpty directly and ships no helper. So the
+// helper-specific assertions run on Darwin; the generic PTY-spawn check runs on
+// any Unix.
+const isDarwin = process.platform === 'darwin';
 
 // Run a command through node-pty and resolve with its output. This is the
 // operation that failed in production — a real end-to-end check of the PTY.
@@ -40,7 +45,7 @@ test('node-pty is installed and loadable', async () => {
   assert.equal(typeof pty.spawn, 'function');
 });
 
-test('ensurePtyHelperExecutable makes the spawn-helper executable', { skip: isWindows }, () => {
+test('ensurePtyHelperExecutable makes the spawn-helper executable', { skip: !isDarwin }, () => {
   ensurePtyHelperExecutable({ currentOnly: true, fromUrl: import.meta.url });
   const helpers = spawnHelperPaths({ currentOnly: true, fromUrl: import.meta.url })
     .filter((p) => fs.existsSync(p));
@@ -57,7 +62,7 @@ test('node-pty can actually spawn a process (no posix_spawnp failure)', { skip: 
   assert.match(out, /k8sight-pty-ok/);
 });
 
-test('a stripped execute bit is self-healed and the PTY works again', { skip: isWindows }, async () => {
+test('a stripped execute bit is self-healed and the PTY works again', { skip: !isDarwin }, async () => {
   const helpers = spawnHelperPaths({ currentOnly: true, fromUrl: import.meta.url })
     .filter((p) => fs.existsSync(p));
   assert.ok(helpers.length > 0);
