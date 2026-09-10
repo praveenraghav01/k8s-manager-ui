@@ -120,9 +120,8 @@ export default function SecurityCenter({ namespaces = [], onNavigate }) {
   if (scanMode && !scan?.images?.length && !scan?.running) {
     return <SetupState error={status.error} scanAvail={scanAvail} onScan={runScan} scanError={scan?.error} />;
   }
-  if (scanMode && scan?.running && !scan?.images?.length) {
-    return <ScanProgress scan={scan} />;
-  }
+  // While scanning, the header + tabs stay visible (below) so you can switch
+  // tabs and watch partial results stream in — the scan keeps running server-side.
 
   const nsList = namespaces.filter((n) => n !== 'all');
   const count = tab === 'resources' ? (config?.resources || []).length
@@ -153,13 +152,19 @@ export default function SecurityCenter({ namespaces = [], onNavigate }) {
 
       <div className="sec-main">
         <div className="sec-body">
-          {scanMode && scan && <ScanBanner scan={scan} onRescan={runScan} />}
-          {loading ? <div className="sec-center"><Loader label="Loading reports…" /></div> : (
+          {scanMode && scan?.phase === 'preparing' ? (
+            <ScanProgress scan={scan} />
+          ) : (
             <>
-              {tab === 'overview' && <ImagesView vuln={vuln} q={q} onSelect={(d) => setDetail({ type: 'image', data: d })} selected={detail?.data} criticalOnly />}
-              {tab === 'images' && <ImagesView vuln={vuln} q={q} onSelect={(d) => setDetail({ type: 'image', data: d })} selected={detail?.data} />}
-              {tab === 'resources' && (scanMode ? <OperatorNote feature="Resource best-practice checks" /> : <ChecksView data={config} q={q} onSelect={(d) => setDetail({ type: 'checks', data: d })} selected={detail?.data} label="resource" />)}
-              {tab === 'roles' && (scanMode ? <OperatorNote feature="RBAC risk analysis" /> : <ChecksView data={rbac} q={q} onSelect={(d) => setDetail({ type: 'checks', data: d })} selected={detail?.data} label="role" />)}
+              {scanMode && scan && <ScanBanner scan={scan} onRescan={runScan} />}
+              {loading ? <div className="sec-center"><Loader label="Loading reports…" /></div> : (
+                <>
+                  {tab === 'overview' && <ImagesView vuln={vuln} q={q} onSelect={(d) => setDetail({ type: 'image', data: d })} selected={detail?.data} criticalOnly />}
+                  {tab === 'images' && <ImagesView vuln={vuln} q={q} onSelect={(d) => setDetail({ type: 'image', data: d })} selected={detail?.data} />}
+                  {tab === 'resources' && (scanMode ? <OperatorNote feature="Resource best-practice checks" /> : <ChecksView data={config} q={q} onSelect={(d) => setDetail({ type: 'checks', data: d })} selected={detail?.data} label="resource" />)}
+                  {tab === 'roles' && (scanMode ? <OperatorNote feature="RBAC risk analysis" /> : <ChecksView data={rbac} q={q} onSelect={(d) => setDetail({ type: 'checks', data: d })} selected={detail?.data} label="role" />)}
+                </>
+              )}
             </>
           )}
         </div>
@@ -362,31 +367,31 @@ helm install trivy-operator aqua/trivy-operator \
   );
 }
 
-function ScanProgress({ scan }) {
-  const preparing = scan.phase === 'preparing';
-  const pct = scan.total ? Math.round((scan.scanned / scan.total) * 100) : 0;
+// Shown in-body during the one-time Trivy download (the scan itself streams into
+// the tabs). Header + tabs stay visible above, so tabs remain switchable.
+function ScanProgress() {
   return (
-    <div className="sec-view">
-      <div className="sec-head"><div className="sec-title"><Icon name="shieldCheck" size={20} /> <h1>Security</h1></div></div>
-      <div className="sec-setup">
-        <div className="sec-setup-icon"><Loader size={40} /></div>
-        <h2>{preparing ? 'Preparing Trivy…' : 'Scanning cluster images…'}</h2>
-        <p>{preparing
-          ? 'Downloading the Trivy scanner and its vulnerability database. This happens once — nothing is installed in your cluster.'
-          : 'Trivy is scanning the images your workloads run. This runs from k8sight — nothing is installed in your cluster.'}</p>
-        {!preparing && <div className="sec-progress"><div className="sec-progress-bar" style={{ width: `${pct}%` }} /></div>}
-        {!preparing && <p className="sec-dim">{scan.scanned} of {scan.total || '…'} images{scan.total ? ` · ${pct}%` : ''}</p>}
-      </div>
+    <div className="sec-setup">
+      <div className="sec-setup-icon scanning"><Icon name="shieldCheck" size={40} /></div>
+      <h2>Preparing Trivy…</h2>
+      <p>Downloading the Trivy scanner and its vulnerability database. This happens once — nothing is installed in your cluster. You can switch tabs or views; the scan runs in the background.</p>
     </div>
   );
 }
 
 function ScanBanner({ scan, onRescan }) {
+  const pct = scan.total ? Math.round((scan.scanned / scan.total) * 100) : 0;
   return (
     <div className="sec-banner">
-      <Icon name="shieldCheck" size={15} />
-      <span>{scan.running ? `Scanning… ${scan.scanned}/${scan.total || '…'}` : `Built-in Trivy scan · ${(scan.images || []).length} images`}{scan.finishedAt ? ` · ${rel(scan.finishedAt)}` : ''}</span>
-      <button className="sec-banner-btn" onClick={onRescan} disabled={scan.running}><Icon name="refresh" size={13} /> {scan.running ? 'Scanning' : 'Re-scan'}</button>
+      <Icon name="shieldCheck" size={15} className={scan.running ? 'sec-spin' : ''} />
+      <span className="sec-banner-text">
+        {scan.running ? `Scanning images… ${scan.scanned}/${scan.total || '…'}` : `Built-in Trivy scan · ${(scan.images || []).length} images`}
+        {scan.finishedAt && !scan.running ? ` · ${rel(scan.finishedAt)}` : ''}
+      </span>
+      {scan.running && (
+        <span className="sec-banner-progress"><span className="sec-banner-progress-bar" style={{ width: `${pct}%` }} /></span>
+      )}
+      <button className="sec-banner-btn" onClick={onRescan} disabled={scan.running}><Icon name="refresh" size={13} /> {scan.running ? `${pct}%` : 'Re-scan'}</button>
     </div>
   );
 }

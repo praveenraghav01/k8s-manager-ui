@@ -193,6 +193,12 @@ export async function startScan(byImage) {
             scanError: scan.error,
           });
           scanState.scanned++;
+          // Stream partial results so the UI fills in while the scan runs.
+          out.sort((a, b) => (b.summary.CRITICAL - a.summary.CRITICAL) || (b.summary.HIGH - a.summary.HIGH));
+          const partialVuln = out.filter((g) => sevTotal(g.summary) > 0).length;
+          scanState.images = out.slice();
+          scanState.summary = { ...total };
+          scanState.results = { vulnerable: partialVuln, ok: out.length - partialVuln };
         }
       };
       await Promise.all(Array.from({ length: Math.min(3, entries.length || 1) }, worker));

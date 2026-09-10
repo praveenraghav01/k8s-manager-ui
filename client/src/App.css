@@ -3610,3 +3610,15 @@ button.sec-tr.row.sel { background: var(--accent-tint); }
 .sec-banner-btn { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border: 1px solid var(--border-strong); border-radius: var(--radius-xs); background: var(--bg-elevated); color: var(--text-secondary); font-size: 12px; font-weight: 600; cursor: pointer; }
 .sec-banner-btn:hover:not(:disabled) { color: var(--text); border-color: var(--accent); }
 .sec-banner-btn:disabled { opacity: .55; cursor: default; }
+/* Scan progress: spinning ring around the shield icon + banner progress */
+@keyframes sec-spin { to { transform: rotate(360deg); } }
+.sec-setup-icon.scanning { position: relative; }
+.sec-setup-icon.scanning::after {
+  content: ''; position: absolute; inset: -7px; border-radius: 24px;
+  border: 2px solid transparent; border-top-color: var(--green); border-right-color: var(--green);
+  animation: sec-spin 0.9s linear infinite;
+}
+.sec-spin { transform-origin: center; animation: sec-spin 1s linear infinite; }
+.sec-banner-text { flex: none; }
+.sec-banner-progress { flex: 1; min-width: 60px; height: 5px; border-radius: 3px; background: var(--bg-surface-2); overflow: hidden; margin: 0 6px; }
+.sec-banner-progress-bar { display: block; height: 100%; background: var(--green); transition: width .4s ease; }

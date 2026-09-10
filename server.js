@@ -2078,7 +2078,9 @@ const scanResultShape = () => {
     running: s.running, done: s.done, phase: s.phase, total: s.total, scanned: s.scanned,
     startedAt: s.startedAt, finishedAt: s.finishedAt, error: s.error,
     installed: !!s.images, images: s.images || [], summary: s.summary,
-    results: s.results, notScanned: null, source: 'trivy-builtin',
+    results: s.results, scanned: s.scanned,
+    notScanned: s.total ? Math.max(0, s.total - s.scanned) : null,
+    source: 'trivy-builtin',
   };
 };
 
