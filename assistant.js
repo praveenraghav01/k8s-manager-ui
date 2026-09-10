@@ -43,9 +43,17 @@ const config = () => envConfig() || stored;
 const source = () => (envConfig() ? 'env' : stored ? 'stored' : null);
 const configured = () => !!config()?.baseUrl && !!config()?.apiKey && !!config()?.model;
 
+// Strip trailing slashes without a backtracking regex (avoids polynomial ReDoS
+// on attacker-influenced input).
+const stripTrailingSlashes = (s) => {
+  let i = s.length;
+  while (i > 0 && s[i - 1] === '/') i--;
+  return s.slice(0, i);
+};
+
 // Normalize a base URL to a chat-completions endpoint.
 const completionsUrl = (base) => {
-  let b = String(base || '').trim().replace(/\/+$/, '');
+  const b = stripTrailingSlashes(String(base || '').trim());
   return b.endsWith('/chat/completions') ? b : `${b}/chat/completions`;
 };
 

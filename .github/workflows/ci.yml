@@ -15,6 +15,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege: the test job only reads the repo. Declaring this here (and not
+# relying on the repo default) is what CodeQL's actions/missing-workflow-permissions
+# checks for.
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Test (${{ matrix.name }})
