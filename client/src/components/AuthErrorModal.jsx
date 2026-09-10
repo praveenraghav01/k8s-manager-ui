@@ -38,10 +38,13 @@ function classify(auth) {
 
   // Azure CLI token expiry (AADSTS70043 etc.)
   if (/aadsts|azureclicredential|az login\b/.test(s) || (provider === 'azure' && /token|expired|credential|refresh/.test(s))) {
+    // kubelogin/azurecli clusters read the Azure CLI token cache, so the fix is
+    // `az login` specifically (a browser sign-in won't refresh it).
+    const cli = /azurecli|kubelogin/.test(s);
     return {
       title: 'Azure sign-in expired',
       summary: 'Your Azure sign-in has expired, so the cluster token could not be refreshed. Sign in to Azure again, then retry.',
-      fix: { kind: 'azure', command: extractAzLogin(raw) || 'az login' },
+      fix: { kind: 'azure', cli, command: extractAzLogin(raw) || 'az login' },
     };
   }
   // AWS SSO / STS token expiry
@@ -124,7 +127,7 @@ export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying
             {(fix.kind === 'azure' || fix.kind === 'aws') && (
               <button
                 className="auth-fix-btn"
-                onClick={fix.kind === 'azure' ? onAddAzure : onAddAws}
+                onClick={() => (fix.kind === 'azure' ? onAddAzure?.(fix.cli ? 'az' : undefined) : onAddAws?.())}
                 disabled={retrying || (fix.kind === 'azure' ? !onAddAzure : !onAddAws)}
               >
                 <Icon name={fix.kind === 'azure' ? 'azure' : 'aws'} size={15} />

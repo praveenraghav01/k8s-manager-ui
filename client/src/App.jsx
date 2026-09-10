@@ -95,6 +95,11 @@ function App() {
   // Which ArgoCD sub-view the sidebar is pointing at (dashboard/applications/…).
   const [argoView, setArgoView] = useState('dashboard');
   const [showAzure, setShowAzure] = useState(false);
+  // When the failing cluster uses kubelogin/azurecli, the fix is `az login` (the
+  // browser OAuth flow doesn't refresh the CLI token that kubelogin reads), so
+  // the auth-error "Sign in to Azure" opens the modal in CLI-login mode.
+  const [azureMode, setAzureMode] = useState(null); // null | 'az'
+  const openAzure = (mode) => { setAzureMode(mode === 'az' ? 'az' : null); setShowAzure(true); };
   const [showAws, setShowAws] = useState(false);
   const [prefSection, setPrefSection] = useState('general');
   const [prefReturn, setPrefReturn] = useState('overview');
@@ -456,7 +461,7 @@ function App() {
           contextsInfo={configStatus.contextsInfo}
           currentContext={configStatus.currentContext}
           onSwitchContext={switchContext}
-          onAddAzure={() => setShowAzure(true)}
+          onAddAzure={(mode) => openAzure(mode)}
           onAddAws={() => setShowAws(true)}
         />
       )}
@@ -475,7 +480,8 @@ function App() {
 
       {showAzure && (
         <AzureIntegration
-          onClose={() => setShowAzure(false)}
+          initialLogin={azureMode}
+          onClose={() => { setShowAzure(false); setAzureMode(null); }}
           onImported={async () => { await fetchConfigStatus(); retryAuth(); }}
         />
       )}
@@ -508,7 +514,7 @@ function App() {
             argocdInstalled={argocdInstalled}
             argoView={resourceType === 'argocd' ? argoView : null}
             onSelectArgoView={(v) => { setArgoView(v); setResourceType('argocd'); }}
-            onAddAzure={() => setShowAzure(true)}
+            onAddAzure={() => openAzure()}
             onAddAws={() => setShowAws(true)}
             onOpenPreferences={() => openPreferences('general')}
           />
@@ -545,7 +551,7 @@ function App() {
               theme={theme}
               onSetTheme={setTheme}
               onChangeConfig={() => setForceConfigModal(true)}
-              onAddAzure={() => setShowAzure(true)}
+              onAddAzure={() => openAzure()}
               onAddAws={() => setShowAws(true)}
               initialSection={prefSection}
               onClose={() => setResourceType(prefReturn || 'overview')}
