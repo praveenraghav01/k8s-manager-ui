@@ -93,10 +93,13 @@ function App() {
     storage: false,
     config: false,
     argocd: false,
-    argocdSettings: false
+    argocdSettings: false,
+    security: false
   });
   // Which ArgoCD sub-view the sidebar is pointing at (dashboard/applications/…).
   const [argoView, setArgoView] = useState('dashboard');
+  // Which Security Center sub-view the sidebar is pointing at.
+  const [securityView, setSecurityView] = useState('overview');
   const [showAzure, setShowAzure] = useState(false);
   // When the failing cluster uses kubelogin/azurecli, the fix is `az login` (the
   // browser OAuth flow doesn't refresh the CLI token that kubelogin reads), so
@@ -536,6 +539,8 @@ function App() {
             argocdInstalled={argocdInstalled}
             argoView={resourceType === 'argocd' ? argoView : null}
             onSelectArgoView={(v) => { setArgoView(v); setResourceType('argocd'); }}
+            securityView={resourceType === 'security' ? securityView : null}
+            onSelectSecurityView={(v) => { setSecurityView(v); setResourceType('security'); }}
             onAddAzure={() => openAzure()}
             onAddAws={() => setShowAws(true)}
             onOpenPreferences={() => openPreferences('general')}
@@ -566,7 +571,7 @@ function App() {
           ) : resourceType === 'accessControl' ? (
             <AccessControl key={`ac-${refreshNonce}`} onNavigate={nav} />
           ) : resourceType === 'security' ? (
-            <SecurityCenter key={`sec-${refreshNonce}`} namespaces={namespaces} onNavigate={nav} />
+            <SecurityCenter key={`sec-${refreshNonce}`} namespaces={namespaces} onNavigate={nav} view={securityView} onViewChange={setSecurityView} />
           ) : resourceType === 'argocd' ? (
             <ArgoCD onNavigate={nav} refreshSignal={refreshNonce} view={argoView} onViewChange={setArgoView} />
           ) : resourceType === 'preferences' ? (

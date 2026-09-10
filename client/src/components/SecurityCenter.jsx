@@ -56,9 +56,13 @@ function Donut({ title, segments, size = 130 }) {
   );
 }
 
-export default function SecurityCenter({ namespaces = [], onNavigate }) {
+export default function SecurityCenter({ namespaces = [], onNavigate, view, onViewChange }) {
   const [status, setStatus] = useState(null);
-  const [tab, setTab] = useState('overview');
+  // Tab is controlled by the sidebar (view/onViewChange) when provided; the
+  // in-view tab bar stays in sync and also works standalone.
+  const [localTab, setLocalTab] = useState('overview');
+  const tab = view || localTab;
+  const setTab = (k) => { setLocalTab(k); onViewChange?.(k); };
   const [ns, setNs] = useState('all');
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(false);
