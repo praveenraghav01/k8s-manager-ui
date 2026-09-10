@@ -124,8 +124,14 @@ export default function SecurityCenter({ namespaces = [], onNavigate }) {
   // tabs and watch partial results stream in — the scan keeps running server-side.
 
   const nsList = namespaces.filter((n) => n !== 'all');
-  const count = tab === 'resources' ? (config?.resources || []).length
-    : tab === 'roles' ? (rbac?.resources || []).length : (vuln?.images || []).length;
+  const count = useMemo(() => {
+    if (tab === 'resources' || tab === 'roles') {
+      const list = (tab === 'resources' ? config : rbac)?.resources || [];
+      return (ns === 'all' ? list : list.filter((r) => r.namespace === ns)).length;
+    }
+    const imgs = vuln?.images || [];
+    return (ns === 'all' ? imgs : imgs.filter((im) => im.namespace === ns || (im.workloads || []).some((w) => w.namespace === ns))).length;
+  }, [tab, ns, vuln, config, rbac]);
 
   return (
     <div className="sec-view">
@@ -159,10 +165,10 @@ export default function SecurityCenter({ namespaces = [], onNavigate }) {
               {scanMode && scan && <ScanBanner scan={scan} onRescan={runScan} />}
               {loading ? <div className="sec-center"><Loader label="Loading reports…" /></div> : (
                 <>
-                  {tab === 'overview' && <ImagesView vuln={vuln} q={q} onSelect={(d) => setDetail({ type: 'image', data: d })} selected={detail?.data} criticalOnly />}
-                  {tab === 'images' && <ImagesView vuln={vuln} q={q} onSelect={(d) => setDetail({ type: 'image', data: d })} selected={detail?.data} />}
-                  {tab === 'resources' && (scanMode ? <OperatorNote feature="Resource best-practice checks" /> : <ChecksView data={config} q={q} onSelect={(d) => setDetail({ type: 'checks', data: d })} selected={detail?.data} label="resource" />)}
-                  {tab === 'roles' && (scanMode ? <OperatorNote feature="RBAC risk analysis" /> : <ChecksView data={rbac} q={q} onSelect={(d) => setDetail({ type: 'checks', data: d })} selected={detail?.data} label="role" />)}
+                  {tab === 'overview' && <ImagesView vuln={vuln} ns={ns} q={q} onSelect={(d) => setDetail({ type: 'image', data: d })} selected={detail?.data} criticalOnly />}
+                  {tab === 'images' && <ImagesView vuln={vuln} ns={ns} q={q} onSelect={(d) => setDetail({ type: 'image', data: d })} selected={detail?.data} />}
+                  {tab === 'resources' && (scanMode ? <OperatorNote feature="Resource best-practice checks" /> : <ChecksView data={config} ns={ns} q={q} onSelect={(d) => setDetail({ type: 'checks', data: d })} selected={detail?.data} label="resource" />)}
+                  {tab === 'roles' && (scanMode ? <OperatorNote feature="RBAC risk analysis" /> : <ChecksView data={rbac} ns={ns} q={q} onSelect={(d) => setDetail({ type: 'checks', data: d })} selected={detail?.data} label="role" />)}
                 </>
               )}
             </>
@@ -175,14 +181,15 @@ export default function SecurityCenter({ namespaces = [], onNavigate }) {
 }
 
 /* ---------- Images / Overview (shared) ---------- */
-function ImagesView({ vuln, q, onSelect, selected, criticalOnly }) {
+function ImagesView({ vuln, ns, q, onSelect, selected, criticalOnly }) {
   const ql = q.toLowerCase();
   const all = vuln?.images || [];
   const rows = useMemo(() => {
     let list = criticalOnly ? all.filter((im) => im.summary.CRITICAL > 0) : all;
+    if (ns && ns !== 'all') list = list.filter((im) => im.namespace === ns || (im.workloads || []).some((w) => w.namespace === ns));
     if (ql) list = list.filter((im) => im.image.toLowerCase().includes(ql) || (im.namespace || '').toLowerCase().includes(ql) || im.vulnerabilities.some((v) => v.id.toLowerCase().includes(ql)));
     return criticalOnly ? [...list].sort((a, b) => new Date(b.scannedAt) - new Date(a.scannedAt)) : list;
-  }, [all, ql, criticalOnly]);
+  }, [all, ns, ql, criticalOnly]);
 
   const statusSeg = [
     { label: 'Scanned', value: vuln?.scanned || 0, color: '#8b949e' },
@@ -223,9 +230,11 @@ function ImagesView({ vuln, q, onSelect, selected, criticalOnly }) {
 }
 
 /* ---------- Resources / Roles ---------- */
-function ChecksView({ data, q, onSelect, selected, label }) {
+function ChecksView({ data, ns, q, onSelect, selected, label }) {
   const ql = q.toLowerCase();
-  const rows = (data?.resources || []).filter((r) => !ql || (r.name || '').toLowerCase().includes(ql) || r.checks.some((c) => (c.id + c.title).toLowerCase().includes(ql)));
+  const rows = (data?.resources || [])
+    .filter((r) => !ns || ns === 'all' || r.namespace === ns)
+    .filter((r) => !ql || (r.name || '').toLowerCase().includes(ql) || r.checks.some((c) => (c.id + c.title).toLowerCase().includes(ql)));
   if (!rows.length) return <div className="sec-empty"><Icon name="shieldCheck" size={28} /><p>No {label} issues{q ? ' match your search' : ''}.</p></div>;
   return (
     <div className="sec-table">
