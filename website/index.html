@@ -760,17 +760,17 @@
       <div class="card i-red reveal">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z"/><path d="M12 9v4M12 16h.01"/></svg></div>
         <h3>Image vulnerabilities</h3>
-        <p>Every image grouped with its CVEs by severity &mdash; Critical, High, Medium, Low &mdash; with fixed-in versions, package details and a per-image drawer you can filter by severity.</p>
+        <p>Every image grouped with its CVEs by severity &mdash; Critical, High, Medium, Low &mdash; with fixed-in versions, affected packages, and a drawer that filters the list.</p>
       </div>
       <div class="card i-amber reveal">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
         <h3>Configuration audit</h3>
-        <p>Resource configs checked against security best practices, so risky manifests surface before they cause an incident &mdash; each finding with its severity and the rule it tripped.</p>
+        <p>Resource configs checked against security best practices, so risky manifests show up before they cause an incident &mdash; each finding with its severity and the rule it tripped.</p>
       </div>
       <div class="card i-purple reveal">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="8" cy="15" r="4"/><path d="M10.85 12.15 19 4l2 2M18 7l1.5 1.5"/></svg></div>
         <h3>RBAC risk analysis</h3>
-        <p>Roles and cluster-roles assessed for over-broad permissions, with the exact subjects and rules flagged &mdash; a clear read on who can do what, and where it&rsquo;s too much.</p>
+        <p>Roles and cluster-roles checked for over-broad permissions, with the exact subjects and rules that grant them.</p>
       </div>
       <div class="card i-cyan reveal">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg></div>
@@ -780,12 +780,12 @@
       <div class="card reveal">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
         <h3>Exposed secrets</h3>
-        <p>Surfaces credentials and tokens baked into image layers, so a leaked key in a base image doesn&rsquo;t slip through unnoticed.</p>
+        <p>Finds credentials and tokens baked into image layers, so a key left in a base image gets caught.</p>
       </div>
       <div class="card i-green reveal">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M12 12l5-3M12 3v9"/></svg></div>
         <h3>Overview &amp; history</h3>
-        <p>At-a-glance donut summaries across images, configs and roles, with results persisted locally so you keep the last scan after you close and reopen the app.</p>
+        <p>Donut summaries across images, configs and roles. Results are saved locally, so the last scan is still there when you reopen the app.</p>
       </div>
     </div>
 
