@@ -1,6 +1,6 @@
 {
   "name": "k8s-manager-ui",
-  "version": "1.4.4",
+  "version": "1.5.0",
   "description": "Kubernetes resource manager UI",
   "author": {
     "name": "Praveen Kumar",
