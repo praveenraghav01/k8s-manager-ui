@@ -340,15 +340,15 @@ function SetupState({ error, scanAvail, onScan, scanError }) {
       <div className="sec-setup">
         <div className="sec-setup-icon"><Icon name="shield" size={40} /></div>
         <h2>Scan your cluster for vulnerabilities</h2>
-        {scanAvail?.available ? (
+        {(scanAvail?.available || scanAvail?.installable) ? (
           <>
-            <p>Run a <strong>built-in image scan</strong> right now — k8sight scans every image your cluster is running with the bundled Trivy{scanAvail.version ? ` (${scanAvail.version})` : ''}. <strong>Nothing to install in your cluster.</strong> The first scan downloads Trivy's vulnerability database and may take a few minutes.</p>
-            <button className="sec-run-btn" onClick={onScan}><Icon name="shieldCheck" size={16} /> Run built-in scan</button>
+            <p>Run a <strong>built-in image scan</strong> right now — k8sight scans every image your cluster is running with Trivy{scanAvail.version ? ` (${scanAvail.version})` : ''}. <strong>Nothing to install in your cluster.</strong>{!scanAvail.available ? ' The first run downloads the Trivy binary (~60 MB) and its vulnerability database, so it may take a few minutes.' : ' The first scan downloads Trivy\'s vulnerability database and may take a few minutes.'}</p>
+            <button className="sec-run-btn" onClick={onScan}><Icon name="shieldCheck" size={16} /> {scanAvail.available ? 'Run built-in scan' : 'Download Trivy & scan'}</button>
             {scanError && <div className="sec-dim" style={{ marginTop: 12, color: 'var(--red)' }}>{scanError}</div>}
             <p className="sec-dim" style={{ marginTop: 18 }}>For continuous scanning plus resource best-practice and RBAC checks, install the Trivy Operator in-cluster (below).</p>
           </>
         ) : (
-          <p>The Security Center reads image-CVE, best-practice and RBAC reports from the <strong>Trivy Operator</strong> in your cluster{scanAvail && !scanAvail.available ? ', or scans on demand with a bundled trivy binary (not found in this build)' : ''}. Install the operator once and its scans light up this view automatically.</p>
+          <p>The Security Center reads image-CVE, best-practice and RBAC reports from the <strong>Trivy Operator</strong> in your cluster. Install the operator once and its scans light up this view automatically.</p>
         )}
         <div className="sec-setup-cmd">
           <pre><code>helm repo add aqua https://aquasecurity.github.io/helm-charts/
@@ -363,16 +363,19 @@ helm install trivy-operator aqua/trivy-operator \
 }
 
 function ScanProgress({ scan }) {
+  const preparing = scan.phase === 'preparing';
   const pct = scan.total ? Math.round((scan.scanned / scan.total) * 100) : 0;
   return (
     <div className="sec-view">
       <div className="sec-head"><div className="sec-title"><Icon name="shieldCheck" size={20} /> <h1>Security</h1></div></div>
       <div className="sec-setup">
         <div className="sec-setup-icon"><Loader size={40} /></div>
-        <h2>Scanning cluster images…</h2>
-        <p>Trivy is scanning the images your workloads run. This runs from k8sight — nothing is installed in your cluster.</p>
-        <div className="sec-progress"><div className="sec-progress-bar" style={{ width: `${pct}%` }} /></div>
-        <p className="sec-dim">{scan.scanned} of {scan.total || '…'} images{scan.total ? ` · ${pct}%` : ''}</p>
+        <h2>{preparing ? 'Preparing Trivy…' : 'Scanning cluster images…'}</h2>
+        <p>{preparing
+          ? 'Downloading the Trivy scanner and its vulnerability database. This happens once — nothing is installed in your cluster.'
+          : 'Trivy is scanning the images your workloads run. This runs from k8sight — nothing is installed in your cluster.'}</p>
+        {!preparing && <div className="sec-progress"><div className="sec-progress-bar" style={{ width: `${pct}%` }} /></div>}
+        {!preparing && <p className="sec-dim">{scan.scanned} of {scan.total || '…'} images{scan.total ? ` · ${pct}%` : ''}</p>}
       </div>
     </div>
   );

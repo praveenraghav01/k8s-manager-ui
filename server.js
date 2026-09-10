@@ -2075,7 +2075,7 @@ app.get('/api/security/checks', async (req, res) => {
 const scanResultShape = () => {
   const s = trivyScan.scanState;
   return {
-    running: s.running, done: s.done, total: s.total, scanned: s.scanned,
+    running: s.running, done: s.done, phase: s.phase, total: s.total, scanned: s.scanned,
     startedAt: s.startedAt, finishedAt: s.finishedAt, error: s.error,
     installed: !!s.images, images: s.images || [], summary: s.summary,
     results: s.results, notScanned: null, source: 'trivy-builtin',
@@ -2090,7 +2090,7 @@ app.get('/api/security/scan/status', async (req, res) => {
 app.post('/api/security/scan', async (req, res) => {
   if (!kubeConfig) return res.status(400).json({ error: 'No kubeconfig loaded' });
   const t = await trivyScan.trivyAvailable();
-  if (!t.available) return res.status(400).json({ error: 'The bundled trivy binary is not available.' });
+  if (!t.available && !t.installable) return res.status(400).json({ error: 'trivy is not available and cannot be auto-installed on this platform.' });
   if (trivyScan.scanState.running) return res.json({ started: false, ...scanResultShape() });
   try {
     const pods = await kubeConfig.makeApiClient(k8s.CoreV1Api).listPodForAllNamespaces({ limit: 5000 });

@@ -13,11 +13,18 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const execFileAsync = promisify(execFile);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Where we cache an auto-downloaded trivy so users need neither the operator
+// nor a manual install.
+const CACHE_DIR = path.join(os.homedir(), '.config', 'k8s-manager', 'bin');
+const CACHED_TRIVY = path.join(CACHE_DIR, process.platform === 'win32' ? 'trivy.exe' : 'trivy');
+const TRIVY_FALLBACK_VERSION = '0.58.1';
 
 // Candidate locations for a bundled binary (electron unpacks to resources/bin).
 const BUNDLED = [
@@ -35,13 +42,57 @@ export function trivyBin() {
   return _bin;
 }
 
-export async function trivyAvailable() {
+async function versionOf(bin) {
   try {
-    const { stdout } = await execFileAsync(trivyBin(), ['--version'], { timeout: 8000 });
-    return { available: true, version: (stdout.match(/Version:\s*([^\s]+)/) || [])[1] || stdout.split('\n')[0].trim() };
-  } catch {
-    return { available: false };
-  }
+    const { stdout } = await execFileAsync(bin, ['--version'], { timeout: 8000 });
+    return (stdout.match(/Version:\s*([^\s]+)/) || [])[1] || stdout.split('\n')[0].trim();
+  } catch { return null; }
+}
+
+// The GitHub release asset name for this OS/arch (null if unsupported).
+function assetName(version) {
+  const o = { darwin: 'macOS', linux: 'Linux', win32: 'Windows' }[process.platform];
+  const a = { x64: '64bit', arm64: 'ARM64', arm: 'ARM' }[process.arch];
+  if (!o || !a) return null;
+  return `trivy_${version}_${o}-${a}.${process.platform === 'win32' ? 'zip' : 'tar.gz'}`;
+}
+// Can we fetch trivy ourselves? (mac/linux; Windows install is manual for now.)
+export function trivyInstallable() { return process.platform !== 'win32' && !!assetName('x'); }
+
+export async function trivyAvailable() {
+  // present on PATH / bundled?
+  let v = await versionOf(trivyBin());
+  if (!v && fs.existsSync(CACHED_TRIVY)) { _bin = CACHED_TRIVY; v = await versionOf(CACHED_TRIVY); }
+  return { available: !!v, version: v || undefined, installable: trivyInstallable() };
+}
+
+async function latestVersion() {
+  try {
+    const r = await fetch('https://api.github.com/repos/aquasecurity/trivy/releases/latest', { headers: { 'user-agent': 'k8sight' }, signal: AbortSignal.timeout(8000) });
+    const j = await r.json();
+    return (j.tag_name || '').replace(/^v/, '') || TRIVY_FALLBACK_VERSION;
+  } catch { return TRIVY_FALLBACK_VERSION; }
+}
+
+// Return a usable trivy path — downloading + caching the binary if none exists.
+export async function ensureTrivy(onPhase) {
+  if ((await trivyAvailable()).available) return trivyBin();
+  if (fs.existsSync(CACHED_TRIVY)) { _bin = CACHED_TRIVY; return CACHED_TRIVY; }
+  if (!trivyInstallable()) throw new Error('trivy is not available — install it and add it to PATH.');
+  onPhase?.('preparing');
+  const version = await latestVersion();
+  const asset = assetName(version);
+  if (!asset) throw new Error(`No trivy build for ${process.platform}/${process.arch}.`);
+  fs.mkdirSync(CACHE_DIR, { recursive: true });
+  const tgz = path.join(CACHE_DIR, asset);
+  const r = await fetch(`https://github.com/aquasecurity/trivy/releases/download/v${version}/${asset}`, { redirect: 'follow', signal: AbortSignal.timeout(180000) });
+  if (!r.ok) throw new Error(`Downloading trivy failed (${r.status}).`);
+  fs.writeFileSync(tgz, Buffer.from(await r.arrayBuffer()));
+  await execFileAsync('tar', ['-xzf', tgz, '-C', CACHE_DIR, 'trivy'], { timeout: 60000 });
+  fs.chmodSync(CACHED_TRIVY, 0o755);
+  try { fs.unlinkSync(tgz); } catch { /* ignore */ }
+  _bin = CACHED_TRIVY;
+  return CACHED_TRIVY;
 }
 
 // Every unique running image → the pods using it.
@@ -95,13 +146,13 @@ export async function scanImage(image) {
 // A single in-flight scan, progress tracked on this module-level object so
 // GET /api/security/scan can report it and return the result when done.
 export const scanState = {
-  running: false, done: false, total: 0, scanned: 0, startedAt: null, finishedAt: null,
-  error: null, images: null, summary: emptySummary(), results: { ok: 0, vulnerable: 0 }, scanned_count: 0,
+  running: false, done: false, phase: 'idle', total: 0, scanned: 0, startedAt: null, finishedAt: null,
+  error: null, images: null, summary: emptySummary(), results: { ok: 0, vulnerable: 0 },
 };
 
 function resetScan() {
   Object.assign(scanState, {
-    running: true, done: false, total: 0, scanned: 0, startedAt: new Date().toISOString(),
+    running: true, done: false, phase: 'preparing', total: 0, scanned: 0, startedAt: new Date().toISOString(),
     finishedAt: null, error: null, images: null, summary: emptySummary(), results: { ok: 0, vulnerable: 0 },
   });
 }
@@ -109,46 +160,49 @@ function resetScan() {
 const order = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, UNKNOWN: 4 };
 const sevTotal = (s) => SEV.reduce((n, k) => n + (s[k] || 0), 0);
 
-// Kick off a scan of every running image (bounded concurrency). Returns quickly;
-// progress + result live on scanState.
+// Kick off a scan of every running image. Downloads trivy first if needed.
+// Returns immediately; progress + result live on scanState.
 export async function startScan(byImage) {
   if (scanState.running) return scanState;
   resetScan();
-  const entries = [...byImage.entries()];
-  scanState.total = entries.length;
-  const out = [];
-  const total = emptySummary();
-  const CONCURRENCY = 3;
-  let cursor = 0;
-  const worker = async () => {
-    while (cursor < entries.length) {
-      const [image, workloads] = entries[cursor++];
-      let scan;
-      try { scan = await scanImage(image); }
-      catch (e) { scan = { os: '', summary: emptySummary(), vulnerabilities: [], error: (e.message || 'scan failed').split('\n')[0] }; }
-      for (const k of SEV) total[k] += scan.summary[k];
-      scan.vulnerabilities.sort((a, b) => order[a.severity] - order[b.severity] || (b.score || 0) - (a.score || 0));
-      const tag = (image.split(':')[1] || '').split('@')[0];
-      out.push({
-        image, repository: image.split(':')[0], tag, digest: (image.split('@')[1] || ''),
-        os: scan.os, namespace: workloads[0]?.namespace || '', status: scan.error ? 'Failed' : 'Scanned',
-        scanner: 'Trivy (built-in)', scannedAt: new Date().toISOString(),
-        summary: scan.summary, criticalCount: scan.summary.CRITICAL, workloads, vulnerabilities: scan.vulnerabilities,
-        scanError: scan.error,
-      });
-      scanState.scanned++;
-    }
-  };
-  // Run workers in the background; don't block the HTTP response.
-  Promise.all(Array.from({ length: Math.min(CONCURRENCY, entries.length || 1) }, worker))
-    .then(() => {
+  (async () => {
+    try {
+      await ensureTrivy((p) => { scanState.phase = p; }); // may download the binary
+      scanState.phase = 'scanning';
+      const entries = [...byImage.entries()];
+      scanState.total = entries.length;
+      const out = [];
+      const total = emptySummary();
+      let cursor = 0;
+      const worker = async () => {
+        while (cursor < entries.length) {
+          const [image, workloads] = entries[cursor++];
+          let scan;
+          try { scan = await scanImage(image); }
+          catch (e) { scan = { os: '', summary: emptySummary(), vulnerabilities: [], error: (e.message || 'scan failed').split('\n')[0] }; }
+          for (const k of SEV) total[k] += scan.summary[k];
+          scan.vulnerabilities.sort((a, b) => order[a.severity] - order[b.severity] || (b.score || 0) - (a.score || 0));
+          const tag = (image.split(':')[1] || '').split('@')[0];
+          out.push({
+            image, repository: image.split(':')[0], tag, digest: (image.split('@')[1] || ''),
+            os: scan.os, namespace: workloads[0]?.namespace || '', status: scan.error ? 'Failed' : 'Scanned',
+            scanner: 'Trivy (built-in)', scannedAt: new Date().toISOString(),
+            summary: scan.summary, criticalCount: scan.summary.CRITICAL, workloads, vulnerabilities: scan.vulnerabilities,
+            scanError: scan.error,
+          });
+          scanState.scanned++;
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(3, entries.length || 1) }, worker));
       out.sort((a, b) => (b.summary.CRITICAL - a.summary.CRITICAL) || (b.summary.HIGH - a.summary.HIGH));
       const vulnerable = out.filter((g) => sevTotal(g.summary) > 0).length;
       Object.assign(scanState, {
-        running: false, done: true, finishedAt: new Date().toISOString(), images: out, summary: total,
-        results: { vulnerable, ok: out.length - vulnerable },
+        running: false, done: true, phase: 'done', finishedAt: new Date().toISOString(),
+        images: out, summary: total, results: { vulnerable, ok: out.length - vulnerable },
       });
-    })
-    .catch((e) => { Object.assign(scanState, { running: false, done: true, error: (e.message || 'scan failed').split('\n')[0] }); });
+    } catch (e) {
+      Object.assign(scanState, { running: false, done: true, phase: 'error', error: (e.message || 'scan failed').split('\n')[0] });
+    }
+  })();
   return scanState;
 }
