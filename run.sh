@@ -12,11 +12,13 @@
 # Flags:
 #   --skip-install           Don't install dependencies (assume node_modules present)
 #   --force-install          Reinstall dependencies even if node_modules already exists
-#   --no-tools               Don't try to auto-install kubectl if it's missing
+#   --no-tools               Don't try to auto-install kubectl/trivy if missing
 #
 # kubectl is installed automatically when missing (Homebrew on macOS, or the
-# official release binary on Linux). The Helm view reads releases via the
-# Kubernetes API, so the helm CLI is not required.
+# official release binary on Linux). trivy is also installed when missing — it
+# powers the Security Center's built-in image scan (optional; the app can also
+# download it on demand). The Helm view reads releases via the Kubernetes API,
+# so the helm CLI is not required.
 #
 # The app reads your local kubeconfig (default ~/.kube/config, or $KUBECONFIG).
 #
@@ -131,6 +133,31 @@ install_kubectl() {
   fi
 }
 
+# trivy powers the Security Center's built-in image scan (github.com/aquasecurity/trivy).
+install_trivy() {
+  local dir target
+  info "Attempting to install trivy"
+
+  if command -v brew >/dev/null 2>&1; then
+    brew install trivy && return 0
+  fi
+
+  dir="$(bin_install_dir)"
+  target="${dir#sudo:}"
+  # The official installer picks the right OS/arch and drops the binary in -b <dir>.
+  if [ "$target" != "$dir" ]; then
+    local tmpd; tmpd="$(mktemp -d)"
+    curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+      | sh -s -- -b "$tmpd" >/dev/null 2>&1 || { err "trivy install failed."; rm -rf "$tmpd"; return 1; }
+    sudo mv "$tmpd/trivy" "$target/trivy"
+    rm -rf "$tmpd"
+  else
+    curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+      | sh -s -- -b "$target" >/dev/null 2>&1 || { err "trivy install failed."; return 1; }
+    case ":$PATH:" in *":$target:"*) ;; *) warn "Add $target to your PATH to use trivy." ;; esac
+  fi
+}
+
 # ------------------------------------------------------------------
 # macOS quarantine cleanup
 # ------------------------------------------------------------------
@@ -197,6 +224,25 @@ check_prereqs() {
     fi
   else
     ok "kubectl present"
+  fi
+
+  # trivy is optional — it powers the Security Center's built-in image scan. If
+  # missing we try to install it, but never fail the run: the app can also
+  # download trivy on demand, and the Security Center works via the Trivy
+  # Operator regardless.
+  if ! command -v trivy >/dev/null 2>&1; then
+    if [ "$NO_TOOLS" -eq 1 ]; then
+      warn "trivy not found — the Security Center will download it on demand when you scan."
+    else
+      warn "trivy not found — attempting to install it (used by the Security Center scan)."
+      if install_trivy && command -v trivy >/dev/null 2>&1; then
+        ok "trivy installed ($(command -v trivy))"
+      else
+        warn "Could not install trivy; the Security Center will download it on demand instead."
+      fi
+    fi
+  else
+    ok "trivy present ($(trivy --version 2>/dev/null | head -1))"
   fi
 
   # kubeconfig sanity (non-fatal — the UI also has a path prompt)
