@@ -7,7 +7,7 @@
 // Writes the version from ./VERSION into every package.json that needs it.
 // The UI reads it from client/package.json (via Vite) and the server exposes
 // it at /api/version, so this one file drives the version everywhere.
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 
@@ -45,4 +45,22 @@ for (const rel of targets) {
     changed++;
   }
 }
+
+// Keep the lockfiles' own version field in sync too (both the top-level and the
+// root package entry, packages['']). Only that field is touched — the resolved
+// dependency tree is left exactly as-is, so this never changes installs.
+for (const rel of ['package-lock.json', 'client/package-lock.json']) {
+  const file = path.join(repo, rel);
+  if (!existsSync(file)) continue;
+  const lock = JSON.parse(readFileSync(file, 'utf8'));
+  let touched = false;
+  if (lock.version !== version) { lock.version = version; touched = true; }
+  if (lock.packages?.[''] && lock.packages[''].version !== version) { lock.packages[''].version = version; touched = true; }
+  if (touched) {
+    writeFileSync(file, JSON.stringify(lock, null, 2) + '\n');
+    console.log(`✓ ${rel} → ${version}`);
+    changed++;
+  }
+}
+
 console.log(changed ? `Synced ${changed} file(s) to ${version}.` : `Already at ${version}.`);
