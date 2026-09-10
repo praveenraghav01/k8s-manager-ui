@@ -143,13 +143,18 @@
 
   /* ---------- Docs layout: sticky sidebar + content ---------- */
   .docs-layout { max-width: 1024px; margin: 0 auto; padding: 32px 22px 96px; display: grid; grid-template-columns: 210px 1fr; gap: 52px; align-items: start; }
-  .docs-side { position: sticky; top: 72px; }
+  .docs-side { position: sticky; top: 72px; max-height: calc(100vh - 88px); overflow-y: auto; padding-right: 6px; }
+  .docs-side::-webkit-scrollbar { width: 6px; }
+  .docs-side::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
   .docs-side .side-title { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-mute); margin: 0 0 12px 12px; }
+  .docs-side .side-group { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--text-mute); margin: 22px 0 6px 12px; }
+  .docs-side .side-group:first-child { margin-top: 0; }
   .docs-side nav { display: block; height: auto; }
-  .docs-side a { display: block; color: var(--text-dim); font-size: 14px; padding: 7px 12px; border-radius: 8px; border-left: 2px solid transparent; transition: color .15s, background .15s; }
+  .docs-side a { display: block; color: var(--text-dim); font-size: 13.5px; padding: 6px 12px; border-radius: 8px; border-left: 2px solid transparent; transition: color .15s, background .15s; }
   .docs-side a:hover { color: var(--text); background: var(--bg-2); text-decoration: none; }
-  .docs-side a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 500; }
-  .docs-side a.sub { padding-left: 26px; font-size: 13px; }
+  .docs-side a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 500; background: color-mix(in srgb, var(--accent) 7%, transparent); }
+  .docs-side a.sub { padding-left: 26px; font-size: 12.5px; }
+  .docs-side .side-ext { margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--border); }
 
   .docs-content { min-width: 0; max-width: 720px; }
   .docs-content article { scroll-margin-top: 64px; }
@@ -248,26 +253,112 @@
 <section class="docs-hero">
   <div class="wrap">
     <div class="eyebrow">Documentation</div>
-    <h1>Connect your clusters</h1>
-    <p>k8sight imports clusters straight from your cloud account — no <code>aws</code>, <code>az</code>, or <code>gcloud</code> CLI required. Pick your provider below.</p>
+    <h1>k8sight docs</h1>
+    <p>A beautiful, native Kubernetes UI for your clusters — installed in seconds, no CLI required. Everything you need to install it, connect your clusters, and get productive.</p>
   </div>
 </section>
 
 <div class="docs-layout">
   <!-- Sticky sidebar TOC -->
   <aside class="docs-side">
-    <div class="side-title">On this page</div>
+    <div class="side-group">Getting started</div>
+    <nav>
+      <a href="#overview" data-sect>Overview</a>
+      <a href="#install" data-sect>Install</a>
+      <a href="#run" data-sect>Running k8sight</a>
+    </nav>
+    <div class="side-group">Connect clusters</div>
     <nav>
       <a href="#aws" data-sect>AWS EKS</a>
       <a href="#azure" data-sect>Azure AKS</a>
       <a href="#gke" data-sect>Google GKE</a>
+      <a href="#local" data-sect>Local &amp; other</a>
       <a href="#gke-setup" data-sect class="sub">GKE OAuth setup</a>
-      <a href="privacy.html">Privacy Policy</a>
-      <a href="terms.html">Terms of Service</a>
     </nav>
+    <div class="side-group">Using k8sight</div>
+    <nav>
+      <a href="#workloads" data-sect>Overview &amp; workloads</a>
+      <a href="#topology" data-sect>Topology</a>
+      <a href="#argocd" data-sect>ArgoCD</a>
+      <a href="#logs-shell" data-sect>Logs, shell &amp; forward</a>
+      <a href="#edit" data-sect>Edit &amp; apply</a>
+    </nav>
+    <div class="side-group">AI</div>
+    <nav>
+      <a href="#assistant" data-sect>Built-in assistant</a>
+      <a href="#agents" data-sect>Coding agents</a>
+      <a href="#mcp" data-sect>MCP server</a>
+    </nav>
+    <div class="side-group">Reference</div>
+    <nav>
+      <a href="#security" data-sect>Security</a>
+      <a href="#config" data-sect>Configuration</a>
+      <a href="#troubleshooting" data-sect>Troubleshooting</a>
+    </nav>
+    <div class="side-ext">
+      <a href="index.html">← Back to home</a>
+      <a href="https://github.com/praveenraghav01/k8sight" target="_blank" rel="noopener">GitHub ↗</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+    </div>
   </aside>
 
   <div class="docs-content">
+    <!-- ============ Overview ============ -->
+    <article id="overview">
+      <h2>Overview</h2>
+      <div class="tagline">A native desktop &amp; web UI for Kubernetes — no CLI required.</div>
+      <p><strong>k8sight</strong> is a beautiful, fast Kubernetes management app: a native desktop build for <strong>macOS, Windows and Linux</strong>, plus a Docker image you can run anywhere. It reads your kubeconfig and gives you a live dashboard, resource browsing and editing, topology, logs, an in-pod terminal, ArgoCD, and one-click cloud onboarding — all without leaving the app.</p>
+      <h3>Highlights</h3>
+      <ul>
+        <li><strong>One-click cloud clusters</strong> — import AWS EKS, Azure AKS and Google GKE straight from your account, with <strong>no <code>aws</code>/<code>az</code>/<code>gcloud</code> CLI required</strong>, at import <em>or</em> runtime.</li>
+        <li><strong>Live cluster overview</strong> — node/pod health, workload charts, capacity, and per-container status.</li>
+        <li><strong>Full resource management</strong> — browse, search, edit YAML, scale, restart and delete across all common kinds, with cross-links (namespace → node → pod → owner).</li>
+        <li><strong>Topology, ArgoCD, Helm, Custom Resources</strong> — interactive graphs and GitOps views.</li>
+        <li><strong>Logs, in-pod shell, port-forward</strong> — a real TTY over WebSocket, a pro log viewer, and one-click port forwarding.</li>
+        <li><strong>Bring your own AI</strong> — a built-in read-only assistant (any OpenAI-compatible LLM), docked coding agents (Claude Code, Copilot, Gemini, Codex, opencode), and an MCP server so agents can drive the cluster.</li>
+        <li><strong>Command palette (⌘K)</strong>, light/dark themes, and a native title bar.</li>
+      </ul>
+      <div class="callout tip">
+        <span class="cico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span>
+        <p>New here? <a href="#install">Install k8sight</a>, then jump to your cloud: <a href="#aws">AWS</a>, <a href="#azure">Azure</a> or <a href="#gke">GKE</a>. For local clusters (Docker Desktop, kind, minikube), see <a href="#local">Local &amp; other</a>.</p>
+      </div>
+    </article>
+
+    <!-- ============ Install ============ -->
+    <article id="install">
+      <h2>Install</h2>
+      <div class="tagline">Desktop app, Docker, or run from source.</div>
+      <h3>Desktop app (recommended)</h3>
+      <p>Download the build for your OS from the <a href="index.html#download">downloads section</a> or the <a href="https://github.com/praveenraghav01/k8sight/releases" target="_blank" rel="noopener">GitHub releases</a> page — macOS (Apple Silicon &amp; Intel), Windows and Linux. It bundles everything it needs; just open it and it reads your <code>~/.kube/config</code>.</p>
+      <h3>Docker</h3>
+      <p>Run the published image and mount your kubeconfig. Publishing to <code>127.0.0.1</code> keeps the API off your network (see <a href="#security">Security</a>):</p>
+      <pre><code>docker run --rm -p 127.0.0.1:8080:3001 \
+  -v "$HOME/.kube:/home/node/.kube:ro" \
+  praveenraghav/k8s-manager-ui:latest</code></pre>
+      <p>Then open <a href="http://localhost:8080" target="_blank" rel="noopener">http://localhost:8080</a>.</p>
+      <h3>From source</h3>
+      <pre><code>git clone https://github.com/praveenraghav01/k8sight
+cd k8sight
+npm install &amp;&amp; (cd client &amp;&amp; npm install)
+npm run build
+npm start          # http://localhost:3001</code></pre>
+      <p>Prerequisites: <strong>Node 18+</strong>. A local <code>kubectl</code>/<code>helm</code> is optional — used only for a few features (Helm, CRDs, ArgoCD, the in-pod shell); core browsing talks to the API server directly.</p>
+    </article>
+
+    <!-- ============ Running ============ -->
+    <article id="run">
+      <h2>Running k8sight</h2>
+      <div class="tagline">Desktop, single-port web server, or Docker.</div>
+      <ul>
+        <li><strong>Desktop app</strong> — launch it like any app; it runs the backend internally and serves the UI. Best for local clusters that listen on <code>127.0.0.1</code>.</li>
+        <li><strong>Web (single port)</strong> — <code>npm start</code> serves the built UI + API on <strong>http://localhost:3001</strong>.</li>
+        <li><strong>Dev (hot reload)</strong> — <code>npm run dev</code> runs the API on 3001 and Vite on <strong>3000</strong> (which proxies <code>/api</code> and <code>/ws</code>).</li>
+        <li><strong>Docker</strong> — see <a href="#install">Install</a>; the image bundles Node, <code>kubectl</code> and <code>kubelogin</code>.</li>
+      </ul>
+      <p>k8sight reads the kubeconfig at <code>KUBECONFIG</code> or <code>~/.kube/config</code>, and you switch the active cluster from the context picker, the ⌘K palette, or a pinned rail. By default the backend binds <strong>loopback only</strong> — see <a href="#security">Security</a>.</p>
+    </article>
+
     <!-- ============ AWS EKS ============ -->
     <article id="aws">
       <div class="prov-head">
@@ -469,6 +560,22 @@
       </ul>
     </article>
 
+    <!-- ============ Local & other ============ -->
+    <article id="local">
+      <h2>Local &amp; other clusters</h2>
+      <div class="tagline">Any kubeconfig context works — Docker Desktop, kind, minikube, on-prem.</div>
+      <p>k8sight uses your existing kubeconfig, so <strong>any context already in <code>~/.kube/config</code> just shows up</strong> — no import step. Switch between them from the context picker or the ⌘K palette. Clusters that authenticate with a client certificate or a static token need no extra tooling; ones that use an exec credential plugin (OIDC/<code>kubelogin</code>, cloud CLIs) need that helper on your <code>PATH</code>.</p>
+      <h3>Local clusters in Docker</h3>
+      <p>Local clusters (Docker Desktop, kind, minikube) listen on <code>127.0.0.1</code>, which <em>inside a container</em> points at the container itself — so the config loads but the connection fails. Either use the <strong>native desktop app</strong> / <code>npm start</code> (simplest), or reach the host from the container:</p>
+      <pre><code>docker run --rm -p 127.0.0.1:8080:3001 \
+  --add-host=host.docker.internal:host-gateway \
+  -v "$HOME/.kube:/home/node/.kube:ro" \
+  praveenraghav/k8s-manager-ui:latest</code></pre>
+      <p>…and set the context's <code>server:</code> to <code>https://host.docker.internal:&lt;port&gt;</code> with <code>insecure-skip-tls-verify: true</code>.</p>
+      <h3>OIDC / kubelogin clusters</h3>
+      <p>Contexts that authenticate with <code>kubectl oidc-login</code> (kubelogin) work — the Docker image bundles the plugin. Since a container can't open a browser, log in on the host first (<code>kubectl get nodes</code> triggers the browser login and caches a token under <code>~/.kube/cache/oidc-login/</code>), then mount <code>~/.kube</code> <strong>read-write</strong> so kubelogin can refresh from inside the container.</p>
+    </article>
+
     <!-- ============ GKE OAuth setup (self-builders) ============ -->
     <article id="gke-setup">
       <h2>GKE browser sign-in — one-time OAuth setup</h2>
@@ -517,6 +624,133 @@
       <pre><code>export GOOGLE_CLIENT_ID='1234567890-abc.apps.googleusercontent.com'
 export GOOGLE_CLIENT_SECRET='GOCSPX-...'</code></pre>
       <p>Restart k8sight after building, then use <strong>Preferences → Cloud Integrations → Add GKE clusters</strong> as described above.</p>
+    </article>
+
+    <!-- ============ Overview & workloads ============ -->
+    <article id="workloads">
+      <h2>Overview &amp; workloads</h2>
+      <div class="tagline">A live dashboard and every common resource kind.</div>
+      <p>The <strong>Overview</strong> is a live dashboard — node/pod health donuts, workload-by-type charts, and cluster capacity. From the sidebar you browse every common kind: <strong>Pods, Deployments, StatefulSets, DaemonSets, ReplicaSets, Jobs, CronJobs, Services, Ingresses, ConfigMaps, Secrets, PVs/PVCs, StorageClasses</strong>, RBAC, and more.</p>
+      <ul>
+        <li><strong>Live metrics</strong> — per-pod CPU/memory from metrics-server, with per-container status boxes.</li>
+        <li><strong>Search &amp; filter</strong> by name or namespace; pick one or many namespaces.</li>
+        <li><strong>Cross-links</strong> — jump namespace → node → pod → owner in a click.</li>
+        <li><strong>Detail drawer</strong> — a slide-in panel with metadata, live metric graphs, conditions, containers, and readable annotations.</li>
+        <li><strong>Right-click / row actions</strong> — Details, Edit YAML, Scale, Rollout restart, Delete, and <strong>Ask AI</strong>.</li>
+      </ul>
+      <p><strong>Nodes</strong> shows per-node CPU/memory graphs with capacity thresholds and the pods on each node; <strong>Namespaces</strong> is a searchable list that filters workloads; <strong>Helm</strong> lists releases with values and the rendered manifest; <strong>Custom Resources</strong> is a lazy tree (group → kind → instance) with YAML.</p>
+    </article>
+
+    <!-- ============ Topology ============ -->
+    <article id="topology">
+      <h2>Topology</h2>
+      <div class="tagline">An interactive map of how your workloads connect.</div>
+      <p>The <strong>Topology</strong> view is a pan/zoom graph of <strong>Deployment → ReplicaSet → Pod → Service</strong> relationships, colour-coded by health. Use it to see at a glance what owns what and where traffic flows, then click any node to open its detail drawer.</p>
+    </article>
+
+    <!-- ============ ArgoCD ============ -->
+    <article id="argocd">
+      <h2>ArgoCD</h2>
+      <div class="tagline">A GitOps dashboard — auto-detected when ArgoCD is installed.</div>
+      <p>When the ArgoCD CRDs are present, k8sight surfaces a full <strong>GitOps dashboard</strong>: a fleet-health status bar, summary cards, a "Needs attention" panel, and recent activity — plus <strong>Applications, View, ApplicationSets, Projects</strong> and <strong>Settings → Repositories / Clusters</strong>, with an "Open Argo CD UI" link.</p>
+      <h3>The View tab</h3>
+      <p>A Topology-style, pan/zoom <strong>resource graph</strong>: pick a namespace + application to see the Application and all of its managed resources as an interactive tree (Deployment → ReplicaSet → Pod inferred), colour-coded by sync/health — one screen for tracking a single app.</p>
+      <h3>Sync, refresh &amp; more</h3>
+      <ul>
+        <li><strong>Sync / Refresh dialog</strong> with per-app checkboxes, all / out-of-sync / none presets, prune, and normal/hard refresh.</li>
+        <li>Application drawer: properties, source (clickable repo), destination, sync policy, last operation, resource tree, deploy history and events.</li>
+        <li>Actions: <strong>Sync</strong> (prune/dry-run/force/replace, two-step confirm), <strong>Refresh</strong> (normal/hard), roll back to a revision, and <strong>Delete</strong> (cascade or orphan, two-step confirm).</li>
+        <li><strong>Ask AI → Summarize</strong> — hand an Application to the built-in assistant to analyze its sync/health and suggest fixes.</li>
+      </ul>
+    </article>
+
+    <!-- ============ Logs, shell & forward ============ -->
+    <article id="logs-shell">
+      <h2>Logs, shell &amp; port-forward</h2>
+      <div class="tagline">A pro log viewer, a real in-pod terminal, and one-click forwarding.</div>
+      <ul>
+        <li><strong>Log viewer</strong> — timestamps, per-container or merged "all containers" streams, case-sensitive/regex search with match navigation, line wrap, tail size, and one-click download.</li>
+        <li><strong>Interactive shell</strong> — a real TTY into pods (<code>kubectl exec -it</code> streamed over WebSocket to xterm.js).</li>
+        <li><strong>Port forwarding</strong> — forward a Service port to <code>localhost</code> (choose a port or get a random one).</li>
+        <li><strong>Multi-tab bottom panel</strong> — logs / terminal / YAML tabs open side by side.</li>
+      </ul>
+    </article>
+
+    <!-- ============ Edit & apply ============ -->
+    <article id="edit">
+      <h2>Edit &amp; apply</h2>
+      <div class="tagline">Edit any resource's YAML and apply it, with guarded actions.</div>
+      <p>Open any resource's YAML, edit it, and apply — with syntax highlighting and validation. Per-row and drawer actions cover <strong>Scale</strong>, <strong>Rollout restart</strong>, and <strong>Delete</strong>, and destructive actions use a two-step confirm. Changes always target the <strong>currently selected context</strong>.</p>
+    </article>
+
+    <!-- ============ Built-in assistant ============ -->
+    <article id="assistant">
+      <h2>Built-in AI assistant</h2>
+      <div class="tagline">A read-only, tool-using debugging session — bring your own LLM.</div>
+      <p>The built-in assistant is a <strong>read-only</strong>, tool-using session over live cluster data: it can read logs, events and resource specs to help debug, but it can't change anything. Connect <strong>any OpenAI-compatible endpoint</strong> (TrueFoundry, OpenAI, Azure OpenAI, LiteLLM, …) in <strong>Preferences → AI</strong> or via env vars. <strong>Secrets are redacted</strong> before anything leaves the app.</p>
+      <p>Right-click a resource (or use the drawer) → <strong>Ask AI</strong> to hand it to the assistant for a summary, event/log analysis, or fix suggestions.</p>
+    </article>
+
+    <!-- ============ Coding agents ============ -->
+    <article id="agents">
+      <h2>Docked coding agents</h2>
+      <div class="tagline">Run your installed CLI agent beside the pod terminal.</div>
+      <p>k8sight detects <strong>Claude Code, GitHub Copilot CLI, Gemini CLI, Codex and opencode</strong> on your <code>PATH</code> and opens the one you pick in a panel beside the pod terminal — with the app's current cluster context loaded, so the agent can operate on the cluster you're viewing. Choose your agent under <strong>Preferences → External Tools</strong> (or a custom command). "Ask AI" actions route to whichever agent you've selected.</p>
+    </article>
+
+    <!-- ============ MCP ============ -->
+    <article id="mcp">
+      <h2>MCP server</h2>
+      <div class="tagline">Let any MCP-compatible agent drive your connected cluster.</div>
+      <p>k8sight is also an <strong>MCP server</strong>: it exposes its Kubernetes capabilities as tools so any MCP client (Claude Code, Claude Desktop, Cursor, …) can operate the cluster it's connected to — same kubeconfig, same selected context. It's served over <strong>Streamable HTTP</strong> at <code>/mcp</code> and over <strong>stdio</strong>.</p>
+      <p>Add it to Claude Code:</p>
+      <pre><code>claude mcp add --transport http k8sight http://localhost:3001/mcp</code></pre>
+      <p><strong>Read tools are always available; write/destructive tools are off by default</strong> — enable them with <code>MCP_ALLOW_WRITE=1</code> (or the Preferences toggle) only when you want an agent to be able to mutate the cluster.</p>
+    </article>
+
+    <!-- ============ Security ============ -->
+    <article id="security">
+      <h2>Security</h2>
+      <div class="tagline">The local API is locked to your machine.</div>
+      <p>The API and the <code>/ws/exec</code> shell carry your kubeconfig's full read/write access with no per-request auth, so the backend is locked down to the local machine:</p>
+      <ul>
+        <li><strong>Loopback by default</strong> — it binds <code>127.0.0.1</code>, so other hosts on your network can't reach it. Set <code>HOST=0.0.0.0</code> to expose it deliberately (the Docker image does this so its published port works).</li>
+        <li><strong>Same-origin only</strong> — a browser page on another origin can't drive the API or the exec WebSocket (a strict origin check, not permissive CORS). Non-browser MCP clients are unaffected.</li>
+        <li><strong>When exposing it</strong> (Docker, or <code>HOST=0.0.0.0</code>), publish to loopback and/or put it behind an authenticating proxy — e.g. <code>-p 127.0.0.1:8080:3001</code>. Add proxy origins via <code>ALLOWED_ORIGINS</code>.</li>
+      </ul>
+      <div class="callout">
+        <span class="cico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></span>
+        <p>Treat the app like <code>kubectl</code> on your laptop: anyone who can reach its port can act as you on the cluster. Don't expose it to untrusted networks without a proxy.</p>
+      </div>
+    </article>
+
+    <!-- ============ Configuration ============ -->
+    <article id="config">
+      <h2>Configuration</h2>
+      <div class="tagline">Environment variables.</div>
+      <ul>
+        <li><code>KUBECONFIG</code> — path to kubeconfig (default <code>~/.kube/config</code>).</li>
+        <li><code>HOST</code> — interface the backend binds (default <code>127.0.0.1</code>; the Docker image sets <code>0.0.0.0</code>).</li>
+        <li><code>ALLOWED_ORIGINS</code> — extra browser origins allowed to call <code>/api</code> and <code>/mcp</code>, comma-separated (for a reverse proxy).</li>
+        <li><code>LLM_BASE_URL</code> / <code>LLM_API_KEY</code> / <code>LLM_MODEL</code> — connect the built-in assistant to an OpenAI-compatible endpoint (also settable in Preferences → AI).</li>
+        <li><code>MCP_ALLOW_WRITE</code> — enable MCP write/destructive tools (default <code>0</code>, read-only).</li>
+        <li><code>MCP_API_BASE</code> — API base the stdio MCP bridge targets (default <code>http://127.0.0.1:3001</code>).</li>
+      </ul>
+      <p>The backend listens on port <strong>3001</strong>; map it to any host port with Docker (<code>-p &lt;host&gt;:3001</code>).</p>
+    </article>
+
+    <!-- ============ Troubleshooting ============ -->
+    <article id="troubleshooting">
+      <h2>Troubleshooting</h2>
+      <div class="tagline">Common connection issues.</div>
+      <ul>
+        <li><strong>"Could not connect to the cluster"</strong> — the modal names the cause and offers a one-click fix. For an expired cloud sign-in, use the <strong>Sign in</strong> button (or the copyable command) and retry; k8sight auto-refreshes and reconnects the selected context when it can.</li>
+        <li><strong>EKS: imports but everything is <code>forbidden</code></strong> — your IAM principal isn't mapped to Kubernetes RBAC. Add an EKS access entry or an <code>aws-auth</code> mapping — see <a href="#aws">AWS EKS</a>.</li>
+        <li><strong>AKS: exec error after import</strong> — an AAD cluster needing <code>kubelogin</code>; clusters added <em>through k8sight's browser flow</em> need no <code>kubelogin</code>. See <a href="#azure">Azure AKS</a>.</li>
+        <li><strong>Local cluster loads but won't connect (in Docker)</strong> — the API server is on <code>127.0.0.1</code>; reach the host or use the desktop app. See <a href="#local">Local &amp; other</a>.</li>
+        <li><strong>kubectl version-skew warning</strong> — that's your local <code>kubectl</code> vs the cluster, not k8sight. Install a kubectl within one minor of the cluster to silence it.</li>
+      </ul>
+      <p>Still stuck? Open an issue on <a href="https://github.com/praveenraghav01/k8sight/issues" target="_blank" rel="noopener">GitHub</a>.</p>
     </article>
   </div>
 </div>
