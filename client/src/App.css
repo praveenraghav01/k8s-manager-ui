@@ -28,6 +28,7 @@
   --accent: #e6e6ea;
   --accent-strong: #45454d;
   --accent-tint: rgba(255, 255, 255, 0.10);
+  --link: #58a6ff; /* always-blue link color (accent is monochrome in dark) */
   --accent-tint-strong: rgba(255, 255, 255, 0.16);
 
   --green: #3fb950;
@@ -79,6 +80,7 @@
   --text-muted: #818b98;
 
   --accent: #0969da;
+  --link: #0969da;
   --accent-strong: #0969da;
   --accent-tint: rgba(9, 105, 218, 0.10);
   --accent-tint-strong: rgba(9, 105, 218, 0.16);
@@ -3531,6 +3533,25 @@ button:active:not(:disabled) { transform: scale(0.97); }
 .sec-donut-legend { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .sec-legend { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
 .sec-legend i { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+.sec-legend.clickable { cursor: pointer; border-radius: 4px; padding: 1px 4px; margin: -1px -4px; transition: background .12s, color .12s; }
+.sec-legend.clickable:hover { background: var(--bg-surface-2); color: var(--text); }
+.sec-legend.clickable.active { color: var(--text); font-weight: 600; }
+
+/* Clickable severity filter pills in the image drawer */
+.sec-sevfilter { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 10px; }
+.sec-sevfilter-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; color: var(--text-secondary);
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: 999px; padding: 3px 9px 3px 8px; cursor: pointer;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.sec-sevfilter-pill i { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.sec-sevfilter-pill b { font-weight: 700; color: var(--text); }
+.sec-sevfilter-pill:hover { border-color: var(--sev); color: var(--text); }
+.sec-sevfilter-pill.active { background: color-mix(in srgb, var(--sev) 16%, transparent); border-color: var(--sev); color: var(--text); }
+.sec-sevfilter-clear { background: none; border: none; color: var(--link); font-size: 11.5px; cursor: pointer; padding: 3px 4px; }
+.sec-sevfilter-clear:hover { text-decoration: underline; }
 
 .sec-section-title { font-size: 14px; font-weight: 650; color: var(--text); margin: 6px 0 12px; }
 .sec-pill { font-size: 10.5px; font-weight: 700; letter-spacing: .03em; padding: 2px 7px; border-radius: 5px; flex: none; }
@@ -3549,7 +3570,8 @@ button.sec-tr.row.sel { background: var(--accent-tint); }
 .sec-kind { color: var(--accent); font-size: 11.5px; }
 .sec-crit { color: var(--red); font-weight: 700; }
 .sec-strong { color: var(--text); font-weight: 600; }
-.sec-cve { color: var(--accent); }
+.sec-cve { color: var(--link); }
+.sec-cve:hover { text-decoration: underline; }
 .sec-mono { font-family: var(--mono); font-size: 11.5px; color: var(--text); }
 .sec-break { word-break: break-all; }
 .sec-ellip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -3573,8 +3595,13 @@ button.sec-tr.row.sel { background: var(--accent-tint); }
 .sec-prop { display: grid; grid-template-columns: 130px 1fr; gap: 12px; padding: 7px 0; font-size: 12.5px; border-bottom: 1px solid var(--border-subtle); }
 .sec-prop-k { color: var(--text-muted); }
 .sec-prop-v { color: var(--text); min-width: 0; word-break: break-word; }
-.sec-prop-v a { color: var(--accent); cursor: pointer; }
+.sec-prop-v a { color: var(--link); cursor: pointer; }
+.sec-prop-v a:hover { text-decoration: underline; }
 .sec-podlinks { display: flex; flex-direction: column; gap: 3px; }
+.sec-podlink { display: inline-flex; align-items: center; gap: 3px; }
+.sec-podlink a { color: var(--link); cursor: pointer; }
+.sec-podlink a:hover { text-decoration: underline; }
+.sec-podlink-sep { color: var(--text-secondary); }
 .sec-vitem { border-top: 1px solid var(--border-subtle); }
 .sec-vitem:first-of-type { border-top: none; }
 .sec-vdesc { font-size: 11.5px; color: var(--text-muted); line-height: 1.5; padding: 0 14px 9px; margin-top: -4px; }

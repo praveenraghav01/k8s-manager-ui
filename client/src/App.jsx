@@ -421,6 +421,14 @@ function App() {
       setSelectedNamespaces([namespace || 'all']);
       setResourceType(type);
       setFocusResource({ type, namespace, name });
+    },
+    // Open the Pods view scoped to a workload. We rarely have the exact pod name
+    // (e.g. Trivy attributes CVEs to the owning ReplicaSet), so filter the pod
+    // list by the owner name — pods are named `<owner>-<hash>` and match.
+    toPods: (namespace, nameFilter) => {
+      setSelectedNamespaces([namespace || 'all']);
+      setResourceType('pod');
+      setSearchQuery(nameFilter || '');
     }
   };
 

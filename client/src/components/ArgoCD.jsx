@@ -5,6 +5,7 @@ import Loader from './Loader';
 import ContextMenu from './ContextMenu';
 import { useToast } from './Toast';
 import { askLabel } from '../aiConfig';
+import useClickOutside from '../hooks/useClickOutside';
 
 // ArgoCD dashboard — auto-detected when the applications.argoproj.io CRD exists.
 // Sub-views: Dashboard, Applications, Application Sets, Projects. Applications
@@ -58,6 +59,8 @@ export default function ArgoCD({ refreshSignal = 0, view, onViewChange }) {
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [drawerTab, setDrawerTab] = useState('summary');
+  const argoDrawerRef = useRef(null);
+  useClickOutside(argoDrawerRef, () => setSelected(null), !!selected && tab !== 'view');
 
   const [menu, setMenu] = useState(null);      // { x, y, app }
   const [syncDialog, setSyncDialog] = useState(null); // { app, prune, dryRun, applyOnly, force, replace, busy }
@@ -550,7 +553,7 @@ export default function ArgoCD({ refreshSignal = 0, view, onViewChange }) {
 
       {/* -------- application detail drawer (hidden on the graph View tab) -------- */}
       {selected && tab !== 'view' && (
-        <div className="resource-drawer argo-drawer">
+        <div className="resource-drawer argo-drawer" ref={argoDrawerRef}>
           <div className="drawer-header">
             <div className="drawer-title">
               <div className="drawer-title-icon blue"><Icon name="argocd" size={18} /></div>

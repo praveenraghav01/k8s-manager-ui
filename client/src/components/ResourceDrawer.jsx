@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Icon from './Icons';
 import MetricsChart from './MetricsChart';
 import Loader from './Loader';
 import ServicePortForward from './ServicePortForward';
+import useClickOutside from '../hooks/useClickOutside';
 
 const fmtCpu = (m) => (m >= 1000 ? `${(m / 1000).toFixed(2)} cores` : `${Math.round(m)}m`);
 const fmtMem = (b) => {
@@ -160,6 +161,8 @@ export default function ResourceDrawer({ resource, namespace, resourceType, onCl
   const [metricsNow, setMetricsNow] = useState(null);
   const [metricsAvail, setMetricsAvail] = useState(true);
   const [revealSecrets, setRevealSecrets] = useState(false);
+  const drawerRef = useRef(null);
+  useClickOutside(drawerRef, onClose);
 
   const isPodKind = resourceType === 'pod' || (resource?.kind || '').toLowerCase() === 'pod';
 
@@ -250,7 +253,7 @@ export default function ResourceDrawer({ resource, namespace, resourceType, onCl
   (spec.imagePullSecrets || []).forEach(s => s.name && secretNames.push(s.name));
 
   return (
-    <div className="resource-drawer">
+    <div className="resource-drawer" ref={drawerRef}>
       <div className="drawer-header">
         <div className="drawer-title">
           <div className={`drawer-title-icon ${statusClass(resource.status) || 'blue'}`}>

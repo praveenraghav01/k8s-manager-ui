@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
 import Icon from './Icons';
 import Loader from './Loader';
+import useClickOutside from '../hooks/useClickOutside';
+import { kindType, KIND_TYPE } from '../lib/kind';
 
 // Security Center — image CVEs, resource best-practice (config-audit) and RBAC
 // risk, read from the Trivy Operator's report CRDs. Overview / Images /
@@ -10,6 +12,7 @@ import Loader from './Loader';
 
 const SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'UNKNOWN'];
 const SEV_COLOR = { CRITICAL: '#e5484d', HIGH: '#f5a623', MEDIUM: '#e3b341', LOW: '#4c9be8', UNKNOWN: '#8b949e' };
+
 const sevTotal = (s = {}) => SEVERITIES.reduce((n, k) => n + (s[k] || 0), 0);
 const SevPill = ({ s }) => <span className="sec-pill" style={{ color: SEV_COLOR[s], background: `${SEV_COLOR[s]}22` }}>{s}</span>;
 
@@ -23,10 +26,11 @@ const rel = (iso) => {
 };
 
 /* ---------- Donut ---------- */
-function Donut({ title, segments, size = 130 }) {
+function Donut({ title, segments, size = 130, onSegmentClick, activeKey }) {
   const total = segments.reduce((n, s) => n + s.value, 0);
   const sw = 15, cr = (size - sw) / 2, circ = 2 * Math.PI * cr;
   let acc = 0;
+  const clickable = !!onSegmentClick;
   return (
     <div className="sec-donut">
       <div className="sec-donut-title">{title}</div>
@@ -35,10 +39,14 @@ function Donut({ title, segments, size = 130 }) {
           <circle cx={size / 2} cy={size / 2} r={cr} fill="none" stroke="var(--bg-surface-2)" strokeWidth={sw} />
           {total > 0 && segments.filter((s) => s.value > 0).map((s, i) => {
             const frac = s.value / total, dash = frac * circ;
+            const dim = activeKey && s.key && activeKey !== s.key;
             const el = (
               <circle key={i} cx={size / 2} cy={size / 2} r={cr} fill="none" stroke={s.color} strokeWidth={sw}
                 strokeDasharray={`${dash} ${circ - dash}`} strokeDashoffset={-acc * circ}
-                transform={`rotate(-90 ${size / 2} ${size / 2})`}>
+                transform={`rotate(-90 ${size / 2} ${size / 2})`}
+                opacity={dim ? 0.28 : 1}
+                style={clickable && s.key ? { cursor: 'pointer' } : undefined}
+                onClick={clickable && s.key ? () => onSegmentClick(s.key) : undefined}>
                 <title>{`${s.label}: ${s.value}`}</title>
               </circle>
             );
@@ -47,9 +55,19 @@ function Donut({ title, segments, size = 130 }) {
           {total === 0 && <text x="50%" y="52%" textAnchor="middle" className="sec-donut-empty">no data</text>}
         </svg>
         <div className="sec-donut-legend">
-          {segments.map((s) => (
-            <span key={s.label} className="sec-legend"><i style={{ background: s.color }} /> {s.label}{s.value ? ` (${s.value})` : ''}</span>
-          ))}
+          {segments.map((s) => {
+            const isClickable = clickable && s.key;
+            const active = activeKey && s.key === activeKey;
+            return (
+              <span
+                key={s.label}
+                className={`sec-legend ${isClickable ? 'clickable' : ''} ${active ? 'active' : ''}`}
+                onClick={isClickable ? () => onSegmentClick(s.key) : undefined}
+              >
+                <i style={{ background: s.color }} /> {s.label}{s.value ? ` (${s.value})` : ''}
+              </span>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -267,7 +285,7 @@ function ChecksView({ data, ns, q, onSelect, selected, label }) {
   if (!rows.length) return <div className="sec-empty"><Icon name="shieldCheck" size={28} /><p>No {label} issues{q ? ' match your search' : ''}.</p></div>;
   return (
     <div className="sec-table">
-      <div className="sec-tr chk sec-th"><span>Name</span><span>Kind</span><span>Namespace</span><span>Issues</span></div>
+      <div className="sec-tr chk sec-th"><span>{label === 'role' ? 'Role Name' : 'Name'}</span><span>Kind</span><span>Namespace</span><span>Vulnerabilities</span></div>
       {rows.map((r, i) => (
         <button key={`${r.kind}/${r.namespace}/${r.name}/${i}`} className={`sec-tr chk row ${selected === r ? 'sel' : ''}`} onClick={() => onSelect(r)}>
           <span className="sec-strong sec-ellip">{r.name}</span>
@@ -290,14 +308,16 @@ const SevMini = ({ summary = {} }) => (
 function Drawer({ detail, onClose, onNavigate }) {
   const isImage = detail.type === 'image';
   const d = detail.data;
+  const drawerRef = useRef(null);
+  useClickOutside(drawerRef, onClose);
   return (
-    <aside className="sec-drawer">
+    <aside className="sec-drawer" ref={drawerRef}>
       <div className="sec-drawer-head">
         <span className="sec-drawer-title">{isImage ? <><span className="sec-kind">OciImage</span> {d.image}</> : <><span className="sec-kind">{d.kind}</span> {d.name}</>}</span>
         <button className="sec-drawer-x" onClick={onClose}><Icon name="close" size={16} /></button>
       </div>
       <div className="sec-drawer-body">
-        {isImage ? <ImageDetail d={d} onNavigate={onNavigate} /> : <ChecksDetail d={d} />}
+        {isImage ? <ImageDetail key={d.image} d={d} onNavigate={onNavigate} /> : <ChecksDetail key={`${d.kind}/${d.namespace}/${d.name}`} d={d} onNavigate={onNavigate} />}
       </div>
     </aside>
   );
@@ -306,28 +326,53 @@ function Drawer({ detail, onClose, onNavigate }) {
 function Prop({ k, children }) { return <div className="sec-prop"><span className="sec-prop-k">{k}</span><span className="sec-prop-v">{children}</span></div>; }
 
 function ImageDetail({ d, onNavigate }) {
+  const [sevFilter, setSevFilter] = useState(null);
   const controlledBy = d.workloads[0];
-  const donutSeg = SEVERITIES.filter((k) => k !== 'UNKNOWN').map((k) => ({ label: k[0] + k.slice(1).toLowerCase(), value: d.summary[k] || 0, color: SEV_COLOR[k] }));
+  const donutSeg = SEVERITIES.filter((k) => k !== 'UNKNOWN').map((k) => ({ key: k, label: k[0] + k.slice(1).toLowerCase(), value: d.summary[k] || 0, color: SEV_COLOR[k] }));
   const worst = SEVERITIES.find((k) => d.summary[k]) || 'LOW';
+  const toggleSev = (k) => setSevFilter((f) => (f === k ? null : k));
+  const shownVulns = sevFilter ? d.vulnerabilities.filter((v) => v.severity === sevFilter) : d.vulnerabilities;
   return (
     <>
       <div className="sec-drawer-section">Properties</div>
       <Prop k="Name"><span className="sec-mono">{d.image}</span></Prop>
       <Prop k="Namespace">{d.namespace ? <a onClick={() => onNavigate?.toNamespace?.(d.namespace)}>{d.namespace}</a> : '—'}</Prop>
-      {controlledBy && <Prop k="Controlled By">{controlledBy.kind} <a onClick={() => onNavigate?.toResource?.({ type: (controlledBy.kind || '').toLowerCase(), namespace: controlledBy.namespace, name: controlledBy.name })}>{controlledBy.name}</a></Prop>}
+      {controlledBy && <Prop k="Controlled By">{controlledBy.kind} <a onClick={() => onNavigate?.toResource?.({ type: kindType(controlledBy.kind), namespace: controlledBy.namespace, name: controlledBy.name })}>{controlledBy.name}</a></Prop>}
       {d.tag && <Prop k="Tag">{d.tag}</Prop>}
       {d.digest && <Prop k="Image Digest"><span className="sec-mono sec-break">{d.digest}</span></Prop>}
       <Prop k="Status">{d.status}</Prop>
       <Prop k="Used By Pods">
         <span className="sec-podlinks">
           {d.workloads.slice(0, 30).map((w, i) => (
-            <a key={i} onClick={() => onNavigate?.toResource?.({ type: (w.kind || '').toLowerCase(), namespace: w.namespace, name: w.name })}>{w.namespace}/{w.name}</a>
+            <span className="sec-podlink" key={i}>
+              <a onClick={() => onNavigate?.toNamespace?.(w.namespace)}>{w.namespace}</a>
+              <span className="sec-podlink-sep">/</span>
+              <a onClick={() => onNavigate?.toPods?.(w.namespace, w.name)}>{w.name}</a>
+            </span>
           ))}
         </span>
       </Prop>
 
       <div className="sec-drawer-section">Vulnerabilities</div>
-      <div className="sec-drawer-donut"><Donut title="" segments={donutSeg} size={120} /></div>
+      <div className="sec-drawer-donut"><Donut title="" segments={donutSeg} size={120} onSegmentClick={toggleSev} activeKey={sevFilter} /></div>
+      <div className="sec-sevfilter">
+        {SEVERITIES.filter((k) => d.summary[k]).map((k) => (
+          <button
+            key={k}
+            className={`sec-sevfilter-pill ${sevFilter === k ? 'active' : ''}`}
+            style={{ '--sev': SEV_COLOR[k] }}
+            onClick={() => toggleSev(k)}
+            title={`Show only ${k[0] + k.slice(1).toLowerCase()} vulnerabilities`}
+          >
+            <i style={{ background: SEV_COLOR[k] }} />
+            {k[0] + k.slice(1).toLowerCase()}
+            <b>{d.summary[k]}</b>
+          </button>
+        ))}
+        {sevFilter && (
+          <button className="sec-sevfilter-clear" onClick={() => setSevFilter(null)}>Clear</button>
+        )}
+      </div>
       <Prop k="Severity"><SevPill s={worst} /></Prop>
       <Prop k="Scanned">{rel(d.scannedAt)}</Prop>
       {d.scanner && <Prop k="Scan Result Source">{d.scanner}</Prop>}
@@ -349,7 +394,7 @@ function ImageDetail({ d, onNavigate }) {
 
       <div className="sec-table" style={{ marginTop: 12 }}>
         <div className="sec-tr vt sec-th"><span>ID</span><span>Severity</span><span>Package</span><span>Fixed in</span><span>Installed</span></div>
-        {d.vulnerabilities.map((v, i) => (
+        {shownVulns.map((v, i) => (
           <div className="sec-vitem" key={v.id + i}>
             <div className="sec-tr vt">
               <span>{v.link ? <a href={v.link} target="_blank" rel="noreferrer" className="sec-cve">{v.id}</a> : v.id}</span>
@@ -366,16 +411,49 @@ function ImageDetail({ d, onNavigate }) {
   );
 }
 
-function ChecksDetail({ d }) {
+function ChecksDetail({ d, onNavigate }) {
+  const [sevFilter, setSevFilter] = useState(null);
+  const summary = d.summary || {};
+  const donutSeg = SEVERITIES.filter((k) => k !== 'UNKNOWN').map((k) => ({ key: k, label: k[0] + k.slice(1).toLowerCase(), value: summary[k] || 0, color: SEV_COLOR[k] }));
+  const worst = SEVERITIES.find((k) => summary[k]) || 'LOW';
+  const navType = KIND_TYPE[d.kind];
+  const toggleSev = (k) => setSevFilter((f) => (f === k ? null : k));
+  const shownChecks = sevFilter ? d.checks.filter((c) => c.severity === sevFilter) : d.checks;
   return (
     <>
       <div className="sec-drawer-section">Properties</div>
+      {d.createdAt && <Prop k="Created">{rel(d.createdAt)}</Prop>}
       <Prop k="Name"><span className="sec-strong">{d.name}</span></Prop>
-      <Prop k="Kind">{d.kind}</Prop>
-      {d.namespace && <Prop k="Namespace">{d.namespace}</Prop>}
-      <div className="sec-drawer-section">Checks ({d.checks.length})</div>
+      <Prop k="Namespace">{d.namespace ? <a onClick={() => onNavigate?.toNamespace?.(d.namespace)}>{d.namespace}</a> : '—'}</Prop>
+      {d.labels ? <Prop k="Labels">{d.labels} Labels</Prop> : null}
+      <Prop k="Controlled By">{d.kind} {navType ? <a onClick={() => onNavigate?.toResource?.({ type: navType, namespace: d.namespace, name: d.name })}>{d.name}</a> : d.name}</Prop>
+      <Prop k="Status">Scanned</Prop>
+
+      <div className="sec-drawer-section">Vulnerabilities</div>
+      <div className="sec-drawer-donut"><Donut title="" segments={donutSeg} size={120} onSegmentClick={toggleSev} activeKey={sevFilter} /></div>
+      <div className="sec-sevfilter">
+        {SEVERITIES.filter((k) => summary[k]).map((k) => (
+          <button
+            key={k}
+            className={`sec-sevfilter-pill ${sevFilter === k ? 'active' : ''}`}
+            style={{ '--sev': SEV_COLOR[k] }}
+            onClick={() => toggleSev(k)}
+            title={`Show only ${k[0] + k.slice(1).toLowerCase()} checks`}
+          >
+            <i style={{ background: SEV_COLOR[k] }} />
+            {k[0] + k.slice(1).toLowerCase()}
+            <b>{summary[k]}</b>
+          </button>
+        ))}
+        {sevFilter && <button className="sec-sevfilter-clear" onClick={() => setSevFilter(null)}>Clear</button>}
+      </div>
+      <Prop k="Severity"><SevPill s={worst} /></Prop>
+      {d.scannedAt && <Prop k="Scanned">{rel(d.scannedAt)}</Prop>}
+      {d.scanner && <Prop k="Scan Result Source">{d.scanner}</Prop>}
+
+      <div className="sec-drawer-section">Checks ({shownChecks.length}{sevFilter ? ` of ${d.checks.length}` : ''})</div>
       <div className="sec-checks">
-        {d.checks.map((c, i) => (
+        {shownChecks.map((c, i) => (
           <div className="sec-checkitem" key={c.id + i}>
             <SevPill s={c.severity} />
             <div className="sec-check-main">
