@@ -172,6 +172,11 @@ async function accessToken() {
 }
 
 async function arm(url, { method = 'GET', body } = {}) {
+  // Only ever call the Azure Resource Manager host. Paginated list calls follow a
+  // `nextLink` taken from ARM responses; pinning the origin stops a malformed or
+  // hostile response from redirecting this bearer-token request to another host
+  // (SSRF / access-token exfiltration).
+  if (new URL(url).origin !== ARM) throw new Error(`Refusing non-ARM request to ${url}`);
   const tk = await accessToken();
   const r = await fetch(url, {
     method,
