@@ -39,6 +39,9 @@ const app = express();
 // with `docker run -p <host>:3001`.
 const PORT = 3001;
 const CLIENT_DIST = path.join(__dirname, 'client', 'dist');
+// CLI-free AKS token helper — app-imported AAD clusters exec this instead of
+// kubelogin, so neither `az` nor `kubelogin` is needed at runtime.
+const AZURE_TOKEN_HELPER = path.join(__dirname, 'azure-token.js');
 
 // Response caching with TTL
 const cache = new Map();
@@ -451,6 +454,31 @@ app.get('/api/azure/clusters', async (req, res) => {
 
 // Merge a fetched kubeconfig (YAML string) into an on-disk kubeconfig object,
 // de-duplicating clusters/users/contexts by name.
+// Rewrite an AAD cluster's kubeconfig user so it authenticates via our bundled
+// azure-token.js (CLI-free) instead of the kubelogin exec that ARM/az returns.
+// Cert-based users (non-AAD / --admin) have no exec and pass through untouched.
+// The well-known AKS AAD server app id is used when the source omits --server-id.
+const AKS_AAD_SERVER_ID = '6dae42f8-4368-4678-94ff-3960e28e3630';
+function nativizeAksExec(kcYaml) {
+  const kc = yaml.load(kcYaml) || {};
+  for (const u of (kc.users || [])) {
+    const exec = u?.user?.exec;
+    if (!exec) continue; // cert-based user — already CLI-free
+    const args = Array.isArray(exec.args) ? exec.args : [];
+    const getArg = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
+    const serverId = getArg('--server-id') || AKS_AAD_SERVER_ID;
+    const tenant = getArg('--tenant-id') || getArg('--tenant') || azure.getTenant() || 'organizations';
+    u.user.exec = {
+      apiVersion: 'client.authentication.k8s.io/v1beta1',
+      command: process.execPath, // node
+      args: [AZURE_TOKEN_HELPER, '--server-id', serverId, '--tenant', tenant],
+      interactiveMode: 'Never',
+      provideClusterInfo: false,
+    };
+  }
+  return yaml.dump(kc);
+}
+
 function mergeKubeconfigYaml(existingPath, incomingYaml) {
   let base = { apiVersion: 'v1', kind: 'Config', clusters: [], users: [], contexts: [], 'current-context': '' };
   try { if (fs.existsSync(existingPath)) base = { ...base, ...(yaml.load(fs.readFileSync(existingPath, 'utf-8')) || {}) }; } catch { /* start fresh */ }
@@ -484,8 +512,11 @@ app.post('/api/azure/import', async (req, res) => {
         if (admin) args.push('--admin');
         await runAz(args, 90000);
       } else {
-        // Browser/REST: fetch the kubeconfig and merge it in ourselves.
-        const kc = await azure.getClusterKubeconfig(c.subscriptionId, c.resourceGroup, c.name, admin);
+        // Browser/REST: fetch the kubeconfig and merge it in ourselves. For AAD
+        // clusters (non-admin), rewrite the kubelogin exec to our bundled
+        // azure-token.js so the cluster needs neither `az` nor `kubelogin`.
+        const raw = await azure.getClusterKubeconfig(c.subscriptionId, c.resourceGroup, c.name, admin);
+        const kc = admin ? raw : nativizeAksExec(raw);
         const merged = mergeKubeconfigYaml(p, kc);
         fs.mkdirSync(path.dirname(p), { recursive: true }); // persist incrementally
         fs.writeFileSync(p, yaml.dump(merged), { mode: 0o600 });

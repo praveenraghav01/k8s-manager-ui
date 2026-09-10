@@ -65,6 +65,8 @@ COPY mcp.js ./
 COPY mcp-stdio.js ./
 COPY aws-eks.js ./
 COPY eks-token.js ./
+COPY azure-aks.js ./
+COPY azure-token.js ./
 COPY --from=client-build /app/client/dist ./client/dist
 
 # The server binds 127.0.0.1 by default (so a local install isn't exposed to the

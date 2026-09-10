@@ -11,6 +11,13 @@
 // ============================================================
 import http from 'http';
 import crypto from 'crypto';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+
+// Where the CLI-free AKS token helper (azure-token.js) reads the refresh token.
+// Persisted so kubelogin/az are never needed for app-imported AAD clusters.
+export const AZURE_AUTH_FILE = path.join(os.homedir(), '.config', 'k8s-manager', 'azure-auth.json');
 
 const AAD = 'https://login.microsoftonline.com';
 const ARM = 'https://management.azure.com';
@@ -39,7 +46,21 @@ function setSession(tok, tenant) {
     tenant,
     account,
   };
+  persistAuth();
 }
+
+// Keep the on-disk refresh token (read by azure-token.js) in sync with the
+// in-memory session, so CLI-free AKS clusters can mint their own tokens.
+function persistAuth() {
+  try {
+    if (!session?.refreshToken) return;
+    fs.mkdirSync(path.dirname(AZURE_AUTH_FILE), { recursive: true });
+    const tmp = `${AZURE_AUTH_FILE}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify({ refreshToken: session.refreshToken, tenant: session.tenant, account: session.account }), { mode: 0o600 });
+    fs.renameSync(tmp, AZURE_AUTH_FILE);
+  } catch { /* non-fatal */ }
+}
+export function getTenant() { return session?.tenant; }
 
 function closeFlowServer() { try { flow?.server?.close(); } catch { /* ignore */ } }
 
@@ -116,7 +137,7 @@ export function cancelLogin() {
   if (flow && flow.status === 'pending') flow.status = 'cancelled';
   flow = null;
 }
-export function signOut() { cancelLogin(); session = null; }
+export function signOut() { cancelLogin(); session = null; try { fs.unlinkSync(AZURE_AUTH_FILE); } catch { /* ignore */ } }
 export function isLoggedIn() { return !!session; }
 
 async function accessToken() {
