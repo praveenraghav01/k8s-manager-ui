@@ -142,12 +142,13 @@ const emptySummary = () => ({ CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0, UNKNOWN: 
 
 // Scan one image → { os, summary, vulnerabilities[] } in our model's shape.
 export async function scanImage(image) {
-  const args = ['image', '--quiet', '--format', 'json', '--scanners', 'vuln', '--timeout', '5m', image];
+  const args = ['image', '--quiet', '--format', 'json', '--scanners', 'vuln,secret', '--timeout', '5m', image];
   const { stdout } = await execFileAsync(trivyBin(), args, { timeout: 6 * 60 * 1000, maxBuffer: 64 * 1024 * 1024 });
   const rep = JSON.parse(stdout || '{}');
   const summary = emptySummary();
   const seen = new Set();
   const vulnerabilities = [];
+  const secretsList = [];
   for (const r of (rep.Results || [])) {
     for (const v of (r.Vulnerabilities || [])) {
       const sev = (v.Severity || 'UNKNOWN').toUpperCase();
@@ -161,9 +162,14 @@ export async function scanImage(image) {
         score: v.CVSS?.nvd?.V3Score || v.CVSS?.redhat?.V3Score,
       });
     }
+    for (const s of (r.Secrets || [])) {
+      secretsList.push({ ruleID: s.RuleID || '', severity: (s.Severity || 'UNKNOWN').toUpperCase(), title: s.Title || '', target: r.Target || '', line: s.StartLine });
+    }
   }
+  const cfg = rep.Metadata?.ImageConfig || {};
+  const platform = [cfg.os, cfg.architecture].filter(Boolean).join('/');
   const os = rep.Metadata?.OS ? `${rep.Metadata.OS.Family || ''} ${rep.Metadata.OS.Name || ''}`.trim() : '';
-  return { os, summary, vulnerabilities };
+  return { os, platform, summary, secrets: secretsList.length, secretsList, vulnerabilities };
 }
 
 // A single in-flight scan, progress tracked on this module-level object so
@@ -209,10 +215,10 @@ export async function startScan(byImage, context) {
           const tag = (image.split(':')[1] || '').split('@')[0];
           out.push({
             image, repository: image.split(':')[0], tag, digest: (image.split('@')[1] || ''),
-            os: scan.os, namespace: workloads[0]?.namespace || '', status: scan.error ? 'Failed' : 'Scanned',
-            scanner: 'Trivy (built-in)', scannedAt: new Date().toISOString(),
+            os: scan.os, platform: scan.platform || '', namespace: workloads[0]?.namespace || '',
+            status: scan.error ? 'Failed' : 'Scanned', scanner: 'Trivy (built-in)', scannedAt: new Date().toISOString(),
             summary: scan.summary, criticalCount: scan.summary.CRITICAL, workloads, vulnerabilities: scan.vulnerabilities,
-            scanError: scan.error,
+            secrets: scan.secrets || 0, secretsList: scan.secretsList || [], scanError: scan.error,
           });
           scanState.scanned++;
           // Stream partial results so the UI fills in while the scan runs.

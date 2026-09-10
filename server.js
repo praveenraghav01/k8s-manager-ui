@@ -1989,7 +1989,7 @@ app.get('/api/security/vulnerabilities', async (req, res) => {
         os: `${rep.os?.family || ''} ${rep.os?.name || ''}`.trim(),
         namespace: owner.namespace, status: 'Scanned',
         scanner: [rep.scanner?.name, rep.scanner?.version].filter(Boolean).join(' '),
-        scannedAt, summary: emptySummary(), workloads: [], vulnerabilities: [], _seen: new Set(),
+        scannedAt, summary: emptySummary(), workloads: [], vulnerabilities: [], secrets: 0, _seen: new Set(),
       });
       const g = byImage.get(image);
       if (scannedAt > g.scannedAt) g.scannedAt = scannedAt;
@@ -2005,9 +2005,23 @@ app.get('/api/security/vulnerabilities', async (req, res) => {
         });
       }
     }
+    // Merge exposed-secret counts (a separate Trivy Operator report) by image.
+    const secretItems = await listTrivy('exposedsecretreports');
+    for (const r of (secretItems || [])) {
+      const owner = trivyOwner(r);
+      if (ns && owner.namespace !== ns) continue;
+      const rep = r.report || {};
+      const art = rep.artifact || {};
+      const reg = rep.registry?.server || '';
+      const image = `${reg ? reg + '/' : ''}${art.repository || '?'}${art.tag ? ':' + art.tag : (art.digest ? '@' + String(art.digest).slice(0, 19) : '')}`;
+      const g = byImage.get(image);
+      if (g) g.secrets = (g.secrets || 0) + (rep.summary ? sevTotalOf({ CRITICAL: rep.summary.criticalCount, HIGH: rep.summary.highCount, MEDIUM: rep.summary.mediumCount, LOW: rep.summary.lowCount }) : (rep.secrets || []).length);
+    }
+
     const order = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, UNKNOWN: 4 };
     const images = [...byImage.values()].map((g) => {
       delete g._seen;
+      g.platform = g.platform || g.os;
       g.criticalCount = g.summary.CRITICAL;
       g.vulnerabilities.sort((a, b) => order[a.severity] - order[b.severity] || (b.score || 0) - (a.score || 0));
       return g;

@@ -208,6 +208,8 @@ function ImagesView({ vuln, ns, q, onSelect, selected, criticalOnly }) {
     { label: 'Vulnerable', value: vuln?.results?.vulnerable || 0, color: '#e5484d' },
   ];
   const vulnSeg = SEVERITIES.filter((k) => k !== 'UNKNOWN').map((k) => ({ label: k[0] + k.slice(1).toLowerCase(), value: vuln?.summary?.[k] || 0, color: SEV_COLOR[k] }));
+  const exposed = all.filter((im) => (im.secrets || 0) > 0).length;
+  const secretSeg = [{ label: 'Clean', value: all.length - exposed, color: '#3fb950' }, { label: 'Exposed', value: exposed, color: '#e5484d' }];
 
   return (
     <>
@@ -215,11 +217,12 @@ function ImagesView({ vuln, ns, q, onSelect, selected, criticalOnly }) {
         <Donut title="Status" segments={statusSeg} />
         <Donut title="Results" segments={resultSeg} />
         <Donut title="Vulnerabilities" segments={vulnSeg} />
+        {!criticalOnly && <Donut title="Exposed Secrets" segments={secretSeg} />}
       </div>
       {criticalOnly && <div className="sec-section-title">Latest critical vulnerabilities</div>}
       {rows.length === 0 ? (
         <div className="sec-empty"><Icon name="shieldCheck" size={28} /><p>No {criticalOnly ? 'critical ' : ''}image findings{q ? ' match your search' : ''}.</p></div>
-      ) : (
+      ) : criticalOnly ? (
         <div className="sec-table">
           <div className="sec-tr sec-th img"><span>Name</span><span>Namespace</span><span>Kind</span><span>Critical</span><span>Scan Date</span></div>
           {rows.map((im) => (
@@ -231,6 +234,24 @@ function ImagesView({ vuln, ns, q, onSelect, selected, criticalOnly }) {
               <span className="sec-dim">{rel(im.scannedAt)}</span>
             </button>
           ))}
+        </div>
+      ) : (
+        <div className="sec-table">
+          <div className="sec-tr sec-th imgfull"><span>Name</span><span>Platforms</span><span>Pods</span><span>Vulnerabilities</span><span>Exposed Secrets</span><span>Status</span></div>
+          {rows.map((im) => {
+            const pods = new Set((im.workloads || []).map((w) => `${w.namespace}/${w.name}`)).size;
+            const scanned = im.status === 'Scanned' || im.status === 'Failed';
+            return (
+              <button key={im.image} className={`sec-tr imgfull row ${selected === im ? 'sel' : ''}`} onClick={() => onSelect(im)}>
+                <span className="sec-mono sec-ellip" title={im.image}>{im.image}</span>
+                <span className="sec-dim">{im.platform || im.os || '—'}</span>
+                <span>{pods}</span>
+                <span>{sevTotal(im.summary) ? <SevMini summary={im.summary} /> : <span className="sec-dim">{scanned ? '—' : '?'}</span>}</span>
+                <span>{scanned ? (im.secrets ? <span className="sec-secretnum">{im.secrets}</span> : <span className="sec-dim">—</span>) : <span className="sec-dim">?</span>}</span>
+                <span className={im.status === 'Failed' ? 'sec-crit' : 'sec-dim'}>{im.status || 'Not Scanned'}</span>
+              </button>
+            );
+          })}
         </div>
       )}
     </>
@@ -310,6 +331,21 @@ function ImageDetail({ d, onNavigate }) {
       <Prop k="Severity"><SevPill s={worst} /></Prop>
       <Prop k="Scanned">{rel(d.scannedAt)}</Prop>
       {d.scanner && <Prop k="Scan Result Source">{d.scanner}</Prop>}
+      <Prop k="Exposed Secrets">{d.secrets ? <span className="sec-secretnum">{d.secrets}</span> : <span className="sec-dim">None</span>}</Prop>
+
+      {d.secretsList?.length > 0 && (
+        <div className="sec-checks" style={{ marginTop: 6, marginBottom: 6 }}>
+          {d.secretsList.map((s, i) => (
+            <div className="sec-checkitem" key={i}>
+              <SevPill s={s.severity} />
+              <div className="sec-check-main">
+                <div className="sec-check-title">{s.title || s.ruleID} <code>{s.ruleID}</code></div>
+                <div className="sec-check-msg">{s.target}{s.line ? `:${s.line}` : ''}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="sec-table" style={{ marginTop: 12 }}>
         <div className="sec-tr vt sec-th"><span>ID</span><span>Severity</span><span>Package</span><span>Fixed in</span><span>Installed</span></div>

@@ -3522,7 +3522,7 @@ button:active:not(:disabled) { transform: scale(0.97); }
 .sec-center { flex: 1; display: grid; place-items: center; padding: 60px 0; }
 
 /* Donuts */
-.sec-donuts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 26px; }
+.sec-donuts { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 26px; }
 .sec-donut { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; background: var(--bg-surface); }
 .sec-donut-title { font-size: 13px; font-weight: 650; color: var(--text-secondary); text-align: center; margin-bottom: 8px; min-height: 16px; }
 .sec-donut-row { display: flex; align-items: center; gap: 14px; }
@@ -3622,3 +3622,6 @@ button.sec-tr.row.sel { background: var(--accent-tint); }
 .sec-banner-text { flex: none; }
 .sec-banner-progress { flex: 1; min-width: 60px; height: 5px; border-radius: 3px; background: var(--bg-surface-2); overflow: hidden; margin: 0 6px; }
 .sec-banner-progress-bar { display: block; height: 100%; background: var(--green); transition: width .4s ease; }
+/* Images tab (full) table */
+.sec-tr.imgfull { grid-template-columns: 2.4fr 1fr .5fr 1.7fr 1.1fr .9fr; }
+.sec-secretnum { color: #e5484d; font-weight: 700; }
