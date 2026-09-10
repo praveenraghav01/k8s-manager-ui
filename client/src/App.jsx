@@ -169,6 +169,11 @@ function App() {
   const retryAuth = async () => {
     setAuthRetrying(true);
     if (serverUnreachable) await fetchConfigStatus();
+    // Reload the kubeconfig first so a fresh cloud login (in-app sign-in, or an
+    // external `az login` / `aws sso login`) is actually picked up — the backend
+    // caches exec-credential tokens on the loaded kubeconfig otherwise, and a
+    // plain re-check would keep failing with the stale token.
+    try { await axios.post('/api/config/reload'); } catch { /* non-fatal — fall back to a plain re-check */ }
     await checkAuth();
     setAuthRetrying(false);
   };

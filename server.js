@@ -314,6 +314,23 @@ app.post('/api/config/context', (req, res) => {
   }
 });
 
+// Reload the kubeconfig from disk, preserving the in-memory selected context.
+// Building a fresh KubeConfig drops any cached exec-credential token, so after
+// an external re-login (`az login`, `aws sso login`, or the in-app sign-in flow)
+// the next auth check picks up the new token instead of reusing the stale one.
+app.post('/api/config/reload', (req, res) => {
+  const p = getKubeConfigPath();
+  if (!fs.existsSync(p)) return res.status(400).json({ error: 'No kubeconfig found' });
+  const prev = currentContext;
+  if (!loadKubeConfig(p)) return res.status(500).json({ error: 'Failed to reload kubeconfig' });
+  if (prev && kubeConfig?.contexts.some((c) => c.name === prev)) {
+    kubeConfig.setCurrentContext(prev);
+    currentContext = prev;
+  }
+  cache.clear();
+  res.json({ success: true, currentContext });
+});
+
 // ------------------------------------------------------------------
 // Azure AKS integration — two sign-in methods.
 //
