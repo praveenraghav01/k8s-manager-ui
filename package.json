@@ -26,6 +26,9 @@
     "dist": "npm run fetch:trivy && npm run build && electron-builder --publish never",
     "mcp": "node mcp-stdio.js"
   },
+  "overrides": {
+    "qs": "^6.16.0"
+  },
   "dependencies": {
     "@aws-crypto/sha256-js": "^5.2.0",
     "@aws-sdk/client-ec2": "^3.1127.0",
