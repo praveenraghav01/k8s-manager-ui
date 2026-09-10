@@ -64,19 +64,34 @@ export function getTenant() { return session?.tenant; }
 
 function closeFlowServer() { try { flow?.server?.close(); } catch { /* ignore */ } }
 
+// `msg` can carry an IDP-supplied error_description reflected from the OAuth
+// callback query string, so HTML-escape it before it enters the page (XSS).
+const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+));
 const successPage = (ok, msg) => `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <body style="margin:0;font:15px -apple-system,system-ui,sans-serif;background:#0b0b0d;color:#ededed;display:grid;place-items:center;height:100vh">
 <div style="text-align:center;max-width:360px;padding:24px">
 <div style="font-size:34px;margin-bottom:8px">${ok ? '&#10003;' : '&#9888;'}</div>
 <h2 style="margin:0 0 8px">${ok ? 'Signed in to Azure' : 'Sign-in failed'}</h2>
-<p style="color:#9aa1ad;margin:0 0 6px">${msg}</p>
+<p style="color:#9aa1ad;margin:0 0 6px">${escapeHtml(msg)}</p>
 <p style="color:#6b7280;font-size:13px">You can close this tab and return to k8sight.</p>
 </div></body>`;
 
 // Begin the browser auth-code flow. Returns { authUrl } for the client to open
 // in the system browser; a loopback server captures the redirect. The client
 // polls loginStatus() until status === 'done'.
-export async function startBrowserLogin(tenant = 'organizations') {
+// A tenant id flows into the AAD token/authorize URL path. Constrain it to the
+// shapes Azure actually uses — a GUID, a verified domain, or common/organizations/
+// consumers — so it can't inject a path segment or host and redirect the request
+// (SSRF). Anything else falls back to the safe default.
+const safeTenant = (t) => {
+  const v = String(t || '').trim();
+  return /^[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$/.test(v) ? v : 'organizations';
+};
+
+export async function startBrowserLogin(rawTenant = 'organizations') {
+  const tenant = safeTenant(rawTenant);
   cancelLogin();
   const verifier = b64url(crypto.randomBytes(32));
   const challenge = b64url(crypto.createHash('sha256').update(verifier).digest());
