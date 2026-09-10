@@ -68,6 +68,7 @@ export default function SecurityCenter({ namespaces = [], onNavigate }) {
   const [detail, setDetail] = useState(null); // { type:'image'|'checks', data }
   const [scan, setScan] = useState(null);     // built-in scan state/result
   const [scanAvail, setScanAvail] = useState(null); // { available, version }
+  const [scanChecked, setScanChecked] = useState(false); // loaded prior/persisted scan?
   const pollRef = useRef(null);
 
   const operatorMode = !!status?.installed;
@@ -91,11 +92,14 @@ export default function SecurityCenter({ namespaces = [], onNavigate }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, ns, operatorMode]);
 
-  // Scan mode: check trivy availability + load any prior scan result.
+  // Scan mode: check trivy availability + load any prior/persisted scan result.
   useEffect(() => {
     if (status == null || operatorMode) return;
-    axios.get('/api/security/scan/status').then((r) => setScanAvail(r.data)).catch(() => setScanAvail({ available: false }));
-    axios.get('/api/security/scan').then((r) => { if (r.data.images?.length || r.data.running) { setScan(r.data); setVuln(r.data); if (r.data.running) poll(); } }).catch(() => {});
+    setScanChecked(false);
+    Promise.all([
+      axios.get('/api/security/scan/status').then((r) => setScanAvail(r.data)).catch(() => setScanAvail({ available: false })),
+      axios.get('/api/security/scan').then((r) => { if (r.data.images?.length || r.data.running) { setScan(r.data); setVuln(r.data); if (r.data.running) poll(); } }).catch(() => {}),
+    ]).finally(() => setScanChecked(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, operatorMode]);
 
@@ -116,8 +120,10 @@ export default function SecurityCenter({ namespaces = [], onNavigate }) {
   };
 
   if (!status) return <div className="sec-center"><Loader label="Checking Security Center…" /></div>;
-  // No operator, and no scan run yet → the setup / run-scan screen.
+  // No operator, and no scan run yet → the setup / run-scan screen. Wait for the
+  // prior/persisted scan to load first so a cached result doesn't flash setup.
   if (scanMode && !scan?.images?.length && !scan?.running) {
+    if (!scanChecked) return <div className="sec-center"><Loader label="Loading security…" /></div>;
     return <SetupState error={status.error} scanAvail={scanAvail} onScan={runScan} scanError={scan?.error} />;
   }
   // While scanning, the header + tabs stay visible (below) so you can switch
@@ -393,7 +399,7 @@ function ScanBanner({ scan, onRescan }) {
       <Icon name="shieldCheck" size={15} className={scan.running ? 'sec-spin' : ''} />
       <span className="sec-banner-text">
         {scan.running ? `Scanning images… ${scan.scanned}/${scan.total || '…'}` : `Built-in Trivy scan · ${(scan.images || []).length} images`}
-        {scan.finishedAt && !scan.running ? ` · ${rel(scan.finishedAt)}` : ''}
+        {scan.finishedAt && !scan.running ? ` · ${scan.cached ? 'last scan ' : ''}${rel(scan.finishedAt)}` : ''}
       </span>
       {scan.running && (
         <span className="sec-banner-progress"><span className="sec-banner-progress-bar" style={{ width: `${pct}%` }} /></span>

@@ -2086,7 +2086,9 @@ const scanResultShape = () => {
 
 app.get('/api/security/scan/status', async (req, res) => {
   const t = await trivyScan.trivyAvailable();
-  res.json({ ...t, running: trivyScan.scanState.running, done: trivyScan.scanState.done, hasResult: !!trivyScan.scanState.images });
+  const s = trivyScan.scanState;
+  const hasResult = (s.context === currentContext && !!s.images) || !!trivyScan.loadScan(currentContext);
+  res.json({ ...t, running: s.running, done: s.done, hasResult });
 });
 
 app.post('/api/security/scan', async (req, res) => {
@@ -2097,14 +2099,28 @@ app.post('/api/security/scan', async (req, res) => {
   try {
     const pods = await kubeConfig.makeApiClient(k8s.CoreV1Api).listPodForAllNamespaces({ limit: 5000 });
     const byImage = trivyScan.listClusterImages(pods.items || [], req.body?.namespace);
-    await trivyScan.startScan(byImage);
+    await trivyScan.startScan(byImage, currentContext);
     res.json({ started: true, ...scanResultShape() });
   } catch (e) {
     res.status(500).json({ error: firstLine(e.message) });
   }
 });
 
-app.get('/api/security/scan', (req, res) => res.json(scanResultShape()));
+app.get('/api/security/scan', (req, res) => {
+  const s = trivyScan.scanState;
+  // Live/in-memory scan for the current context wins; otherwise fall back to the
+  // persisted result for this cluster (survives an app restart / context switch).
+  if (s.context === currentContext && (s.images || s.running)) return res.json(scanResultShape());
+  const cached = trivyScan.loadScan(currentContext);
+  if (cached && cached.images?.length) {
+    return res.json({
+      installed: true, running: false, done: true, phase: 'done', cached: true, source: 'trivy-builtin',
+      images: cached.images, summary: cached.summary, results: cached.results,
+      scanned: cached.scanned, total: cached.total, notScanned: null, finishedAt: cached.finishedAt,
+    });
+  }
+  res.json(scanResultShape());
+});
 
 // Applications that aren't fully Synced+Healthy — the "Needs attention" panel.
 const needsAttention = (a) => a.syncStatus !== 'Synced' || (a.healthStatus !== 'Healthy' && a.healthStatus !== 'Unknown');

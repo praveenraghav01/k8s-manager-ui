@@ -26,6 +26,27 @@ const CACHE_DIR = path.join(os.homedir(), '.config', 'k8s-manager', 'bin');
 const CACHED_TRIVY = path.join(CACHE_DIR, process.platform === 'win32' ? 'trivy.exe' : 'trivy');
 const TRIVY_FALLBACK_VERSION = '0.58.1';
 
+// Persist each cluster's last scan so results survive an app restart. One JSON
+// file per context under the app config dir (same place as other app state).
+const SCAN_DIR = path.join(os.homedir(), '.config', 'k8s-manager', 'security-scans');
+const scanFile = (context) => path.join(SCAN_DIR, `${String(context || 'default').replace(/[^a-zA-Z0-9_.@+-]/g, '_').slice(0, 200)}.json`);
+
+export function persistScan(context, result) {
+  try {
+    fs.mkdirSync(SCAN_DIR, { recursive: true });
+    const file = scanFile(context);
+    const tmp = `${file}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(result), { mode: 0o600 });
+    fs.renameSync(tmp, file);
+  } catch { /* non-fatal */ }
+}
+export function loadScan(context) {
+  try {
+    const file = scanFile(context);
+    return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf-8')) : null;
+  } catch { return null; }
+}
+
 // Candidate locations for a shipped binary: TRIVY_BIN, the repo/dev ./bin
 // (populated by scripts/fetch-trivy.mjs), and the packaged app's resources/bin
 // (electron-builder extraResources). Platform-aware name (trivy.exe on Windows).
@@ -148,7 +169,7 @@ export async function scanImage(image) {
 // A single in-flight scan, progress tracked on this module-level object so
 // GET /api/security/scan can report it and return the result when done.
 export const scanState = {
-  running: false, done: false, phase: 'idle', total: 0, scanned: 0, startedAt: null, finishedAt: null,
+  running: false, done: false, phase: 'idle', context: null, total: 0, scanned: 0, startedAt: null, finishedAt: null,
   error: null, images: null, summary: emptySummary(), results: { ok: 0, vulnerable: 0 },
 };
 
@@ -164,9 +185,10 @@ const sevTotal = (s) => SEV.reduce((n, k) => n + (s[k] || 0), 0);
 
 // Kick off a scan of every running image. Downloads trivy first if needed.
 // Returns immediately; progress + result live on scanState.
-export async function startScan(byImage) {
+export async function startScan(byImage, context) {
   if (scanState.running) return scanState;
   resetScan();
+  scanState.context = context || null;
   (async () => {
     try {
       await ensureTrivy((p) => { scanState.phase = p; }); // may download the binary
@@ -204,10 +226,11 @@ export async function startScan(byImage) {
       await Promise.all(Array.from({ length: Math.min(3, entries.length || 1) }, worker));
       out.sort((a, b) => (b.summary.CRITICAL - a.summary.CRITICAL) || (b.summary.HIGH - a.summary.HIGH));
       const vulnerable = out.filter((g) => sevTotal(g.summary) > 0).length;
-      Object.assign(scanState, {
-        running: false, done: true, phase: 'done', finishedAt: new Date().toISOString(),
-        images: out, summary: total, results: { vulnerable, ok: out.length - vulnerable },
-      });
+      const finishedAt = new Date().toISOString();
+      const results = { vulnerable, ok: out.length - vulnerable };
+      Object.assign(scanState, { running: false, done: true, phase: 'done', finishedAt, images: out, summary: total, results });
+      // Persist so the results are there after an app restart.
+      persistScan(context, { images: out, summary: total, results, scanned: scanState.scanned, total: scanState.total, finishedAt });
     } catch (e) {
       Object.assign(scanState, { running: false, done: true, phase: 'error', error: (e.message || 'scan failed').split('\n')[0] });
     }
