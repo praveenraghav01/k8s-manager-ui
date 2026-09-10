@@ -22,12 +22,16 @@ import { randomUUID } from 'crypto';
 import { createMcpServer } from './mcp.js';
 import * as awsEks from './aws-eks.js';
 import * as trivyScan from './trivy-scan.js';
+import { ensurePtyHelperExecutable } from './lib/pty-helper.mjs';
 
 // node-pty powers the pod terminal (a real PTY bridged to `kubectl exec`). Load
 // it defensively so a missing/unbuildable native module never crashes the whole
 // server — only the terminal feature is disabled in that (rare) case.
 let pty = null;
 try {
+  // Restore node-pty's spawn-helper execute bit BEFORE first use, so pod
+  // terminals don't fail with "posix_spawnp failed". See lib/pty-helper.mjs.
+  ensurePtyHelperExecutable({ currentOnly: true });
   pty = (await import('node-pty')).default;
 } catch (e) {
   console.warn('[terminal] node-pty is unavailable; pod shells are disabled:', e.message);
@@ -698,25 +702,53 @@ const loginShellPath = () => new Promise((resolve) => {
     resolve((loginPathCache = (!err && stdout ? String(stdout).trim() : '')));
   });
 });
-const commandExists = async (cmd) => {
-  const safe = String(cmd).replace(/[^a-zA-Z0-9_.-]/g, '');
-  if (!safe) return false;
+// Well-known bin directories a GUI-launched app's minimal PATH usually omits.
+const knownBinDirs = () => {
   const home = process.env.HOME || os.homedir();
-  const known = [
+  return [
     `${home}/.local/bin`, `${home}/bin`, `${home}/.npm-global/bin`,
     `${home}/.yarn/bin`, `${home}/.bun/bin`, `${home}/.deno/bin`, `${home}/.cargo/bin`,
     '/opt/homebrew/bin', '/usr/local/bin', '/usr/bin', '/bin',
   ];
+};
+const commandExists = async (cmd) => {
+  const safe = String(cmd).replace(/[^a-zA-Z0-9_.-]/g, '');
+  if (!safe) return false;
   const dirs = new Set([
     ...(process.env.PATH ? process.env.PATH.split(path.delimiter) : []),
     ...(await loginShellPath()).split(path.delimiter),
-    ...known,
+    ...knownBinDirs(),
   ].filter(Boolean));
   for (const dir of dirs) {
     try { fs.accessSync(path.join(dir, safe), fs.constants.X_OK); return true; } catch { /* keep looking */ }
   }
   return false;
 };
+
+// Resolve an executable to an ABSOLUTE path. node-pty spawns via posix_spawnp,
+// whose PATH lookup ignores the well-known dirs a GUI-launched macOS app is
+// missing — so `pty.spawn('kubectl', …)` fails with "posix_spawnp failed" even
+// though Node's execFile/spawn (used by the REST calls) resolve it fine. Search
+// the process PATH, the cached login-shell PATH, and the known dirs; fall back
+// to the bare name so PATH lookup can still try.
+const resolveBinSync = (cmd) => {
+  const safe = String(cmd).replace(/[^a-zA-Z0-9_.-]/g, '');
+  if (!safe) return cmd;
+  const dirs = [
+    ...(process.env.PATH ? process.env.PATH.split(path.delimiter) : []),
+    ...(loginPathCache ? loginPathCache.split(path.delimiter) : []),
+    ...knownBinDirs(),
+  ].filter(Boolean);
+  for (const dir of dirs) {
+    const p = path.join(dir, safe);
+    try { fs.accessSync(p, fs.constants.X_OK); return p; } catch { /* keep looking */ }
+  }
+  return cmd;
+};
+// Warm the login-shell PATH cache early so the first pod terminal can resolve
+// kubectl from a shell-configured location too (knownBinDirs already covers the
+// common Homebrew/local installs even before this resolves).
+loginShellPath();
 app.get('/api/ai-agents', async (req, res) => {
   const agents = await Promise.all(AI_AGENTS.map(async (a) => ({ id: a.id, name: a.name, command: a.command, desc: a.desc, install: a.install, installed: await commandExists(a.command) })));
   res.json({ agents });
@@ -2074,9 +2106,17 @@ app.get('/api/security/checks', async (req, res) => {
         category: c.category || '', message: (c.messages || [])[0] || c.description || '', remediation: c.remediation || '',
       })).sort((a, b) => order[a.severity] - order[b.severity]);
       if (!failed.length) continue;
-      resources.push({ kind: owner.kind || 'Cluster', name: owner.name, namespace: owner.namespace, summary: rep.summary && {
-        CRITICAL: rep.summary.criticalCount || 0, HIGH: rep.summary.highCount || 0, MEDIUM: rep.summary.mediumCount || 0, LOW: rep.summary.lowCount || 0, UNKNOWN: 0,
-      } || emptySummary(), checks: failed });
+      resources.push({
+        kind: owner.kind || 'Cluster', name: owner.name, namespace: owner.namespace,
+        createdAt: r.metadata?.creationTimestamp || '',
+        scannedAt: rep.updateTimestamp || r.metadata?.creationTimestamp || '',
+        scanner: [rep.scanner?.name, rep.scanner?.version].filter(Boolean).join(' '),
+        labels: Object.keys(r.metadata?.labels || {}).length,
+        summary: rep.summary && {
+          CRITICAL: rep.summary.criticalCount || 0, HIGH: rep.summary.highCount || 0, MEDIUM: rep.summary.mediumCount || 0, LOW: rep.summary.lowCount || 0, UNKNOWN: 0,
+        } || emptySummary(),
+        checks: failed,
+      });
     }
     resources.sort((a, b) => (b.summary.CRITICAL - a.summary.CRITICAL) || (b.summary.HIGH - a.summary.HIGH));
     res.json({ installed: true, resources, summary: total, reportCount: items.length });
@@ -3257,10 +3297,14 @@ wss.on('connection', async (browserWs, req) => {
     const container = url.searchParams.get('container') || undefined;
     if (!namespace || !pod) { browserWs.close(1008, 'Missing namespace or pod'); return; }
     const args = kctl('exec', '-it', '-n', namespace, ...(container ? ['-c', container] : []), pod, '--', 'sh', '-c', 'exec $(command -v bash || command -v sh || echo /bin/sh)');
+    const kubectlBin = resolveBinSync('kubectl');
     try {
-      term = pty.spawn('kubectl', args, { name: 'xterm-256color', cols: 80, rows: 24, cwd: process.env.HOME || '/', env: process.env });
+      term = pty.spawn(kubectlBin, args, { name: 'xterm-256color', cols: 80, rows: 24, cwd: process.env.HOME || '/', env: process.env });
     } catch (err) {
-      send(`\r\n\x1b[31mFailed to start shell: ${err.message}\x1b[0m\r\n`);
+      const hint = kubectlBin === 'kubectl'
+        ? ' (kubectl was not found — install it or add it to PATH)'
+        : '';
+      send(`\r\n\x1b[31mFailed to start shell: ${err.message}${hint}\x1b[0m\r\n`);
       browserWs.close();
       return;
     }

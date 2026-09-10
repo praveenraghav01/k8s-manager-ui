@@ -16,6 +16,8 @@
     "client": "cd client && npm run dev",
     "version:sync": "node scripts/sync-version.mjs",
     "fetch:trivy": "node scripts/fetch-trivy.mjs",
+    "postinstall": "node scripts/fix-pty-helper.mjs",
+    "test": "node --test \"test/**/*.test.mjs\"",
     "build": "npm run version:sync && cd client && npm run build",
     "start": "node server.js",
     "app": "electron .",

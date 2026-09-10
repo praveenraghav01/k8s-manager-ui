@@ -67,6 +67,10 @@ jobs:
       - name: Install client dependencies
         run: npm ci --prefix client
 
+      # Gate the release on the test suite — never ship a build whose tests fail.
+      - name: Run tests
+        run: npm test
+
       - name: Build & package
         # `npm run dist` runs the client build then electron-builder for the
         # host OS. --publish never keeps electron-builder from uploading; the

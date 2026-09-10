@@ -1,0 +1,61 @@
+name: CI
+
+# Run the automated test suite (plus a syntax/build sanity check) on every push
+# and pull request. Any failing test fails the job, which blocks the merge /
+# turns the commit red. node-pty's spawn-helper exec-bit fix is macOS-specific,
+# so we test on both Linux and macOS to guard that regression on its home OS.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref to save runner minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: Linux
+          - os: macos-14
+            name: macOS (arm64)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            client/package-lock.json
+
+      # `npm ci` runs the postinstall (fix-pty-helper) so node-pty's spawn-helper
+      # is executable before the terminal tests spawn a PTY.
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install client dependencies
+        run: npm ci --prefix client
+
+      - name: Server syntax check
+        run: node --check server.js
+
+      # The actual gate: a failing test exits non-zero and fails the job.
+      - name: Run tests
+        run: npm test
+
+      # Catch build-time breakage (bad import, JSX error) too.
+      - name: Build client
+        run: npm run build --prefix client
