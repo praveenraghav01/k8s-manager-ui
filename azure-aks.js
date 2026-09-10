@@ -173,12 +173,14 @@ async function accessToken() {
 
 async function arm(url, { method = 'GET', body } = {}) {
   // Only ever call the Azure Resource Manager host. Paginated list calls follow a
-  // `nextLink` taken from ARM responses; pinning the origin stops a malformed or
-  // hostile response from redirecting this bearer-token request to another host
-  // (SSRF / access-token exfiltration).
-  if (new URL(url).origin !== ARM) throw new Error(`Refusing non-ARM request to ${url}`);
+  // `nextLink` taken from ARM responses; verify the host and then rebuild the URL
+  // from the constant ARM base, so a malformed or hostile response can't redirect
+  // this bearer-token request to another host (SSRF / access-token exfiltration).
+  const parsed = new URL(url);
+  if (parsed.hostname !== 'management.azure.com') throw new Error(`Refusing non-ARM request to ${url}`);
+  const safeUrl = `${ARM}${parsed.pathname}${parsed.search}`;
   const tk = await accessToken();
-  const r = await fetch(url, {
+  const r = await fetch(safeUrl, {
     method,
     headers: { authorization: `Bearer ${tk}`, 'content-type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
