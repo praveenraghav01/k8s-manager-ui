@@ -1,4 +1,5 @@
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -112,30 +113,19 @@ app.use((req, res, next) => {
   return res.status(403).json({ error: 'Cross-origin request rejected' });
 });
 
-// Lightweight in-memory rate limiter for the API/MCP surface. The server binds
-// to loopback and enforces same-origin, so this is defense-in-depth (e.g. a
-// runaway client or a same-origin script hammering the API) rather than a
-// perimeter control — hence a generous fixed-window cap and no extra dependency.
-const RL_WINDOW_MS = 60_000;
-const RL_MAX = Number(process.env.RATE_LIMIT_MAX) || 1000; // requests/min/IP
-const rlHits = new Map(); // ip -> { count, resetAt }
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, e] of rlHits) if (e.resetAt <= now) rlHits.delete(ip);
-}, RL_WINDOW_MS).unref();
-app.use((req, res, next) => {
-  if (!req.path.startsWith('/api') && !req.path.startsWith('/mcp')) return next();
-  const ip = req.socket.remoteAddress || 'local';
-  const now = Date.now();
-  let e = rlHits.get(ip);
-  if (!e || e.resetAt <= now) { e = { count: 0, resetAt: now + RL_WINDOW_MS }; rlHits.set(ip, e); }
-  e.count++;
-  if (e.count > RL_MAX) {
-    res.set('Retry-After', String(Math.ceil((e.resetAt - now) / 1000)));
-    return res.status(429).json({ error: 'Too many requests' });
-  }
-  return next();
+// Rate-limit the API/MCP surface. The server binds to loopback and enforces
+// same-origin, so this is defense-in-depth (a runaway client or same-origin
+// script hammering the API) rather than a perimeter control — hence a generous
+// fixed-window cap.
+const apiLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: Number(process.env.RATE_LIMIT_MAX) || 1000, // requests/min/IP
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Too many requests' },
 });
+app.use('/api', apiLimiter);
+app.use('/mcp', apiLimiter);
 
 app.use(express.json());
 
