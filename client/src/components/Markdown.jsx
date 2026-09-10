@@ -8,6 +8,16 @@ import React from 'react';
 // Inline: `code`, **bold**, *italic* / _italic_, [text](url)
 const INLINE = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*\s][^*]*\*|_[^_\s][^_]*_)|(\[[^\]]+\]\([^)]+\))/;
 
+// Only allow safe link schemes — the text comes from LLM/agent output, so a
+// `[x](javascript:…)` link would otherwise be a click-to-execute XSS. Unsafe
+// hrefs fall back to no link (render the text only).
+const safeHref = (url) => {
+  const u = String(url).trim();
+  if (/^(https?:|mailto:|tel:)/i.test(u)) return u;
+  if (/^[/#]/.test(u)) return u; // relative / anchor
+  return null;
+};
+
 function parseInline(text, kp = '') {
   const out = [];
   let rest = text;
@@ -23,7 +33,10 @@ function parseInline(text, kp = '') {
       out.push(<strong key={`${kp}b${k++}`}>{tok.slice(2, -2)}</strong>);
     } else if (tok[0] === '[') {
       const l = tok.match(/\[([^\]]+)\]\(([^)]+)\)/);
-      out.push(<a key={`${kp}a${k++}`} href={l[2]} target="_blank" rel="noreferrer">{l[1]}</a>);
+      const href = safeHref(l[2]);
+      out.push(href
+        ? <a key={`${kp}a${k++}`} href={href} target="_blank" rel="noreferrer">{l[1]}</a>
+        : <span key={`${kp}a${k++}`}>{l[1]}</span>);
     } else {
       out.push(<em key={`${kp}i${k++}`}>{tok.slice(1, -1)}</em>);
     }

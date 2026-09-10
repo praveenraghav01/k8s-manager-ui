@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
-import { execSync, execFileSync, spawnSync, spawn, execFile } from 'child_process';
+import { execFileSync, spawnSync, spawn, execFile } from 'child_process';
 import { promisify } from 'util';
 
 const execFileAsync = promisify(execFile);
@@ -697,7 +697,7 @@ app.post('/api/ai-agents/launch-external', (req, res) => {
       '#!/bin/bash',
       `export KUBECONFIG=${shq(kubeconfigPath)}`,
       `export KUBE_CONTEXT=${shq(currentContext || '')}`,
-      `echo "Cluster context: ${currentContext || '(default)'}"`,
+      `echo ${shq(`Cluster context: ${currentContext || '(default)'}`)}`,
       launch,
       `rm -f ${shq(kubeconfigPath)} ${shq(script)}`,
       'exec $SHELL -l',
@@ -2286,8 +2286,9 @@ app.get('/api/cluster/summary', async (req, res) => {
     const podPhases = { Running: 0, Pending: 0, Succeeded: 0, Failed: 0, Unknown: 0 };
     let podTotal = 0;
     try {
-      const out = execSync(
-        `kubectl get pods -A -o jsonpath='{range .items[*]}{.status.phase}{"\\n"}{end}'`,
+      const out = execFileSync(
+        'kubectl',
+        kctl('get', 'pods', '-A', '-o', 'jsonpath={range .items[*]}{.status.phase}{"\\n"}{end}'),
         { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 12000 }
       );
       out.split('\n').filter(Boolean).forEach(p => {
@@ -2299,8 +2300,9 @@ app.get('/api/cluster/summary', async (req, res) => {
     // Namespace count
     let namespaceCount = 0;
     try {
-      const out = execSync(
-        `kubectl get ns -o jsonpath='{range .items[*]}{.metadata.name}{"\\n"}{end}'`,
+      const out = execFileSync(
+        'kubectl',
+        kctl('get', 'ns', '-o', 'jsonpath={range .items[*]}{.metadata.name}{"\\n"}{end}'),
         { encoding: 'utf-8', maxBuffer: 4 * 1024 * 1024, timeout: 8000 }
       );
       namespaceCount = out.split('\n').filter(Boolean).length;
