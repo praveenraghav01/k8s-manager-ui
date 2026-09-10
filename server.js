@@ -1936,6 +1936,7 @@ const trivyOwner = (r) => {
 };
 const sev = (s) => (s || 'UNKNOWN').toUpperCase();
 const emptySummary = () => ({ CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0, UNKNOWN: 0 });
+const sevTotalOf = (s = {}) => (s.CRITICAL || 0) + (s.HIGH || 0) + (s.MEDIUM || 0) + (s.LOW || 0) + (s.UNKNOWN || 0);
 const addSummary = (into, s = {}) => {
   into.CRITICAL += s.criticalCount || 0; into.HIGH += s.highCount || 0;
   into.MEDIUM += s.mediumCount || 0; into.LOW += s.lowCount || 0; into.UNKNOWN += s.unknownCount || s.noneCount || 0;
@@ -1980,11 +1981,17 @@ app.get('/api/security/vulnerabilities', async (req, res) => {
       const reg = rep.registry?.server || '';
       const image = `${reg ? reg + '/' : ''}${art.repository || '?'}${art.tag ? ':' + art.tag : (art.digest ? '@' + String(art.digest).slice(0, 19) : '')}`;
       addSummary(total, rep.summary);
+      const scannedAt = rep.updateTimestamp || r.metadata?.creationTimestamp || '';
       if (!byImage.has(image)) byImage.set(image, {
-        image, repository: art.repository || '', tag: art.tag || '', os: `${rep.os?.family || ''} ${rep.os?.name || ''}`.trim(),
-        summary: emptySummary(), workloads: [], vulnerabilities: [], _seen: new Set(),
+        image, repository: art.repository || '', tag: art.tag || '',
+        digest: art.digest || '', registry: reg,
+        os: `${rep.os?.family || ''} ${rep.os?.name || ''}`.trim(),
+        namespace: owner.namespace, status: 'Scanned',
+        scanner: [rep.scanner?.name, rep.scanner?.version].filter(Boolean).join(' '),
+        scannedAt, summary: emptySummary(), workloads: [], vulnerabilities: [], _seen: new Set(),
       });
       const g = byImage.get(image);
+      if (scannedAt > g.scannedAt) g.scannedAt = scannedAt;
       addSummary(g.summary, rep.summary);
       g.workloads.push({ kind: owner.kind, name: owner.name, namespace: owner.namespace, container: owner.container });
       for (const v of (rep.vulnerabilities || [])) {
@@ -2000,10 +2007,24 @@ app.get('/api/security/vulnerabilities', async (req, res) => {
     const order = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, UNKNOWN: 4 };
     const images = [...byImage.values()].map((g) => {
       delete g._seen;
+      g.criticalCount = g.summary.CRITICAL;
       g.vulnerabilities.sort((a, b) => order[a.severity] - order[b.severity] || (b.score || 0) - (a.score || 0));
       return g;
     }).sort((a, b) => (b.summary.CRITICAL - a.summary.CRITICAL) || (b.summary.HIGH - a.summary.HIGH));
-    res.json({ installed: true, images, summary: total, reportCount: items.length });
+    // Results donut: images with any finding vs clean.
+    const vulnerable = images.filter((g) => sevTotalOf(g.summary) > 0).length;
+    const results = { vulnerable, ok: images.length - vulnerable };
+    // Status donut: scanned vs not-scanned (best-effort pod count for the total).
+    const scanned = images.length;
+    let podCount = null;
+    try {
+      const pods = await kubeConfig.makeApiClient(k8s.CoreV1Api).listPodForAllNamespaces({ limit: 5000 });
+      podCount = (pods.items || []).length;
+    } catch { /* best-effort */ }
+    res.json({
+      installed: true, images, summary: total, reportCount: items.length,
+      results, scanned, notScanned: podCount != null ? Math.max(0, podCount - scanned) : null,
+    });
   } catch (e) {
     res.status(500).json({ error: firstLine(e.message) });
   }
