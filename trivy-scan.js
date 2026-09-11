@@ -82,10 +82,37 @@ function assetName(version) {
 // Can we fetch trivy ourselves? (mac/linux; Windows install is manual for now.)
 export function trivyInstallable() { return process.platform !== 'win32' && !!assetName('x'); }
 
+// Self-heal a bundled-but-unrunnable trivy. On a downloaded, unsigned macOS
+// .app the shipped binary carries com.apple.quarantine, and the bundle may be
+// read-only under App Translocation — so Gatekeeper blocks exec'ing it in
+// place and `trivy --version` fails. Copy it once into our writable cache dir
+// (fs.copyFileSync does NOT carry the quarantine xattr, so the copy runs),
+// chmod +x, and best-effort strip quarantine. No network, no user action.
+// Returns the version string on success (and points _bin at the copy), else null.
+async function healFromBundled() {
+  const src = BUNDLED.find((p) => { try { return fs.existsSync(p); } catch { return false; } });
+  if (!src || src === CACHED_TRIVY) return null;
+  try {
+    fs.mkdirSync(CACHE_DIR, { recursive: true });
+    fs.copyFileSync(src, CACHED_TRIVY);
+    fs.chmodSync(CACHED_TRIVY, 0o755);
+    if (process.platform === 'darwin') {
+      try { await execFileAsync('xattr', ['-d', 'com.apple.quarantine', CACHED_TRIVY], { timeout: 4000 }); }
+      catch { /* attr usually absent on the copy — fine */ }
+    }
+    const v = await versionOf(CACHED_TRIVY);
+    if (v) { _bin = CACHED_TRIVY; return v; }
+  } catch { /* fall through — caller may still download */ }
+  return null;
+}
+
 export async function trivyAvailable() {
   // present on PATH / bundled?
   let v = await versionOf(trivyBin());
   if (!v && fs.existsSync(CACHED_TRIVY)) { _bin = CACHED_TRIVY; v = await versionOf(CACHED_TRIVY); }
+  // Bundled binary exists but won't run (quarantined / translocated .app)?
+  // Copy it to the writable cache and use that copy — offline, no prompts.
+  if (!v) v = await healFromBundled();
   return { available: !!v, version: v || undefined, installable: trivyInstallable() };
 }
 
