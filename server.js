@@ -2470,7 +2470,7 @@ app.post('/api/argocd/application/:namespace/:name/sync', async (req, res) => {
     if (o.replace) syncOptions.push('Replace=true');
     if (o.force) syncOptions.push('Force=true');
     if (syncOptions.length) sync.syncOptions = syncOptions;
-    const patch = JSON.stringify({ operation: { initiatedBy: { username: 'k8s-manager-ui' }, sync } });
+    const patch = JSON.stringify({ operation: { initiatedBy: { username: 'k8sight' }, sync } });
     const out = await runKubectl(['patch', 'applications.argoproj.io', name, '-n', namespace, '--type', 'merge', '-p', patch]);
     cache.clear();
     res.json({ success: true, message: out || 'Sync triggered' });

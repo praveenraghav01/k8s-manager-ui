@@ -51,7 +51,7 @@ export function createMcpServer({ baseURL, version, allowWrite } = {}) {
   };
 
   const server = new McpServer({
-    name: 'k8s-manager-ui',
+    name: 'k8sight',
     version: version || process.env.APP_VERSION || '1.2.0',
   });
 
