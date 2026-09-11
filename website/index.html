@@ -35,13 +35,20 @@
     --panel-2: #f5f5f7;
     --border: #d2d2d7;
     --border-2: #c7c7cc;
+    --hairline: #e5e5e7;
     --text: #1d1d1f;
     --text-dim: #6e6e73;
     --text-mute: #86868b;
     --brand-light: #1d1d1f;
     --brand-dark: #6e6e73;
-    --accent: #0071e3;
+    --accent: #0066cc;            /* Action Blue — the single interactive color */
     --accent-hover: #0077ed;
+    --accent-focus: #0071e3;      /* keyboard focus ring */
+    --accent-on-dark: #2997ff;    /* Sky link, used inside dark tiles */
+    /* Full-bleed tile surfaces (the color change is the section divider) */
+    --tile-canvas: #ffffff;
+    --tile-parchment: #f5f5f7;
+    --tile-dark: #1d1d1f;
     /* Apple system colors */
     --green: #34c759;
     --amber: #ff9f0a;
@@ -62,6 +69,7 @@
     --panel-2: #161617;
     --border: #333336;
     --border-2: #48484a;
+    --hairline: rgba(255,255,255,.09);
     --text: #f5f5f7;
     --text-dim: #a1a1a6;
     --text-mute: #86868b;
@@ -153,11 +161,9 @@
     font-size: clamp(40px, 7vw, 80px); line-height: 1.05; letter-spacing: -0.015em; font-weight: 700;
     margin: 4px auto 18px; max-width: 16ch; color: var(--text);
   }
-  h1 .grad {
-    background: linear-gradient(90deg, var(--accent), #a25bff 90%);
-    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-  }
-  .hero p.sub { font-size: clamp(19px, 2.4vw, 26px); line-height: 1.28; font-weight: 500; color: var(--text); max-width: 46ch; margin: 0 auto 26px; }
+  /* Single accent, no gradient (Apple uses one solid Action Blue) */
+  h1 .grad { color: var(--accent); -webkit-text-fill-color: var(--accent); }
+  .hero p.sub { font-size: clamp(19px, 2.4vw, 26px); line-height: 1.32; font-weight: 400; color: var(--text-dim); max-width: 46ch; margin: 0 auto 26px; letter-spacing: -0.01em; }
 
   .cta-row { display: flex; gap: 26px; justify-content: center; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
   .btn {
@@ -168,7 +174,9 @@
   .btn svg { width: 18px; height: 18px; }
   .btn-primary { background: var(--accent); color: #fff; }
   .btn-primary:hover { background: var(--accent-hover); color: #fff; text-decoration: none; }
-  .btn-primary:active { opacity: .85; }
+  /* System-wide press micro-interaction */
+  .btn:active { transform: scale(0.95); }
+  .btn:focus-visible { outline: 2px solid var(--accent-focus); outline-offset: 2px; }
   /* Apple secondary = blue text link with chevron */
   .btn-ghost { background: transparent; color: var(--accent); border-color: transparent; padding: 11px 6px; }
   .btn-ghost:hover { color: var(--accent-hover); text-decoration: underline; background: transparent; }
@@ -179,16 +187,20 @@
   .shot-wrap { margin-top: 48px; position: relative; }
   .shot-frame {
     border-radius: 22px; overflow: hidden; border: 1px solid rgba(0,0,0,.06);
-    box-shadow: 0 24px 60px rgba(0,0,0,.14);
+    /* The one drop-shadow in the system — reserved for product imagery */
+    box-shadow: 3px 5px 30px rgba(0,0,0,.22);
     background: var(--panel);
   }
-  :root[data-theme="dark"] .shot-frame { border-color: rgba(255,255,255,.08); box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+  :root[data-theme="dark"] .shot-frame { border-color: rgba(255,255,255,.08); box-shadow: 3px 5px 40px rgba(0,0,0,.55); }
   .shot-frame img { width: 100%; display: block; }
   .shot-glow { display: none; }
   /* Theme-aware screenshots — light shown by default, dark in dark theme */
   .shot-frame .shot-dark { display: none; }
   :root[data-theme="dark"] .shot-frame .shot-light { display: none; }
   :root[data-theme="dark"] .shot-frame .shot-dark { display: block; }
+  /* Dark tiles always show the dark-UI screenshot so the shot matches the tile */
+  .tile-dark .shot-frame .shot-light { display: none; }
+  .tile-dark .shot-frame .shot-dark { display: block; }
 
   /* ---------- Stat strip ---------- */
   .strip { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-top: 52px; background: var(--bg-2); }
@@ -196,7 +208,7 @@
   .strip .stat { text-align: center; }
   .strip .stat b { display: block; font-size: 28px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); }
   .strip .stat span { font-size: 13px; color: var(--text-mute); }
-  .strip .stat b .grad { background: linear-gradient(90deg, var(--accent), #a25bff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .strip .stat b .grad { color: var(--accent); }
 
   /* ---------- Section head ---------- */
   .sec { padding: 72px 0; }
@@ -208,15 +220,15 @@
   /* ---------- Feature tiles (Apple bento) ---------- */
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
   .card {
-    background: var(--bg-2); border: none; border-radius: var(--radius); padding: 30px 28px;
-    transition: transform .3s var(--ease-out), box-shadow .3s;
+    background: var(--bg-2); border: 1px solid var(--hairline); border-radius: var(--radius); padding: 30px 28px;
+    transition: transform .3s var(--ease-out), border-color .2s;
   }
-  .card:hover { transform: translateY(-3px); box-shadow: 0 18px 40px rgba(0,0,0,.10); }
+  /* No card shadow — elevation comes from the hairline + a quiet lift */
+  .card:hover { transform: translateY(-2px); border-color: var(--border-2); }
   :root[data-theme="dark"] .card { background: #161617; }
-  :root[data-theme="dark"] .card:hover { box-shadow: 0 18px 40px rgba(0,0,0,.5); }
   .card .ico {
     width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; margin-bottom: 18px;
-    background: var(--panel); box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    background: var(--panel); border: 1px solid var(--hairline);
   }
   :root[data-theme="dark"] .card .ico { background: #1d1d1f; box-shadow: none; }
   .card .ico svg { width: 22px; height: 22px; stroke: var(--text); }
@@ -229,9 +241,36 @@
   .card.i-amber .ico svg { stroke: var(--amber); }
   .card.i-red .ico svg { stroke: var(--red); }
 
-  /* ---------- Alternating band ---------- */
-  .band { background: var(--bg-2); }
+  /* ---------- Full-bleed tile rhythm ----------
+     Sections stack edge-to-edge with zero gap; the surface-color change
+     itself is the divider (Apple's "museum gallery" pulse). */
+  .tile-canvas { background: var(--bg); }
+  .tile-parchment, .band { background: var(--bg-2); }
+  :root[data-theme="dark"] .tile-parchment,
   :root[data-theme="dark"] .band { background: #0a0a0a; }
+
+  /* The always-dark product tile. It redefines the local token palette so
+     every descendant (cards, chips, chat, checklist) adapts automatically,
+     in light OR dark theme. This is the dark beat in the light→dark pulse. */
+  .tile-dark {
+    --bg: #141416;
+    --bg-2: #1d1d1f;
+    --panel: #0d0d0f;
+    --panel-2: #1d1d1f;
+    --text: #f5f5f7;
+    --text-dim: #a1a1a6;
+    --text-mute: #86868b;
+    --brand-light: #f5f5f7;
+    --brand-dark: #a1a1a6;
+    --border: #333336;
+    --border-2: #48484a;
+    --hairline: rgba(255,255,255,.09);
+    --accent: var(--accent-on-dark);   /* Sky link on dark */
+    --accent-hover: #47a5ff;
+    background: var(--tile-dark);
+    color: var(--text);
+  }
+  :root[data-theme="dark"] .tile-dark { background: #101012; }
   .split { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
   .split .kicker { color: var(--accent); font-weight: 600; font-size: 17px; letter-spacing: -0.01em; }
   .split h2 { font-size: clamp(26px, 3.4vw, 40px); letter-spacing: -0.015em; font-weight: 700; margin: 6px 0 16px; line-height: 1.1; color: var(--text); }
@@ -247,7 +286,7 @@
   }
   :root[data-theme="dark"] .chat { box-shadow: 0 20px 50px rgba(0,0,0,.5); }
   .chat-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); background: var(--bg-2); }
-  .chat-head .spark { width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), #a25bff); display: grid; place-items: center; }
+  .chat-head .spark { width: 26px; height: 26px; border-radius: 8px; background: var(--accent); display: grid; place-items: center; }
   .chat-head .spark svg { width: 15px; height: 15px; stroke: #fff; }
   .chat-head b { font-size: 14px; color: var(--text); } .chat-head span { font-size: 12px; color: var(--text-mute); margin-left: auto; }
   .chat-body { padding: 20px; display: grid; gap: 14px; }
@@ -265,12 +304,12 @@
   /* ---------- Cloud tiles ---------- */
   .cloud-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
   .cloud-card {
-    background: var(--bg-2); border: none; border-radius: var(--radius); padding: 32px 26px; text-align: center;
-    transition: transform .3s var(--ease-out), box-shadow .3s;
+    background: var(--bg-2); border: 1px solid var(--hairline); border-radius: var(--radius); padding: 32px 26px; text-align: center;
+    transition: transform .3s var(--ease-out), border-color .2s;
   }
-  .cloud-card:hover { transform: translateY(-3px); box-shadow: 0 18px 40px rgba(0,0,0,.10); }
+  .cloud-card:hover { transform: translateY(-2px); border-color: var(--border-2); }
   :root[data-theme="dark"] .cloud-card { background: #161617; }
-  .cloud-card .logo-badge { width: 60px; height: 60px; margin: 0 auto 18px; border-radius: 16px; display: grid; place-items: center; background: var(--panel); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .cloud-card .logo-badge { width: 60px; height: 60px; margin: 0 auto 18px; border-radius: 16px; display: grid; place-items: center; background: var(--panel); border: 1px solid var(--hairline); }
   :root[data-theme="dark"] .cloud-card .logo-badge { background: #1d1d1f; box-shadow: none; }
   .cloud-card .logo-badge svg { width: 32px; height: 32px; }
   .cloud-card h3 { font-size: 19px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
@@ -282,13 +321,13 @@
   /* ---------- Download ---------- */
   .dl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
   .dl-card {
-    background: var(--bg-2); border: none; border-radius: 20px; padding: 32px 28px; position: relative; overflow: hidden;
-    transition: transform .3s var(--ease-out), box-shadow .3s;
+    background: var(--bg-2); border: 1px solid var(--hairline); border-radius: 20px; padding: 32px 28px; position: relative; overflow: hidden;
+    transition: transform .3s var(--ease-out), border-color .2s;
   }
-  .dl-card:hover { transform: translateY(-3px); box-shadow: 0 18px 40px rgba(0,0,0,.10); }
+  .dl-card:hover { transform: translateY(-2px); border-color: var(--border-2); }
   :root[data-theme="dark"] .dl-card { background: #161617; }
   .dl-card .head { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
-  .dl-card .head .ico { width: 48px; height: 48px; border-radius: 13px; display: grid; place-items: center; background: var(--panel); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .dl-card .head .ico { width: 48px; height: 48px; border-radius: 13px; display: grid; place-items: center; background: var(--panel); border: 1px solid var(--hairline); }
   :root[data-theme="dark"] .dl-card .head .ico { background: #1d1d1f; box-shadow: none; }
   .dl-card .head .ico svg { width: 26px; height: 26px; fill: var(--text); }
   .dl-card h3 { font-size: 21px; font-weight: 600; letter-spacing: -0.01em; color: var(--text); }
@@ -443,7 +482,7 @@
 </header>
 
 <!-- HERO -->
-<section class="hero" id="top">
+<section class="hero tile-canvas" id="top">
   <div class="wrap">
     <h1>See your whole cluster in <span class="grad">one beautiful</span> window</h1>
     <p class="sub">k8sight is a native desktop app for browsing and operating any Kubernetes cluster from your local <code>kubeconfig</code>: live metrics, pod logs, interactive shells, topology, Helm, Argo CD, one-click EKS &amp; AKS clusters, a built-in security scanner, an AI assistant and docked coding agents.</p>
@@ -481,7 +520,7 @@
 </div>
 
 <!-- FEATURES -->
-<section class="sec" id="features">
+<section class="sec tile-canvas" id="features">
   <div class="wrap">
     <div class="sec-head reveal">
       <span class="kicker">Everything in one pane</span>
@@ -559,10 +598,10 @@
 </section>
 
 <!-- AI ASSISTANT -->
-<section class="band" id="assistant">
-  <div class="wrap sec">
+<section class="sec tile-dark" id="assistant">
+  <div class="wrap">
     <div class="sec-head reveal">
-      <span class="kicker" style="color:var(--purple);">Bring your own LLM</span>
+      <span class="kicker">Bring your own LLM</span>
       <h2>An AI assistant that actually reads your cluster</h2>
       <p>Pick your model in the top toolbar and ask in plain English: <em>“why is this pod not ready?”</em> or <em>“any warning events in kube-system?”</em>. It runs an agentic tool-use loop over read-only cluster data and streams the answer back token by token.</p>
     </div>
@@ -607,7 +646,7 @@
     <div class="split" style="margin-top:72px;">
       <div class="chat reveal" style="order:2;">
         <div class="chat-head">
-          <span class="spark" style="background:linear-gradient(135deg,var(--brand-light),var(--brand-dark));"><svg viewBox="0 0 24 24" fill="none" stroke="#0a0a0c" stroke-width="2"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3M13 5l-2 14"/></svg></span>
+          <span class="spark" style="background:var(--brand-light);"><svg viewBox="0 0 24 24" fill="none" stroke="#0a0a0c" stroke-width="2"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3M13 5l-2 14"/></svg></span>
           <b>Agent panel</b><span>docks like a terminal</span>
         </div>
         <div class="chat-body" style="font-family:var(--mono); font-size:12.5px; color:var(--text-dim); background:var(--bg);">
@@ -618,7 +657,7 @@
         </div>
       </div>
       <div class="reveal" style="order:1;">
-        <span class="kicker" style="color:var(--brand-light);">Your terminal agents, docked</span>
+        <span class="kicker">Your terminal agents, docked</span>
         <h2>Run your favourite coding agent right beside the cluster</h2>
         <p>k8sight detects the coding agents already installed on your machine and opens them in a docked panel (same place as the pod terminal) so you can debug manifests and cluster state side by side. The top toolbar shows the chosen agent's own icon and name.</p>
         <div class="agents-strip">
@@ -635,7 +674,7 @@
 </section>
 
 <!-- CLOUD -->
-<section class="sec" id="cloud">
+<section class="sec tile-parchment" id="cloud">
   <div class="wrap">
     <div class="sec-head reveal">
       <span class="kicker">Managed Kubernetes</span>
@@ -671,7 +710,7 @@
 </section>
 
 <!-- ARGOCD -->
-<section class="sec" id="argocd" style="padding-top:0;">
+<section class="sec tile-canvas" id="argocd">
   <div class="wrap">
     <div class="sec-head reveal">
       <span class="kicker">GitOps, natively</span>
@@ -732,7 +771,7 @@
 </section>
 
 <!-- SECURITY -->
-<section class="sec" id="security" style="padding-top:0;">
+<section class="sec tile-dark" id="security">
   <div class="wrap">
     <div class="sec-head reveal">
       <span class="kicker">Security &amp; posture</span>
@@ -798,7 +837,7 @@
 </section>
 
 <!-- DOWNLOAD -->
-<section class="sec" id="download">
+<section class="sec tile-parchment" id="download">
   <div class="wrap">
     <div class="sec-head reveal">
       <span class="kicker">Get started in a minute</span>
