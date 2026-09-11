@@ -96,6 +96,11 @@ jobs:
     name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-latest
+    # Manual approval gate: this job targets the `release` environment, which has
+    # required reviewers. After every platform builds, the workflow PAUSES here
+    # until a reviewer approves it in the Actions run — then it publishes.
+    # (Configure reviewers in Settings → Environments → release.)
+    environment: release
     # Publish for a pushed tag, or any manual run (version from the VERSION file).
     if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     steps:
