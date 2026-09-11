@@ -141,11 +141,7 @@ export default function Nodes({ focusNode, onFocusHandled, onNavigate }) {
           </h3>
           <span className="resource-count">{nodes.length} items</span>
         </div>
-        <div className="resource-controls">
-          <button className="cluster-refresh-btn" onClick={fetchNodes} disabled={loading}>
-            <Icon name="refresh" size={14} /> Refresh
-          </button>
-        </div>
+        <div className="resource-controls" />
       </div>
 
       <div className="resource-table-wrapper">

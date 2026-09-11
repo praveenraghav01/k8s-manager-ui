@@ -126,9 +126,6 @@ export default function Cluster() {
             <span className="cluster-version-badge">{data.serverVersion}</span>
           )}
         </h2>
-        <button className="cluster-refresh-btn" onClick={fetchSummary} disabled={loading}>
-          <Icon name="refresh" size={14} /> Refresh
-        </button>
       </div>
 
       {loading && <Loader label="Loading cluster information…" />}

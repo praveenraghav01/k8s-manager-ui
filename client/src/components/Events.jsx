@@ -38,9 +38,6 @@ export default function Events({ namespace = 'all' }) {
     <div className="events-container">
       <div className="events-toolbar">
         <h3>Cluster Events</h3>
-        <button className="events-refresh-btn" onClick={fetchEvents} disabled={loading}>
-          <Icon name="refresh" size={14} /> Refresh
-        </button>
       </div>
 
       <div className="events-content">

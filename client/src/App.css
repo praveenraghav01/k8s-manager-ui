@@ -3316,6 +3316,7 @@ h5.md-h, h6.md-h { font-size: 12.5px; color: var(--text-secondary); }
 .topbar-btn:hover:not(:disabled) { background: var(--bg-hover); color: var(--text); }
 .topbar-btn:active:not(:disabled) { transform: scale(0.94); }
 .topbar-btn:disabled { opacity: 0.3; cursor: default; }
+.topbar-btn.spinning svg { animation: loader-spin 0.7s linear infinite; transform-origin: center; }
 .topbar-ai {
   display: flex; align-items: stretch;
   border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden;

@@ -474,6 +474,8 @@ function App() {
           canForward={history.idx < history.stack.length - 1}
           onNotifications={() => setResourceType('events')}
           onConfigureAi={() => openPreferences('external-tools')}
+          onRefresh={handleRefresh}
+          refreshing={refreshing}
         />
       )}
       {serverUnreachable && configChecked && (
