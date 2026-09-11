@@ -116,7 +116,6 @@
     },
     "win": {
       "icon": "build/icon.png",
-      "publisherName": "Praveen Kumar",
       "artifactName": "${productName}-windows.${ext}",
       "target": [
         "nsis"
