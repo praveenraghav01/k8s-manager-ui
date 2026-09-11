@@ -431,6 +431,41 @@ body {
 .auth-raw-copy { position: absolute; top: 6px; right: 6px; padding: 4px 6px; }
 
 .auth-actions { flex-wrap: wrap; gap: 8px; }
+/* "Add cluster" dropdown (AWS / Azure / Local) on the connect screens */
+.auth-add { position: relative; }
+.auth-add > .modal-btn { display: inline-flex; align-items: center; gap: 6px; }
+.auth-add-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  min-width: 220px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  padding: 5px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.auth-add-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 11px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.auth-add-item:hover { background: var(--border-subtle); }
 
 /* ============================================================
    Toast notifications
