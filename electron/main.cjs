@@ -60,15 +60,16 @@ function resolveUserPath() {
 }
 
 // --- 2. Start the backend -------------------------------------------------
-// The server ships inside the asar archive (app.asar). We launch it with
-// Electron's utilityProcess.fork() rather than spawning `node server.js`:
-// utilityProcess runs a Node child that IS asar-aware, so server.js and all of
-// node_modules can stay packed in app.asar (a single file) instead of being
-// unpacked — which is what lets `asar` be enabled and keeps the build fast.
-// server.js resolves everything (client/dist, VERSION, node_modules) via
-// import.meta.url, so it works transparently from inside the archive.
+// The backend is ESM (`"type": "module"`). Node's native ESM loader does NOT
+// read from inside an asar archive (Electron's asar shim only patches CommonJS
+// require/fs), so `import './lib/pty-helper.mjs'` from a packed server.js fails
+// at launch. We therefore ship the app unpacked (`asar: false`); server.js and
+// node_modules live on the real filesystem, where the ESM loader can read them.
+// It's launched with utilityProcess.fork() (not `node server.js`) so it runs on
+// Electron's bundled Node; server.js resolves client/dist, VERSION and
+// node_modules via import.meta.url.
 function serverRoot() {
-  return app.getAppPath(); // .../Contents/Resources/app.asar (packaged) or project root (dev)
+  return app.getAppPath(); // .../Contents/Resources/app (packaged) or project root (dev)
 }
 
 function startServer(fixedPath) {
