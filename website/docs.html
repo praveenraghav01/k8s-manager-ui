@@ -169,6 +169,7 @@
   .docs-content h2 { font-size: clamp(26px, 3.5vw, 32px); font-weight: 700; letter-spacing: -0.015em; margin: 0 0 6px; color: var(--text); scroll-margin-top: 64px; }
   .docs-content .tagline { color: var(--text-mute); font-size: 15px; margin-bottom: 20px; }
   .docs-content h3 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; margin: 34px 0 12px; color: var(--text); scroll-margin-top: 64px; }
+  .rel-date { font-size: 13px; font-weight: 400; color: var(--text-mute); margin-left: 8px; }
   .docs-content p { color: var(--text-dim); font-size: 16px; line-height: 1.62; margin-bottom: 14px; }
   .docs-content strong { color: var(--text); font-weight: 600; }
   .docs-content ul, .docs-content ol { color: var(--text-dim); margin: 0 0 16px 22px; }
@@ -299,6 +300,7 @@
       <a href="#security" data-sect>Security</a>
       <a href="#config" data-sect>Configuration</a>
       <a href="#troubleshooting" data-sect>Troubleshooting</a>
+      <a href="#release-notes" data-sect>Release notes</a>
     </nav>
     <div class="side-ext">
       <a href="index.html">← Back to home</a>
@@ -756,6 +758,82 @@ export GOOGLE_CLIENT_SECRET='GOCSPX-...'</code></pre>
         <li><strong>kubectl version-skew warning</strong> — that's your local <code>kubectl</code> vs the cluster, not k8sight. Install a kubectl within one minor of the cluster to silence it.</li>
       </ul>
       <p>Still stuck? Open an issue on <a href="https://github.com/praveenraghav01/k8sight/issues" target="_blank" rel="noopener">GitHub</a>.</p>
+    </article>
+
+    <!-- ============ Release notes ============ -->
+    <article id="release-notes">
+      <h2>Release notes</h2>
+      <div class="tagline">What's new in each version. Installers for every release are on the <a href="https://github.com/praveenraghav01/k8sight/releases" target="_blank" rel="noopener">Releases</a> page.</div>
+
+      <h3>v1.5.0 <span class="rel-date">Sep 10, 2026</span> — Security Center</h3>
+      <p>Scan your cluster's security posture from inside k8sight — no operator required.</p>
+      <ul>
+        <li><strong>Security Center</strong> — image <strong>CVEs</strong>, <strong>configuration audit</strong>, <strong>RBAC risk</strong> and <strong>exposed secrets</strong>, with severity donuts, an images table and detail drawers.</li>
+        <li><strong>Bundled Trivy scanner</strong> — scan running images with <strong>nothing installed in-cluster</strong> (reads Trivy Operator reports if present, or runs the bundled binary; auto-downloads on demand).</li>
+        <li>Scan results persist across restarts.</li>
+        <li>Fixes: pod-terminal <code>posix_spawnp</code> failure; added a test suite and CI.</li>
+      </ul>
+      <p><a href="https://github.com/praveenraghav01/k8sight/releases/tag/v1.5.0" target="_blank" rel="noopener">Release on GitHub ↗</a></p>
+
+      <h3>v1.4.4 <span class="rel-date">Sep 10, 2026</span> — CLI-free Azure &amp; hardening</h3>
+      <ul>
+        <li><strong>CLI-free Azure AKS</strong> — a native token helper authenticates imported clusters with no <code>az</code> or <code>kubelogin</code>.</li>
+        <li><strong>Smarter auth errors</strong> — a friendly summary with a one-click fix, auto-recovery of expired credentials, and a <strong>Skip</strong> option in the import flow.</li>
+        <li><strong>Docs site</strong> — AWS/Azure setup guides, privacy policy &amp; terms, and social share previews.</li>
+        <li><strong>Security</strong> — local API hardened (loopback bind, strict same-origin guard); cluster version read in-process.</li>
+      </ul>
+      <p><a href="https://github.com/praveenraghav01/k8sight/releases/tag/v1.4.4" target="_blank" rel="noopener">Release on GitHub ↗</a></p>
+
+      <h3>v1.4.3 <span class="rel-date">Sep 9, 2026</span> — MCP server</h3>
+      <ul>
+        <li><strong>MCP server</strong> — connect Claude, Cursor and other MCP agents to inspect and operate the cluster; toggle <strong>write access</strong> from the UI (no env var or restart).</li>
+        <li>All cluster features and resources exposed as MCP tools, with a new <strong>MCP Server</strong> settings section.</li>
+        <li>Website redesigned in Apple's design language; theme-toggle fix.</li>
+      </ul>
+      <p><a href="https://github.com/praveenraghav01/k8sight/releases/tag/v1.4.3" target="_blank" rel="noopener">Release on GitHub ↗</a></p>
+
+      <h3>v1.4.2 <span class="rel-date">Sep 8, 2026</span> — One-click downloads</h3>
+      <ul>
+        <li><strong>Direct download links</strong> via stable, version-less artifact names (<code>k8sight-macos.dmg</code>, <code>k8sight-windows.exe</code>, …).</li>
+        <li>Release workflow derives the tag from the <code>VERSION</code> file and builds first, then publishes.</li>
+      </ul>
+      <p><a href="https://github.com/praveenraghav01/k8sight/releases/tag/v1.4.2" target="_blank" rel="noopener">Release on GitHub ↗</a></p>
+
+      <h3>v1.4.1 <span class="rel-date">Sep 8, 2026</span> — Rebrand to k8sight + cross-platform builds</h3>
+      <ul>
+        <li><strong>Cross-platform release pipeline</strong> — macOS <code>.dmg</code>, Windows <code>.exe</code>, and Linux <code>.AppImage</code>/<code>.deb</code>, built in parallel on native runners.</li>
+        <li><strong>Rebrand to k8sight</strong> — new name, logo, and an Apple-inspired website with a light/dark theme.</li>
+        <li>Official brand logos for AWS/Azure and the coding agents.</li>
+        <li>Fixes: macOS launch crash (hardened-runtime signing); package all backend modules; CI on Node 24.</li>
+      </ul>
+      <p><a href="https://github.com/praveenraghav01/k8sight/releases/tag/v1.4.1" target="_blank" rel="noopener">Release on GitHub ↗</a></p>
+
+      <h3>v1.3.0 <span class="rel-date">Aug 25, 2026</span> — Argo CD + a fresh look</h3>
+      <ul>
+        <li><strong>Argo CD support</strong> — auto-detected, with a GitOps dashboard for your Applications.</li>
+        <li><strong>Redesigned UI</strong> — a clean monochrome theme and a new logo.</li>
+        <li>Docker image bundles <code>kubectl</code> + <code>kubelogin</code>, with faster builds and a kubeconfig-mount fix.</li>
+      </ul>
+      <p><a href="https://github.com/praveenraghav01/k8sight/releases/tag/v1.3.0" target="_blank" rel="noopener">Release on GitHub ↗</a></p>
+
+      <h3>v1.2.0 <span class="rel-date">Jul 30, 2026</span> — AI assistant</h3>
+      <ul>
+        <li><strong>Built-in AI assistant</strong> — ask about your cluster in plain English (bring your own OpenAI-compatible model).</li>
+        <li>Versioned <strong>Docker image</strong> published via CI.</li>
+      </ul>
+      <p><a href="https://github.com/praveenraghav01/k8sight/releases/tag/v1.2.0" target="_blank" rel="noopener">Release on GitHub ↗</a> · v1.2.1 was a packaging patch.</p>
+
+      <h3>v1.1.0 <span class="rel-date">Jul 24, 2026</span> — Polish &amp; reliability</h3>
+      <ul>
+        <li>Improved error handling; new app icon and refreshed screenshots.</li>
+      </ul>
+      <p><a href="https://github.com/praveenraghav01/k8sight/releases/tag/v1.1.0" target="_blank" rel="noopener">Release on GitHub ↗</a></p>
+
+      <h3>v1.0.0 <span class="rel-date">Jul 24, 2026</span> — First public release</h3>
+      <ul>
+        <li>Native desktop UI: live cluster dashboard, workloads, pod logs, an interactive in-pod shell, detail drawers, and YAML view/edit.</li>
+      </ul>
+      <p><a href="https://github.com/praveenraghav01/k8sight/releases/tag/v1.0.0" target="_blank" rel="noopener">Release on GitHub ↗</a></p>
     </article>
   </div>
 </div>
