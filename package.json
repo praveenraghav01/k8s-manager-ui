@@ -116,10 +116,15 @@
     },
     "win": {
       "icon": "build/icon.png",
+      "publisherName": "Praveen Kumar",
       "artifactName": "${productName}-windows.${ext}",
       "target": [
         "nsis"
       ]
+    },
+    "nsis": {
+      "shortcutName": "k8sight",
+      "uninstallDisplayName": "k8sight"
     },
     "deb": {
       "fpm": [
