@@ -11,7 +11,7 @@ const PROVIDERS = {
 };
 const ORDER = ['demo', 'aws', 'azure', 'gcp', 'local', 'other'];
 
-export default function ContextSelector({ contexts = [], contextsInfo, currentContext, onChange, onAddAzure, onAddAws }) {
+export default function ContextSelector({ contexts = [], contextsInfo, currentContext, onChange, onAddAzure, onAddAws, onAddLocal }) {
   const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -81,7 +81,7 @@ export default function ContextSelector({ contexts = [], contextsInfo, currentCo
               </div>
             ))}
           </div>
-          {(onAddAzure || onAddAws) && (
+          {(onAddAzure || onAddAws || onAddLocal) && (
             <div className="ctx-add-row">
               <button className={`ctx-add-cluster ${addOpen ? 'open' : ''}`} onClick={() => setAddOpen((o) => !o)}>
                 <Icon name="plus" size={14} /> <span>Add cluster</span>
@@ -97,6 +97,11 @@ export default function ContextSelector({ contexts = [], contextsInfo, currentCo
                   {onAddAzure && (
                     <button className="ctx-add-item" onClick={() => { setOpen(false); onAddAzure(); }}>
                       <Icon name="azure" size={15} style={{ color: PROVIDERS.azure.color }} /> Azure AKS
+                    </button>
+                  )}
+                  {onAddLocal && (
+                    <button className="ctx-add-item" onClick={() => { setOpen(false); onAddLocal(); }}>
+                      <Icon name="box" size={15} style={{ color: PROVIDERS.local.color }} /> Local — load kubeconfig
                     </button>
                   )}
                 </div>

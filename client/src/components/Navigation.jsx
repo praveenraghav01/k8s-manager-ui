@@ -20,6 +20,7 @@ export default function Navigation({
   onSelectSecurityView,
   onAddAzure,
   onAddAws,
+  onAddLocal,
   onOpenPreferences
 }) {
   // Route context changes through the app-level switch so the new cluster's
@@ -150,6 +151,7 @@ export default function Navigation({
           onChange={handleContextChange}
           onAddAzure={onAddAzure}
           onAddAws={onAddAws}
+          onAddLocal={onAddLocal}
         />
       </div>
 

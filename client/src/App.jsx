@@ -563,6 +563,7 @@ function App() {
             onSelectSecurityView={(v) => { setSecurityView(v); setResourceType('security'); }}
             onAddAzure={() => openAzure()}
             onAddAws={() => setShowAws(true)}
+            onAddLocal={() => setForceConfigModal(true)}
             onOpenPreferences={() => openPreferences('general')}
           />
 
