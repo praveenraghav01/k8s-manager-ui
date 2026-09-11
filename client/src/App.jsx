@@ -492,6 +492,7 @@ function App() {
           exists={configStatus.exists}
           onSubmit={loadConfigFromPath}
           onDemo={startDemo}
+          onClose={configStatus.loaded ? () => setForceConfigModal(false) : undefined}
         />
       )}
 

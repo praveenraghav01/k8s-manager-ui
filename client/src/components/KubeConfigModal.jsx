@@ -1,10 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from './Icons';
 
-export default function KubeConfigModal({ defaultPath, exists, onSubmit, onDemo }) {
+export default function KubeConfigModal({ defaultPath, exists, onSubmit, onDemo, onClose }) {
   const [path, setPath] = useState(defaultPath || '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+
+  // Dismiss on Escape when the modal is closable (there's a cluster behind it).
+  useEffect(() => {
+    if (!onClose) return;
+    const onKey = (e) => { if (e.key === 'Escape' && !busy) onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose, busy]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -21,11 +29,16 @@ export default function KubeConfigModal({ defaultPath, exists, onSubmit, onDemo 
   };
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" onMouseDown={onClose ? (e) => { if (e.target === e.currentTarget && !busy) onClose(); } : undefined}>
       <div className="modal">
         <div className="modal-header">
           <span className="modal-icon"><Icon name="cluster" size={20} /></span>
           <h2>Load kubeconfig</h2>
+          {onClose && (
+            <button className="modal-close" onClick={onClose} disabled={busy} title="Close" aria-label="Close">
+              <Icon name="close" size={16} />
+            </button>
+          )}
         </div>
 
         <p className="modal-desc">
