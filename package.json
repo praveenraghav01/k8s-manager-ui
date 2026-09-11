@@ -59,10 +59,7 @@
   "build": {
     "appId": "com.k8sight.desktop",
     "productName": "k8sight",
-    "asar": true,
-    "asarUnpack": [
-      "**/*.node"
-    ],
+    "asar": false,
     "afterPack": "electron/after-pack.cjs",
     "directories": {
       "output": "release",
@@ -71,6 +68,8 @@
     "files": [
       "electron/**/*",
       "*.js",
+      "lib/**/*",
+      "VERSION",
       "package.json",
       "client/dist/**/*"
     ],
