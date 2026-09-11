@@ -2,16 +2,18 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Icon from './Icons';
 
 const PROVIDERS = {
+  demo: { label: 'Demo', icon: 'sparkles', color: '#af52de' },
   aws: { label: 'AWS EKS', icon: 'aws', color: '#ff9900' },
   azure: { label: 'Azure AKS', icon: 'azure', color: '#3b96f0' },
   gcp: { label: 'Google GKE', icon: 'cluster', color: '#4285f4' },
   local: { label: 'Local', icon: 'box', color: '#8b949e' },
   other: { label: 'Other clusters', icon: 'cluster', color: '#8b8fa3' },
 };
-const ORDER = ['aws', 'azure', 'gcp', 'local', 'other'];
+const ORDER = ['demo', 'aws', 'azure', 'gcp', 'local', 'other'];
 
-export default function ContextSelector({ contexts = [], contextsInfo, currentContext, onChange, onAddAzure, onAddAws }) {
+export default function ContextSelector({ contexts = [], contextsInfo, currentContext, onChange, onAddAzure, onAddAws, onAddLocal }) {
   const [open, setOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [query, setQuery] = useState('');
   const ref = useRef(null);
   const searchRef = useRef(null);
@@ -24,7 +26,7 @@ export default function ContextSelector({ contexts = [], contextsInfo, currentCo
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
   }, []);
 
-  useEffect(() => { if (open) setTimeout(() => searchRef.current?.focus(), 0); else setQuery(''); }, [open]);
+  useEffect(() => { if (open) setTimeout(() => searchRef.current?.focus(), 0); else { setQuery(''); setAddOpen(false); } }, [open]);
 
   const providerByName = useMemo(() => {
     const m = new Map();
@@ -79,17 +81,30 @@ export default function ContextSelector({ contexts = [], contextsInfo, currentCo
               </div>
             ))}
           </div>
-          {(onAddAzure || onAddAws) && (
+          {(onAddAzure || onAddAws || onAddLocal) && (
             <div className="ctx-add-row">
-              {onAddAzure && (
-                <button className="ctx-add-btn" onClick={() => { setOpen(false); onAddAzure(); }}>
-                  <Icon name="azure" size={14} style={{ color: PROVIDERS.azure.color }} /> Add Azure
-                </button>
-              )}
-              {onAddAws && (
-                <button className="ctx-add-btn" onClick={() => { setOpen(false); onAddAws(); }}>
-                  <Icon name="aws" size={14} style={{ color: PROVIDERS.aws.color }} /> Add AWS
-                </button>
+              <button className={`ctx-add-cluster ${addOpen ? 'open' : ''}`} onClick={() => setAddOpen((o) => !o)}>
+                <Icon name="plus" size={14} /> <span>Add cluster</span>
+                <Icon name={addOpen ? 'chevronUp' : 'chevronDown'} size={12} className="ctx-add-caret" />
+              </button>
+              {addOpen && (
+                <div className="ctx-add-menu">
+                  {onAddAws && (
+                    <button className="ctx-add-item" onClick={() => { setOpen(false); onAddAws(); }}>
+                      <Icon name="aws" size={15} style={{ color: PROVIDERS.aws.color }} /> AWS EKS
+                    </button>
+                  )}
+                  {onAddAzure && (
+                    <button className="ctx-add-item" onClick={() => { setOpen(false); onAddAzure(); }}>
+                      <Icon name="azure" size={15} style={{ color: PROVIDERS.azure.color }} /> Azure AKS
+                    </button>
+                  )}
+                  {onAddLocal && (
+                    <button className="ctx-add-item" onClick={() => { setOpen(false); onAddLocal(); }}>
+                      <Icon name="box" size={15} style={{ color: PROVIDERS.local.color }} /> Local — load kubeconfig
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           )}

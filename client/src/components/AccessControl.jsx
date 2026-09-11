@@ -99,9 +99,6 @@ export default function AccessControl({ onNavigate }) {
             <input type="text" placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} className="search-input" />
             <span className="search-icon"><Icon name="search" size={15} /></span>
           </div>
-          <button className="cluster-refresh-btn" onClick={fetchRbac} disabled={loading}>
-            <Icon name="refresh" size={14} /> Refresh
-          </button>
         </div>
       </div>
 

@@ -5,7 +5,7 @@ import { getAiConfig, isExternalAgent, aiToolName, aiToolIcon } from '../aiConfi
 // Native-style global top toolbar. Spans the full window width, doubles as the
 // window drag region (macOS traffic lights sit at its left), and holds
 // back/forward history plus the right-side AI launcher and notifications.
-export default function TopBar({ onBack, onForward, canBack, canForward, onNotifications, onConfigureAi }) {
+export default function TopBar({ onBack, onForward, canBack, canForward, onNotifications, onConfigureAi, onRefresh, refreshing }) {
   const [cfg, setCfg] = useState(getAiConfig);
   useEffect(() => {
     const onChange = () => setCfg(getAiConfig());
@@ -45,6 +45,17 @@ export default function TopBar({ onBack, onForward, canBack, canForward, onNotif
         <button className="topbar-btn" onClick={onNotifications} title="Events &amp; alerts" aria-label="Notifications">
           <Icon name="bell" size={17} />
         </button>
+        {onRefresh && (
+          <button
+            className={`topbar-btn ${refreshing ? 'spinning' : ''}`}
+            onClick={onRefresh}
+            disabled={refreshing}
+            title="Refresh"
+            aria-label="Refresh"
+          >
+            <Icon name="refresh" size={17} />
+          </button>
+        )}
       </div>
     </header>
   );

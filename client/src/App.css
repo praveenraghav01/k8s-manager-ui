@@ -206,6 +206,14 @@ body {
   animation: modal-in 0.22s var(--ease-out);
 }
 .modal-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.modal-close {
+  margin-left: auto; flex-shrink: 0;
+  width: 30px; height: 30px; display: grid; place-items: center;
+  border-radius: 8px; border: none; background: transparent;
+  color: var(--text-secondary); cursor: pointer; transition: background 0.15s, color 0.15s;
+}
+.modal-close:hover:not(:disabled) { background: var(--bg-hover); color: var(--text); }
+.modal-close:disabled { opacity: 0.4; cursor: default; }
 .modal-icon {
   width: 38px;
   height: 38px;
@@ -273,6 +281,11 @@ body {
 .modal-btn.primary:hover:not(:disabled) { filter: brightness(1.12); }
 .modal-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 .modal-hint { margin-top: 16px; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+/* Demo entry point on the "load kubeconfig" screen */
+.modal-demo { margin-top: 18px; }
+.modal-or { display: flex; align-items: center; gap: 12px; margin: 2px 0 12px; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+.modal-or::before, .modal-or::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.modal-demo .modal-btn { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 
 /* Danger variant of the modal icon (auth / connectivity failures) */
 .modal-icon.danger { background: var(--red-tint); color: var(--red); }
@@ -426,6 +439,75 @@ body {
 .auth-raw-copy { position: absolute; top: 6px; right: 6px; padding: 4px 6px; }
 
 .auth-actions { flex-wrap: wrap; gap: 8px; }
+/* "Add cluster" dropdown (AWS / Azure / Local) on the connect screens */
+.auth-add { position: relative; }
+.auth-add > .modal-btn { display: inline-flex; align-items: center; gap: 6px; }
+.auth-add-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  min-width: 220px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  padding: 5px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.auth-add-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 11px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.auth-add-item:hover { background: var(--border-subtle); }
+
+/* Coloured connect-screen buttons (tints work on light + dark) */
+.modal-btn.btn-demo { --c: #a855f7; }
+.modal-btn.btn-add { --c: #3b9dff; }
+.modal-btn.btn-demo, .modal-btn.btn-add {
+  background: color-mix(in srgb, var(--c) 15%, transparent);
+  border-color: color-mix(in srgb, var(--c) 45%, transparent);
+  color: var(--c);
+}
+.modal-btn.btn-demo:hover:not(:disabled),
+.modal-btn.btn-add:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--c) 26%, transparent);
+}
+/* Icon-only Retry, pinned to the header's top-right */
+.auth-retry-icon {
+  --c: #34c759;
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+  background: color-mix(in srgb, var(--c) 15%, transparent);
+  color: var(--c);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.auth-retry-icon:hover:not(:disabled) { background: color-mix(in srgb, var(--c) 26%, transparent); }
+.auth-retry-icon:active:not(:disabled) { transform: scale(0.92); }
+.auth-retry-icon:disabled { cursor: default; }
+.auth-retry-icon.spinning svg { animation: auth-retry-spin 0.8s linear infinite; }
+@keyframes auth-retry-spin { to { transform: rotate(360deg); } }
 
 /* ============================================================
    Toast notifications
@@ -863,14 +945,21 @@ body {
 }
 .ctx-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 .ctx-option.active .ctx-dot { box-shadow: 0 0 0 2px var(--accent-tint); }
-.ctx-add-row { display: flex; border-top: 1px solid var(--border); }
-.ctx-add-btn {
-  flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
-  padding: 9px 10px; border: none; background: var(--bg-surface);
+.ctx-add-row { display: flex; flex-direction: column; border-top: 1px solid var(--border); }
+.ctx-add-cluster {
+  display: flex; align-items: center; gap: 7px;
+  padding: 9px 12px; border: none; background: var(--bg-surface);
   color: var(--text-secondary); font-size: 11.5px; font-weight: 600; cursor: pointer;
 }
-.ctx-add-btn + .ctx-add-btn { border-left: 1px solid var(--border); }
-.ctx-add-btn:hover { background: var(--bg-hover); color: var(--text); }
+.ctx-add-cluster:hover { background: var(--bg-hover); color: var(--text); }
+.ctx-add-caret { margin-left: auto; }
+.ctx-add-menu { display: flex; flex-direction: column; border-top: 1px solid var(--border); background: var(--bg-base, var(--bg-surface)); }
+.ctx-add-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 14px; border: none; background: transparent;
+  color: var(--text); font-size: 12.5px; font-weight: 500; text-align: left; cursor: pointer;
+}
+.ctx-add-item:hover { background: var(--bg-hover); }
 .ctx-option {
   width: 100%;
   display: flex;
@@ -3242,6 +3331,7 @@ h5.md-h, h6.md-h { font-size: 12.5px; color: var(--text-secondary); }
 .topbar-btn:hover:not(:disabled) { background: var(--bg-hover); color: var(--text); }
 .topbar-btn:active:not(:disabled) { transform: scale(0.94); }
 .topbar-btn:disabled { opacity: 0.3; cursor: default; }
+.topbar-btn.spinning svg { animation: loader-spin 0.7s linear infinite; transform-origin: center; }
 .topbar-ai {
   display: flex; align-items: stretch;
   border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden;

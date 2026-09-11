@@ -89,9 +89,6 @@ export default function CustomResources() {
             />
             <span className="search-icon"><Icon name="search" size={15} /></span>
           </div>
-          <button className="cluster-refresh-btn" onClick={fetchCrds} disabled={loading}>
-            <Icon name="refresh" size={14} /> Refresh
-          </button>
         </div>
       </div>
 

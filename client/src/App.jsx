@@ -242,6 +242,14 @@ function App() {
     }
   };
 
+  // Enter the demo cluster from any connect screen. Also clears a
+  // settings-forced config modal, and closes it directly when we're already in
+  // demo (switchContext would no-op on the same context, leaving it stuck).
+  const startDemo = () => {
+    setForceConfigModal(false);
+    if (configStatus.currentContext !== 'demo-cluster') switchContext('demo-cluster');
+  };
+
   // Global refresh for the active page. App-managed views (Overview + resource
   // lists) reload via the shared fetch; self-fetching views (Cluster, Nodes,
   // Topology, Helm, Namespaces, Custom Resources, Access Control) are remounted
@@ -466,6 +474,8 @@ function App() {
           canForward={history.idx < history.stack.length - 1}
           onNotifications={() => setResourceType('events')}
           onConfigureAi={() => openPreferences('external-tools')}
+          onRefresh={handleRefresh}
+          refreshing={refreshing}
         />
       )}
       {serverUnreachable && configChecked && (
@@ -481,6 +491,8 @@ function App() {
           defaultPath={configStatus.defaultPath}
           exists={configStatus.exists}
           onSubmit={loadConfigFromPath}
+          onDemo={startDemo}
+          onClose={configStatus.loaded ? () => setForceConfigModal(false) : undefined}
         />
       )}
 
@@ -496,6 +508,7 @@ function App() {
           onSwitchContext={switchContext}
           onAddAzure={(mode) => openAzure(mode)}
           onAddAws={() => setShowAws(true)}
+          onDemo={startDemo}
         />
       )}
 
@@ -551,6 +564,7 @@ function App() {
             onSelectSecurityView={(v) => { setSecurityView(v); setResourceType('security'); }}
             onAddAzure={() => openAzure()}
             onAddAws={() => setShowAws(true)}
+            onAddLocal={() => setForceConfigModal(true)}
             onOpenPreferences={() => openPreferences('general')}
           />
 

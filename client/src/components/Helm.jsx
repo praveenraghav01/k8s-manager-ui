@@ -101,11 +101,7 @@ export default function Helm() {
           </h3>
           <span className="resource-count">{releases.length} items</span>
         </div>
-        <div className="resource-controls">
-          <button className="cluster-refresh-btn" onClick={fetchReleases} disabled={loading}>
-            <Icon name="refresh" size={14} /> Refresh
-          </button>
-        </div>
+        <div className="resource-controls" />
       </div>
 
       <div className="resource-table-wrapper">

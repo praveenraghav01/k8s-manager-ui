@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Icon from './Icons';
 import ContextSelector from './ContextSelector';
 
@@ -100,10 +100,24 @@ function classify(auth) {
   };
 }
 
-export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying, contexts = [], contextsInfo, currentContext, onSwitchContext, onAddAzure, onAddAws }) {
+export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying, contexts = [], contextsInfo, currentContext, onSwitchContext, onAddAzure, onAddAws, onDemo }) {
   const raw = auth?.message || '';
   const { title, summary, fix, unmatched } = classify(auth);
   const [copied, setCopied] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const addRef = useRef(null);
+
+  // Close the "Add cluster" menu on outside click / Escape.
+  useEffect(() => {
+    if (!addOpen) return;
+    const onDown = (e) => { if (addRef.current && !addRef.current.contains(e.target)) setAddOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setAddOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
+  }, [addOpen]);
+
+  const canAdd = onChangeConfig || onAddAzure || onAddAws;
 
   // Only surface the raw error separately when it isn't already the summary.
   const showRaw = !!raw && (!unmatched || raw.length > 160);
@@ -118,6 +132,15 @@ export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying
         <div className="modal-header">
           <span className="modal-icon danger"><Icon name="warning" size={20} /></span>
           <h2>{title}</h2>
+          <button
+            className={`auth-retry-icon ${retrying ? 'spinning' : ''}`}
+            onClick={onRetry}
+            disabled={retrying}
+            title={retrying ? 'Retrying…' : 'Retry'}
+            aria-label={retrying ? 'Retrying' : 'Retry'}
+          >
+            <Icon name="refresh" size={16} />
+          </button>
         </div>
 
         <p className="modal-desc auth-summary">{summary}</p>
@@ -189,24 +212,44 @@ export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying
         )}
 
         <div className="modal-actions auth-actions">
-          {onChangeConfig && (
-            <button className="modal-btn" onClick={onChangeConfig} disabled={retrying}>
-              Load kubeconfig
+          {onDemo && (
+            <button className="modal-btn btn-demo" onClick={onDemo} disabled={retrying} title="Explore a synthetic cluster — no real cluster needed">
+              <Icon name="sparkles" size={14} /> Demo
             </button>
           )}
-          {onAddAzure && (
-            <button className="modal-btn" onClick={onAddAzure} disabled={retrying}>
-              <Icon name="azure" size={14} /> Azure
-            </button>
+          {canAdd && (
+            <div className="auth-add" ref={addRef}>
+              <button
+                className="modal-btn btn-add"
+                onClick={() => setAddOpen((o) => !o)}
+                disabled={retrying}
+                aria-haspopup="menu"
+                aria-expanded={addOpen}
+              >
+                <Icon name="plus" size={14} /> Add cluster
+                <Icon name={addOpen ? 'chevronUp' : 'chevronDown'} size={12} style={{ marginLeft: 2 }} />
+              </button>
+              {addOpen && (
+                <div className="auth-add-menu" role="menu">
+                  {onAddAws && (
+                    <button className="auth-add-item" role="menuitem" onClick={() => { setAddOpen(false); onAddAws(); }}>
+                      <Icon name="aws" size={16} /> AWS EKS
+                    </button>
+                  )}
+                  {onAddAzure && (
+                    <button className="auth-add-item" role="menuitem" onClick={() => { setAddOpen(false); onAddAzure(); }}>
+                      <Icon name="azure" size={16} /> Azure AKS
+                    </button>
+                  )}
+                  {onChangeConfig && (
+                    <button className="auth-add-item" role="menuitem" onClick={() => { setAddOpen(false); onChangeConfig(); }}>
+                      <Icon name="box" size={16} /> Local — load kubeconfig
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           )}
-          {onAddAws && (
-            <button className="modal-btn" onClick={onAddAws} disabled={retrying}>
-              <Icon name="aws" size={14} /> AWS
-            </button>
-          )}
-          <button className="modal-btn primary" onClick={onRetry} disabled={retrying}>
-            <Icon name="refresh" size={14} /> {retrying ? 'Retrying…' : 'Retry'}
-          </button>
         </div>
       </div>
     </div>
