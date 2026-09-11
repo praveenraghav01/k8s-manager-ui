@@ -497,6 +497,7 @@ function App() {
           onSwitchContext={switchContext}
           onAddAzure={(mode) => openAzure(mode)}
           onAddAws={() => setShowAws(true)}
+          onDemo={() => switchContext('demo-cluster')}
         />
       )}
 

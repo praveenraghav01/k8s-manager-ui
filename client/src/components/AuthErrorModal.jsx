@@ -100,7 +100,7 @@ function classify(auth) {
   };
 }
 
-export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying, contexts = [], contextsInfo, currentContext, onSwitchContext, onAddAzure, onAddAws }) {
+export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying, contexts = [], contextsInfo, currentContext, onSwitchContext, onAddAzure, onAddAws, onDemo }) {
   const raw = auth?.message || '';
   const { title, summary, fix, unmatched } = classify(auth);
   const [copied, setCopied] = useState(false);
@@ -189,6 +189,11 @@ export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying
         )}
 
         <div className="modal-actions auth-actions">
+          {onDemo && (
+            <button className="modal-btn" onClick={onDemo} disabled={retrying} title="Explore a synthetic cluster — no real cluster needed">
+              <Icon name="sparkles" size={14} /> Demo
+            </button>
+          )}
           {onChangeConfig && (
             <button className="modal-btn" onClick={onChangeConfig} disabled={retrying}>
               Load kubeconfig
