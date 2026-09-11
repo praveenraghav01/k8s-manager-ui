@@ -766,11 +766,14 @@ export GOOGLE_CLIENT_SECRET='GOCSPX-...'</code></pre>
       <div class="tagline">What's new in each version. Installers for every release are on the <a href="https://github.com/praveenraghav01/k8sight/releases" target="_blank" rel="noopener">Releases</a> page.</div>
 
       <h3>v1.5.0 <span class="rel-date">Sep 10, 2026</span> — Security Center</h3>
-      <p>Scan your cluster's security posture from inside k8sight — no operator required.</p>
+      <p>Audit your cluster's security posture from inside k8sight — <strong>image vulnerabilities, misconfigurations, RBAC risk and exposed secrets</strong> — with no operator to install.</p>
       <ul>
-        <li><strong>Security Center</strong> — image <strong>CVEs</strong>, <strong>configuration audit</strong>, <strong>RBAC risk</strong> and <strong>exposed secrets</strong>, with severity donuts, an images table and detail drawers.</li>
-        <li><strong>Bundled Trivy scanner</strong> — scan running images with <strong>nothing installed in-cluster</strong> (reads Trivy Operator reports if present, or runs the bundled binary; auto-downloads on demand).</li>
-        <li>Scan results persist across restarts.</li>
+        <li><strong>Image vulnerabilities</strong> — every running image grouped by severity (Critical / High / Medium / Low), with fixed-in versions, affected packages and per-image detail.</li>
+        <li><strong>Configuration audit</strong> — resource configs checked against best practices; each finding shows its severity and the rule it tripped.</li>
+        <li><strong>RBAC risk</strong> — roles and cluster-roles flagged for over-broad permissions, with the exact subjects and rules.</li>
+        <li><strong>Exposed secrets</strong> — credentials and tokens baked into image layers.</li>
+        <li><strong>Zero-install scanning</strong> — a <strong>bundled Trivy</strong> scans running images with nothing in-cluster (reads Trivy Operator reports if present, or runs the bundled binary; auto-downloads on demand).</li>
+        <li>An Overview with severity donuts plus Images / Resources / Roles tabs and detail drawers; scans stream results and <strong>persist across restarts</strong>.</li>
         <li>Fixes: pod-terminal <code>posix_spawnp</code> failure; added a test suite and CI.</li>
       </ul>
       <p><a href="https://github.com/praveenraghav01/k8sight/releases/tag/v1.5.0" target="_blank" rel="noopener">Release on GitHub ↗</a></p>
