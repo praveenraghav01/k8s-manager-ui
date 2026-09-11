@@ -242,6 +242,14 @@ function App() {
     }
   };
 
+  // Enter the demo cluster from any connect screen. Also clears a
+  // settings-forced config modal, and closes it directly when we're already in
+  // demo (switchContext would no-op on the same context, leaving it stuck).
+  const startDemo = () => {
+    setForceConfigModal(false);
+    if (configStatus.currentContext !== 'demo-cluster') switchContext('demo-cluster');
+  };
+
   // Global refresh for the active page. App-managed views (Overview + resource
   // lists) reload via the shared fetch; self-fetching views (Cluster, Nodes,
   // Topology, Helm, Namespaces, Custom Resources, Access Control) are remounted
@@ -481,7 +489,7 @@ function App() {
           defaultPath={configStatus.defaultPath}
           exists={configStatus.exists}
           onSubmit={loadConfigFromPath}
-          onDemo={() => switchContext('demo-cluster')}
+          onDemo={startDemo}
         />
       )}
 
@@ -497,7 +505,7 @@ function App() {
           onSwitchContext={switchContext}
           onAddAzure={(mode) => openAzure(mode)}
           onAddAws={() => setShowAws(true)}
-          onDemo={() => switchContext('demo-cluster')}
+          onDemo={startDemo}
         />
       )}
 

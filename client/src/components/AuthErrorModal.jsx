@@ -132,6 +132,15 @@ export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying
         <div className="modal-header">
           <span className="modal-icon danger"><Icon name="warning" size={20} /></span>
           <h2>{title}</h2>
+          <button
+            className={`auth-retry-icon ${retrying ? 'spinning' : ''}`}
+            onClick={onRetry}
+            disabled={retrying}
+            title={retrying ? 'Retrying…' : 'Retry'}
+            aria-label={retrying ? 'Retrying' : 'Retry'}
+          >
+            <Icon name="refresh" size={16} />
+          </button>
         </div>
 
         <p className="modal-desc auth-summary">{summary}</p>
@@ -204,14 +213,14 @@ export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying
 
         <div className="modal-actions auth-actions">
           {onDemo && (
-            <button className="modal-btn" onClick={onDemo} disabled={retrying} title="Explore a synthetic cluster — no real cluster needed">
+            <button className="modal-btn btn-demo" onClick={onDemo} disabled={retrying} title="Explore a synthetic cluster — no real cluster needed">
               <Icon name="sparkles" size={14} /> Demo
             </button>
           )}
           {canAdd && (
             <div className="auth-add" ref={addRef}>
               <button
-                className="modal-btn"
+                className="modal-btn btn-add"
                 onClick={() => setAddOpen((o) => !o)}
                 disabled={retrying}
                 aria-haspopup="menu"
@@ -241,9 +250,6 @@ export default function AuthErrorModal({ auth, onRetry, onChangeConfig, retrying
               )}
             </div>
           )}
-          <button className="modal-btn primary" onClick={onRetry} disabled={retrying}>
-            <Icon name="refresh" size={14} /> {retrying ? 'Retrying…' : 'Retry'}
-          </button>
         </div>
       </div>
     </div>
