@@ -23,6 +23,9 @@ A native desktop app (macOS · Windows · Linux) — and a Docker image — for 
 
 ## Features
 
+**Demo mode — try it with no cluster**
+- Pick the built-in **demo cluster** (or click **Explore the demo** on the connect screen) to try every feature against a realistic synthetic cluster — sample workloads (including a Pending and a CrashLoopBackOff pod), live metrics, logs, topology, Helm, Argo CD, a Security Center scan, a pod shell and the AI assistant — with **no kubeconfig required**.
+
 **Explore**
 - Live cluster dashboard — node/pod health, workload charts, capacity.
 - Every workload type (Pods, Deployments, StatefulSets, DaemonSets, Services, …) with live CPU/memory, per-container status, and cross-links (namespace → node → pod → owner).
@@ -52,8 +55,11 @@ A native desktop app (macOS · Windows · Linux) — and a Docker image — for 
 
 ## Quick start
 
+> [!TIP]
+> No cluster handy? Launch the app and click **Explore the demo** (or pick the **demo** context) to browse and operate a synthetic cluster — every feature works, no setup needed.
+
 > [!NOTE]
-> k8sight shells out to `kubectl` (required on your `PATH`) and `helm` (v3, for the Helm view). You also need a working `kubeconfig` (`~/.kube/config`, or set `KUBECONFIG`). The packaged desktop app bundles its own Node runtime; building from source needs **Node.js 20+** (24 recommended).
+> To use a real cluster, k8sight shells out to `kubectl` (required on your `PATH`) and `helm` (v3, for the Helm view), and needs a working `kubeconfig` (`~/.kube/config`, or set `KUBECONFIG`). The packaged desktop app bundles its own Node runtime; building from source needs **Node.js 20+** (24 recommended).
 
 ### Desktop app
 
