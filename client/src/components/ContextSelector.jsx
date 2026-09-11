@@ -13,6 +13,7 @@ const ORDER = ['demo', 'aws', 'azure', 'gcp', 'local', 'other'];
 
 export default function ContextSelector({ contexts = [], contextsInfo, currentContext, onChange, onAddAzure, onAddAws }) {
   const [open, setOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [query, setQuery] = useState('');
   const ref = useRef(null);
   const searchRef = useRef(null);
@@ -25,7 +26,7 @@ export default function ContextSelector({ contexts = [], contextsInfo, currentCo
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
   }, []);
 
-  useEffect(() => { if (open) setTimeout(() => searchRef.current?.focus(), 0); else setQuery(''); }, [open]);
+  useEffect(() => { if (open) setTimeout(() => searchRef.current?.focus(), 0); else { setQuery(''); setAddOpen(false); } }, [open]);
 
   const providerByName = useMemo(() => {
     const m = new Map();
@@ -82,15 +83,23 @@ export default function ContextSelector({ contexts = [], contextsInfo, currentCo
           </div>
           {(onAddAzure || onAddAws) && (
             <div className="ctx-add-row">
-              {onAddAzure && (
-                <button className="ctx-add-btn" onClick={() => { setOpen(false); onAddAzure(); }}>
-                  <Icon name="azure" size={14} style={{ color: PROVIDERS.azure.color }} /> Add Azure
-                </button>
-              )}
-              {onAddAws && (
-                <button className="ctx-add-btn" onClick={() => { setOpen(false); onAddAws(); }}>
-                  <Icon name="aws" size={14} style={{ color: PROVIDERS.aws.color }} /> Add AWS
-                </button>
+              <button className={`ctx-add-cluster ${addOpen ? 'open' : ''}`} onClick={() => setAddOpen((o) => !o)}>
+                <Icon name="plus" size={14} /> <span>Add cluster</span>
+                <Icon name={addOpen ? 'chevronUp' : 'chevronDown'} size={12} className="ctx-add-caret" />
+              </button>
+              {addOpen && (
+                <div className="ctx-add-menu">
+                  {onAddAws && (
+                    <button className="ctx-add-item" onClick={() => { setOpen(false); onAddAws(); }}>
+                      <Icon name="aws" size={15} style={{ color: PROVIDERS.aws.color }} /> AWS EKS
+                    </button>
+                  )}
+                  {onAddAzure && (
+                    <button className="ctx-add-item" onClick={() => { setOpen(false); onAddAzure(); }}>
+                      <Icon name="azure" size={15} style={{ color: PROVIDERS.azure.color }} /> Azure AKS
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           )}
