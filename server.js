@@ -23,6 +23,7 @@ import { randomUUID } from 'crypto';
 import { createMcpServer } from './mcp.js';
 import * as awsEks from './aws-eks.js';
 import * as trivyScan from './trivy-scan.js';
+import * as demo from './demo.js';
 import { ensurePtyHelperExecutable } from './lib/pty-helper.mjs';
 
 // node-pty powers the pod terminal (a real PTY bridged to `kubectl exec`). Load
@@ -128,6 +129,61 @@ app.use('/api', apiLimiter);
 app.use('/mcp', apiLimiter);
 
 app.use(express.json());
+
+// ------------------------------------------------------------------
+// Demo mode — when the active context is the synthetic 'demo-cluster',
+// serve an in-memory cluster (demo.js) so every feature is explorable with
+// no real cluster. This single interception covers all data + mutation
+// endpoints; config/cloud/MCP/static fall through, and the assistant is
+// handled explicitly (canned, no LLM needed).
+// ------------------------------------------------------------------
+app.use((req, res, next) => {
+  if (!demo.isDemo(currentContext)) return next();
+  const p = req.path;
+  // Real config handlers stay in charge (they are demo-aware).
+  if (p === '/api/config/status' || p === '/api/config/context' ||
+      p === '/api/config/load' || p === '/api/config/reload') return next();
+  // Auth always "passes" in demo.
+  if (p === '/api/config/auth') return res.json({ ok: true, currentContext: demo.DEMO_CONTEXT });
+  // Assistant: report enabled + stream canned answers (no LLM required).
+  if (p === '/api/assistant/status') {
+    return res.json({ enabled: true, source: 'demo', editable: false, baseUrl: '', model: 'k8sight-demo (canned)' });
+  }
+  if (p === '/api/assistant/chat' && req.method === 'POST') return demoAssistantChat(req, res);
+  // Cloud sign-in, agent detection, MCP, version and non-API paths are unchanged.
+  if (p.startsWith('/api/azure') || p.startsWith('/api/aws') ||
+      p.startsWith('/api/ai-agents') || p === '/mcp' || p === '/api/version' ||
+      !p.startsWith('/api/')) return next();
+  // Everything else under /api is cluster data → the synthetic cluster.
+  if (demo.handle(req, res)) return;
+  return next();
+});
+
+// Canned, streamed assistant reply for demo mode — matches the SSE event
+// shape of /api/assistant/chat (token / tool / done).
+function demoAssistantChat(req, res) {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders?.();
+  const send = (type, data) => { res.write(`data: ${JSON.stringify({ type, ...data })}\n\n`); res.flush?.(); };
+  const history = (req.body && req.body.messages) || [];
+  const last = [...history].reverse().find((m) => m && m.role === 'user');
+  const { text, toolCalls } = demo.aiReply(last?.text || '');
+  (toolCalls || []).forEach((name) => send('tool', { name, input: {} }));
+  const words = String(text).split(/(\s+)/);
+  let i = 0;
+  const tick = () => {
+    if (res.writableEnded) return;
+    if (i >= words.length) { send('done', {}); return res.end(); }
+    send('token', { text: words[i++] });
+    setTimeout(tick, 18);
+  };
+  // Stop streaming if the client actually disconnects (res 'close', not req —
+  // req 'close' fires as soon as the small POST body is read).
+  res.on('close', () => { i = words.length; });
+  setTimeout(tick, (toolCalls && toolCalls.length) ? 250 : 0);
+}
 
 // Serve the built frontend in production (when client/dist exists)
 if (fs.existsSync(CLIENT_DIST)) {
@@ -253,19 +309,10 @@ app.post('/api/mcp/config', (req, res) => {
 });
 
 app.get('/api/config/status', (req, res) => {
-  if (!kubeConfig) {
-    const attemptedPath = getKubeConfigPath();
-    return res.json({
-      loaded: false,
-      contexts: [],
-      defaultPath: attemptedPath,
-      exists: fs.existsSync(attemptedPath)
-    });
-  }
+  const demoInfo = demo.demoContextInfo(); // { name, cluster, provider: 'demo' }
 
   // Tag each context with its cloud provider (derived from the cluster's server
   // URL) so the UI can group and icon them.
-  const clusterByName = new Map(kubeConfig.clusters.map((c) => [c.name, c]));
   const providerOf = (server = '') => {
     const s = server.toLowerCase();
     if (s.includes('.azmk8s.io') || s.includes('azure')) return 'azure';
@@ -274,18 +321,42 @@ app.get('/api/config/status', (req, res) => {
     if (/(127\.0\.0\.1|localhost|:6443|:8443|host\.docker|kubernetes\.docker|minikube|kind|orbstack|rancher)/.test(s)) return 'local';
     return 'other';
   };
-  const contextsInfo = kubeConfig.contexts.map((c) => {
-    const cl = clusterByName.get(c.cluster);
-    return { name: c.name, cluster: c.cluster, provider: providerOf(cl?.server) };
-  });
+
+  let contexts = [], contextsInfo = [], clusters = [];
+  if (kubeConfig) {
+    const clusterByName = new Map(kubeConfig.clusters.map((c) => [c.name, c]));
+    contextsInfo = kubeConfig.contexts.map((c) => {
+      const cl = clusterByName.get(c.cluster);
+      return { name: c.name, cluster: c.cluster, provider: providerOf(cl?.server) };
+    });
+    contexts = kubeConfig.contexts.map((c) => c.name);
+    clusters = kubeConfig.clusters.map((c) => c.name);
+  }
+
+  // The synthetic demo cluster is always offered, listed first.
+  contexts = [demoInfo.name, ...contexts];
+  contextsInfo = [demoInfo, ...contextsInfo];
+  clusters = [demoInfo.cluster, ...clusters];
+
+  const inDemo = demo.isDemo(currentContext);
+  if (!kubeConfig && !inDemo) {
+    const attemptedPath = getKubeConfigPath();
+    return res.json({
+      loaded: false,
+      contexts,
+      contextsInfo,
+      defaultPath: attemptedPath,
+      exists: fs.existsSync(attemptedPath),
+    });
+  }
 
   res.json({
     loaded: true,
-    currentContext,
-    path: getKubeConfigPath(),
-    contexts: kubeConfig.contexts.map(c => c.name),
+    currentContext: inDemo ? demoInfo.name : currentContext,
+    path: inDemo ? 'demo (synthetic cluster)' : getKubeConfigPath(),
+    contexts,
     contextsInfo,
-    clusters: kubeConfig.clusters.map(c => c.name)
+    clusters,
   });
 });
 
@@ -309,6 +380,13 @@ app.post('/api/config/load', (req, res) => {
 
 app.post('/api/config/context', (req, res) => {
   const { contextName } = req.body;
+
+  // Enter the synthetic demo cluster (works with no kubeconfig at all).
+  if (demo.isDemo(contextName)) {
+    currentContext = demo.DEMO_CONTEXT;
+    cache.clear();
+    return res.json({ success: true, currentContext });
+  }
 
   if (!kubeConfig) {
     return res.status(400).json({ error: 'No kubeconfig loaded' });
@@ -3268,6 +3346,18 @@ const wss = new WebSocketServer({
 });
 
 wss.on('connection', async (browserWs, req) => {
+  // Demo mode: a scripted pseudo-terminal instead of a real pod exec.
+  if (demo.isDemo(currentContext)) {
+    const durl = new URL(req.url, 'http://localhost');
+    demo.shellSession(browserWs, {
+      agent: durl.searchParams.get('agent'),
+      namespace: durl.searchParams.get('namespace'),
+      pod: durl.searchParams.get('pod'),
+      container: durl.searchParams.get('container'),
+    });
+    return;
+  }
+
   if (!kubeConfig) {
     browserWs.close(1011, 'No kubeconfig loaded');
     return;

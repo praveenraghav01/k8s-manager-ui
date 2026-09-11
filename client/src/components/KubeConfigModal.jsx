@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Icon from './Icons';
 
-export default function KubeConfigModal({ defaultPath, exists, onSubmit }) {
+export default function KubeConfigModal({ defaultPath, exists, onSubmit, onDemo }) {
   const [path, setPath] = useState(defaultPath || '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -58,6 +58,18 @@ export default function KubeConfigModal({ defaultPath, exists, onSubmit }) {
             </button>
           </div>
         </form>
+
+        {onDemo && (
+          <div className="modal-demo">
+            <div className="modal-or"><span>or</span></div>
+            <button type="button" className="modal-btn" onClick={() => onDemo()} disabled={busy}>
+              <Icon name="sparkles" size={14} /> Explore the demo — no cluster needed
+            </button>
+            <p className="modal-hint" style={{ marginTop: 8 }}>
+              A synthetic cluster with sample workloads, metrics, logs, Argo CD and security scans, so you can try every feature.
+            </p>
+          </div>
+        )}
 
         <p className="modal-hint">
           Tip: you can also set the <code>KUBECONFIG</code> environment variable and restart the server.

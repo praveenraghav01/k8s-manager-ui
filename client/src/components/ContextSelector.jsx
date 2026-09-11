@@ -2,13 +2,14 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Icon from './Icons';
 
 const PROVIDERS = {
+  demo: { label: 'Demo', icon: 'sparkles', color: '#af52de' },
   aws: { label: 'AWS EKS', icon: 'aws', color: '#ff9900' },
   azure: { label: 'Azure AKS', icon: 'azure', color: '#3b96f0' },
   gcp: { label: 'Google GKE', icon: 'cluster', color: '#4285f4' },
   local: { label: 'Local', icon: 'box', color: '#8b949e' },
   other: { label: 'Other clusters', icon: 'cluster', color: '#8b8fa3' },
 };
-const ORDER = ['aws', 'azure', 'gcp', 'local', 'other'];
+const ORDER = ['demo', 'aws', 'azure', 'gcp', 'local', 'other'];
 
 export default function ContextSelector({ contexts = [], contextsInfo, currentContext, onChange, onAddAzure, onAddAws }) {
   const [open, setOpen] = useState(false);

@@ -481,6 +481,7 @@ function App() {
           defaultPath={configStatus.defaultPath}
           exists={configStatus.exists}
           onSubmit={loadConfigFromPath}
+          onDemo={() => switchContext('demo-cluster')}
         />
       )}
 

@@ -273,6 +273,11 @@ body {
 .modal-btn.primary:hover:not(:disabled) { filter: brightness(1.12); }
 .modal-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 .modal-hint { margin-top: 16px; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+/* Demo entry point on the "load kubeconfig" screen */
+.modal-demo { margin-top: 18px; }
+.modal-or { display: flex; align-items: center; gap: 12px; margin: 2px 0 12px; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+.modal-or::before, .modal-or::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.modal-demo .modal-btn { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 
 /* Danger variant of the modal icon (auth / connectivity failures) */
 .modal-icon.danger { background: var(--red-tint); color: var(--red); }
