@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
 <title>k8sight: a beautiful desktop UI for Kubernetes</title>
 <meta name="description" content="k8sight is a native desktop app for browsing and operating any Kubernetes cluster from your local kubeconfig. Live dashboards, pod logs, interactive shells, topology, Helm, Argo CD, cloud clusters (EKS/AKS), a built-in Security Center (image CVEs, config & RBAC audit), an AI assistant and docked coding agents. Download for macOS, Windows and Linux." />
 <link rel="canonical" href="https://k8sight.in/" />
@@ -28,6 +30,7 @@
 <style>
   /* ============ Apple-style design system ============ */
   :root {
+    color-scheme: light;
     /* Light palette (default) */
     --bg: #ffffff;
     --bg-2: #f5f5f7;
@@ -63,6 +66,7 @@
     --ease-spring: cubic-bezier(0.34, 1.3, 0.64, 1);
   }
   :root[data-theme="dark"] {
+    color-scheme: dark;
     --bg: #000000;
     --bg-2: #0a0a0a;
     --panel: #1d1d1f;
@@ -96,7 +100,18 @@
   a:hover { text-decoration: underline; }
   img { max-width: 100%; display: block; }
   section { position: relative; }
+  /* Sticky 48px nav must not obscure anchored sections */
+  section[id] { scroll-margin-top: 60px; }
   code { font-family: var(--mono); font-size: 0.88em; }
+  /* Kill the 300ms double-tap delay + set an intentional tap highlight */
+  a, button { touch-action: manipulation; -webkit-tap-highlight-color: rgba(0,0,0,0); }
+  /* Balanced, non-orphaned headline wrapping */
+  h1, h2, .sec-head p { text-wrap: balance; }
+  /* Consistent keyboard focus ring on every interactive element */
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent-focus); outline-offset: 3px; border-radius: 4px; }
+  /* Skip link — visible only on keyboard focus */
+  .skip-link { position: absolute; left: 12px; top: -60px; z-index: 9999; background: var(--accent); color: #fff; padding: 9px 15px; border-radius: 8px; font-size: 14px; font-weight: 500; transition: top .18s var(--ease-out); }
+  .skip-link:focus { top: 10px; text-decoration: none; }
 
   .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 22px; }
 
@@ -192,7 +207,7 @@
     background: var(--panel);
   }
   :root[data-theme="dark"] .shot-frame { border-color: rgba(255,255,255,.08); box-shadow: 3px 5px 40px rgba(0,0,0,.55); }
-  .shot-frame img { width: 100%; display: block; }
+  .shot-frame img { width: 100%; height: auto; display: block; }
   .shot-glow { display: none; }
   /* Theme-aware screenshots — light shown by default, dark in dark theme */
   .shot-frame .shot-dark { display: none; }
@@ -449,6 +464,7 @@
 </script>
 </head>
 <body>
+<a class="skip-link" href="#features">Skip to content</a>
 <div class="bg-glow"></div>
 
 <!-- NAV -->
@@ -456,7 +472,7 @@
   <div class="wrap">
     <nav>
       <a class="brand" href="#top">
-        <img class="logo" src="assets/icon.svg" alt="k8sight logo" />
+        <img class="logo" src="assets/icon.svg" width="26" height="26" alt="k8sight logo" />
         <span>k8sight<small>KUBERNETES, IN SIGHT</small></span>
       </a>
       <div class="nav-right">
@@ -470,11 +486,11 @@
           <a class="nav-cta" href="#download">Download</a>
         </div>
         <button class="theme-btn" id="themeBtn" aria-label="Toggle light and dark theme">
-          <svg class="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
-          <svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <svg aria-hidden="true" focusable="false" class="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
+          <svg aria-hidden="true" focusable="false" class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
         </button>
         <button class="menu-btn" id="menuBtn" aria-label="Menu">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          <svg aria-hidden="true" focusable="false" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
       </div>
     </nav>
@@ -488,11 +504,11 @@
     <p class="sub">k8sight is a native desktop app for browsing and operating any Kubernetes cluster from your local <code>kubeconfig</code>: live metrics, pod logs, interactive shells, topology, Helm, Argo CD, one-click EKS &amp; AKS clusters, a built-in security scanner, an AI assistant and docked coding agents.</p>
     <div class="cta-row">
       <a class="btn btn-primary" href="#download">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
         Download k8sight
       </a>
       <a class="btn btn-ghost" href="https://github.com/praveenraghav01/k8sight" target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.5v-1.7c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.7.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.4-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0C17.3 5 18.3 5.3 18.3 5.3c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.6.8.5 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.5v-1.7c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.7.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.4-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0C17.3 5 18.3 5.3 18.3 5.3c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.6.8.5 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
         View on GitHub
       </a>
     </div>
@@ -501,8 +517,8 @@
     <div class="shot-wrap reveal">
       <div class="shot-glow"></div>
       <div class="shot-frame">
-        <img class="shot-dark" src="assets/screenshot-dashboard-dark.png" alt="k8sight cluster dashboard showing node and pod health, capacity, and cluster info" />
-        <img class="shot-light" src="assets/screenshot-dashboard-light.png" alt="k8sight cluster dashboard in light theme showing node and pod health, capacity, and cluster info" />
+        <img class="shot-dark" src="assets/screenshot-dashboard-dark.png" width="2946" height="1760" decoding="async" fetchpriority="high" alt="k8sight cluster dashboard showing node and pod health, capacity, and cluster info" />
+        <img class="shot-light" src="assets/screenshot-dashboard-light.png" width="2946" height="1760" decoding="async" fetchpriority="high" alt="k8sight cluster dashboard in light theme showing node and pod health, capacity, and cluster info" />
       </div>
     </div>
   </div>
@@ -529,67 +545,67 @@
     </div>
     <div class="grid">
       <div class="card i-cyan reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg></div>
         <h3>Live cluster dashboard</h3>
         <p>Node and pod health donuts, workload charts and real capacity, an at-a-glance overview the moment you connect.</p>
       </div>
       <div class="card reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
         <h3>Every workload type</h3>
         <p>Pods, Deployments, StatefulSets, DaemonSets, Services and more, with live CPU/memory from metrics-server and per-container status.</p>
       </div>
       <div class="card i-purple reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg></div>
         <h3>Command palette (⌘K)</h3>
         <p>A Spotlight-style palette to jump to any view, cluster or action from the keyboard, plus a native top toolbar with back/forward history.</p>
       </div>
       <div class="card i-green reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></div>
         <h3>Interactive shell</h3>
         <p>A real TTY into any pod: <code>kubectl exec -it</code> streamed over WebSocket to a full xterm.js terminal, docked in a bottom panel.</p>
       </div>
       <div class="card i-amber reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 6h13M4 12h9M4 18h11"/><circle cx="19.5" cy="15" r="2.5"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 6h13M4 12h9M4 18h11"/><circle cx="19.5" cy="15" r="2.5"/></svg></div>
         <h3>Pro log viewer</h3>
         <p>Timestamps, per-container or merged "all containers" streams, case/regex search with match navigation, line wrap, tail size and one-click download.</p>
       </div>
       <div class="card i-purple reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><circle cx="6" cy="18" r="3"/><path d="M6 9v6M9 6h6a3 3 0 0 1 3 3v6"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><circle cx="6" cy="18" r="3"/><path d="M6 9v6M9 6h6a3 3 0 0 1 3 3v6"/></svg></div>
         <h3>Interactive topology</h3>
         <p>Pan &amp; zoom the graph of Deployment → ReplicaSet → Pod → Service relationships to understand what talks to what.</p>
       </div>
       <div class="card i-red reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/><path d="M3 5v14"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/><path d="M3 5v14"/></svg></div>
         <h3>Port forwarding</h3>
         <p>Forward a Service port straight to <code>localhost</code>: pick a port or grab a random one, no CLI juggling.</p>
       </div>
       <div class="card reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/></svg></div>
         <h3>Custom Resources &amp; Helm</h3>
         <p>Lazy-loaded CRD tree with YAML details, plus Helm releases with their values and rendered manifests, no <code>helm</code> CLI needed.</p>
       </div>
       <div class="card i-cyan reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></div>
         <h3>Slide-in detail drawer</h3>
         <p>A right-side panel with metadata, live metric graphs, conditions and containers, cross-linked namespace → node → pod → owner.</p>
       </div>
       <div class="card i-amber reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></div>
         <h3>Light &amp; dark themes</h3>
         <p>One-click theme switch: a crisp light mode and a redesigned true-black dark mode, token-driven and persisted across sessions.</p>
       </div>
       <div class="card i-purple reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="8.5" y="13" width="7" height="7" rx="1.5"/><path d="M6.5 10v1.5a1.5 1.5 0 0 0 1.5 1.5M17.5 10v1.5a1.5 1.5 0 0 1-1.5 1.5"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="8.5" y="13" width="7" height="7" rx="1.5"/><path d="M6.5 10v1.5a1.5 1.5 0 0 0 1.5 1.5M17.5 10v1.5a1.5 1.5 0 0 1-1.5 1.5"/></svg></div>
         <h3>Multi-cluster quick-switch</h3>
         <p>Pin your favourite kubeconfig contexts to a left-hand rail and jump between dev, staging and prod clusters in a single click.</p>
       </div>
       <div class="card i-green reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></div>
         <h3>MCP server built in</h3>
         <p>Expose the same read-only tools to your own agents over the Model Context Protocol, via HTTP or stdio, with write tools off by default.</p>
       </div>
       <div class="card i-cyan reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
         <h3>External tools, detected</h3>
         <p>k8sight finds <code>kubectl</code>, <code>helm</code>, cloud CLIs and coding agents on your real login-shell PATH, shown with their official logos.</p>
       </div>
@@ -608,26 +624,26 @@
     <div class="shot-wrap reveal" style="margin-bottom:52px;">
       <div class="shot-glow"></div>
       <div class="shot-frame">
-        <img class="shot-dark" src="assets/screenshot-agent-dark.png" alt="k8sight with a Claude Code coding agent docked in a panel beside the cluster dashboard" />
-        <img class="shot-light" src="assets/screenshot-agent-light.png" alt="k8sight in light theme with a Claude Code coding agent docked in a panel beside the cluster dashboard" />
+        <img class="shot-dark" src="assets/screenshot-agent-dark.png" width="2946" height="1760" decoding="async" loading="lazy" alt="k8sight with a Claude Code coding agent docked in a panel beside the cluster dashboard" />
+        <img class="shot-light" src="assets/screenshot-agent-light.png" width="2946" height="1760" decoding="async" loading="lazy" alt="k8sight in light theme with a Claude Code coding agent docked in a panel beside the cluster dashboard" />
       </div>
     </div>
     <div class="split">
       <div class="reveal">
         <ul class="checklist">
-          <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Read-only by design</b>: it can never modify your cluster; it shows you the <code>kubectl</code> command when a change is needed.</span></li>
-          <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Grounded in live data</b>: calls tools like logs, events and describe to base every answer on your real cluster.</span></li>
-          <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Secrets redacted</b>: secret values are stripped from tool output before anything reaches the API.</span></li>
-          <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Provider-agnostic</b>: connects to any OpenAI-compatible endpoint (TrueFoundry, OpenAI, Azure, LiteLLM…) and stays aware of your current view.</span></li>
+          <li><span class="ck"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Read-only by design</b>: it can never modify your cluster; it shows you the <code>kubectl</code> command when a change is needed.</span></li>
+          <li><span class="ck"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Grounded in live data</b>: calls tools like logs, events and describe to base every answer on your real cluster.</span></li>
+          <li><span class="ck"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Secrets redacted</b>: secret values are stripped from tool output before anything reaches the API.</span></li>
+          <li><span class="ck"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> <span><b>Provider-agnostic</b>: connects to any OpenAI-compatible endpoint (TrueFoundry, OpenAI, Azure, LiteLLM…) and stays aware of your current view.</span></li>
         </ul>
         <div class="ai-note" style="margin-top:24px; display:flex; gap:12px; align-items:flex-start; padding:16px 18px; border:1px solid var(--border-2); border-left:3px solid var(--amber); border-radius:12px; background:var(--panel-2);">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" style="flex:0 0 auto; margin-top:1px;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+          <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" style="flex:0 0 auto; margin-top:1px;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
           <span style="color:var(--text-dim); font-size:14.5px; line-height:1.6;"><b style="color:var(--text);">Needs your own LLM subscription.</b> The assistant ships with no built-in model. You connect an OpenAI-compatible API (TrueFoundry, OpenAI, Azure OpenAI, LiteLLM, …), which usually requires a paid account and API key. Your key is stored locally in <code style="font-family:var(--mono); font-size:12.5px;">~/.config/k8s-manager/config.json</code>. Everything else in the app works without it.</span>
         </div>
       </div>
       <div class="chat reveal">
         <div class="chat-head">
-          <span class="spark"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span>
+          <span class="spark"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span>
           <b>Assistant</b><span>read-only · your model</span>
         </div>
         <div class="chat-body">
@@ -646,7 +662,7 @@
     <div class="split" style="margin-top:72px;">
       <div class="chat reveal" style="order:2;">
         <div class="chat-head">
-          <span class="spark" style="background:var(--brand-light);"><svg viewBox="0 0 24 24" fill="none" stroke="#0a0a0c" stroke-width="2"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3M13 5l-2 14"/></svg></span>
+          <span class="spark" style="background:var(--brand-light);"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="#0a0a0c" stroke-width="2"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3M13 5l-2 14"/></svg></span>
           <b>Agent panel</b><span>docks like a terminal</span>
         </div>
         <div class="chat-body" style="font-family:var(--mono); font-size:12.5px; color:var(--text-dim); background:var(--bg);">
@@ -661,11 +677,11 @@
         <h2>Run your favourite coding agent right beside the cluster</h2>
         <p>k8sight detects the coding agents already installed on your machine and opens them in a docked panel (same place as the pod terminal) so you can debug manifests and cluster state side by side. The top toolbar shows the chosen agent's own icon and name.</p>
         <div class="agents-strip">
-          <span class="agent-chip"><svg viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></svg> Claude Code</span>
-          <span class="agent-chip"><svg viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M23.922 16.997C23.061 18.492 18.063 22.02 12 22.02 5.937 22.02.939 18.492.078 16.997A.641.641 0 0 1 0 16.741v-2.869a.883.883 0 0 1 .053-.22c.372-.935 1.347-2.292 2.605-2.656.167-.429.414-1.055.644-1.517a10.098 10.098 0 0 1-.052-1.086c0-1.331.282-2.499 1.132-3.368.397-.406.89-.717 1.474-.952C7.255 2.937 9.248 1.98 11.978 1.98c2.731 0 4.767.957 6.166 2.093.584.235 1.077.546 1.474.952.85.869 1.132 2.037 1.132 3.368 0 .368-.014.733-.052 1.086.23.462.477 1.088.644 1.517 1.258.364 2.233 1.721 2.605 2.656a.841.841 0 0 1 .053.22v2.869a.641.641 0 0 1-.078.256Zm-11.75-5.992h-.344a4.359 4.359 0 0 1-.355.508c-.77.947-1.918 1.492-3.508 1.492-1.725 0-2.989-.359-3.782-1.259a2.137 2.137 0 0 1-.085-.104L4 11.746v6.585c1.435.779 4.514 2.179 8 2.179 3.486 0 6.565-1.4 8-2.179v-6.585l-.098-.104s-.033.045-.085.104c-.793.9-2.057 1.259-3.782 1.259-1.59 0-2.738-.545-3.508-1.492a4.359 4.359 0 0 1-.355-.508Zm2.328 3.25c.549 0 1 .451 1 1v2c0 .549-.451 1-1 1-.549 0-1-.451-1-1v-2c0-.549.451-1 1-1Zm-5 0c.549 0 1 .451 1 1v2c0 .549-.451 1-1 1-.549 0-1-.451-1-1v-2c0-.549.451-1 1-1Zm3.313-6.185c.136 1.057.403 1.913.878 2.497.442.544 1.134.938 2.344.938 1.573 0 2.292-.337 2.657-.751.384-.435.558-1.15.558-2.361 0-1.14-.243-1.847-.705-2.319-.477-.488-1.319-.862-2.824-1.025-1.487-.161-2.192.138-2.533.529-.269.307-.437.808-.438 1.578v.021c0 .265.021.562.063.893Zm-1.626 0c.042-.331.063-.628.063-.894v-.02c-.001-.77-.169-1.271-.438-1.578-.341-.391-1.046-.69-2.533-.529-1.505.163-2.347.537-2.824 1.025-.462.472-.705 1.179-.705 2.319 0 1.211.175 1.926.558 2.361.365.414 1.084.751 2.657.751 1.21 0 1.902-.394 2.344-.938.475-.584.742-1.44.878-2.497Z"/></svg> GitHub Copilot</span>
-          <span class="agent-chip"><svg viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81"/></svg> Gemini CLI</span>
-          <span class="agent-chip"><svg viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg> Codex</span>
-          <span class="agent-chip"><svg viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M22 24H2V0h20zM17 4.8H7v14.4h10z"/></svg> opencode</span>
+          <span class="agent-chip"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></svg> Claude Code</span>
+          <span class="agent-chip"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M23.922 16.997C23.061 18.492 18.063 22.02 12 22.02 5.937 22.02.939 18.492.078 16.997A.641.641 0 0 1 0 16.741v-2.869a.883.883 0 0 1 .053-.22c.372-.935 1.347-2.292 2.605-2.656.167-.429.414-1.055.644-1.517a10.098 10.098 0 0 1-.052-1.086c0-1.331.282-2.499 1.132-3.368.397-.406.89-.717 1.474-.952C7.255 2.937 9.248 1.98 11.978 1.98c2.731 0 4.767.957 6.166 2.093.584.235 1.077.546 1.474.952.85.869 1.132 2.037 1.132 3.368 0 .368-.014.733-.052 1.086.23.462.477 1.088.644 1.517 1.258.364 2.233 1.721 2.605 2.656a.841.841 0 0 1 .053.22v2.869a.641.641 0 0 1-.078.256Zm-11.75-5.992h-.344a4.359 4.359 0 0 1-.355.508c-.77.947-1.918 1.492-3.508 1.492-1.725 0-2.989-.359-3.782-1.259a2.137 2.137 0 0 1-.085-.104L4 11.746v6.585c1.435.779 4.514 2.179 8 2.179 3.486 0 6.565-1.4 8-2.179v-6.585l-.098-.104s-.033.045-.085.104c-.793.9-2.057 1.259-3.782 1.259-1.59 0-2.738-.545-3.508-1.492a4.359 4.359 0 0 1-.355-.508Zm2.328 3.25c.549 0 1 .451 1 1v2c0 .549-.451 1-1 1-.549 0-1-.451-1-1v-2c0-.549.451-1 1-1Zm-5 0c.549 0 1 .451 1 1v2c0 .549-.451 1-1 1-.549 0-1-.451-1-1v-2c0-.549.451-1 1-1Zm3.313-6.185c.136 1.057.403 1.913.878 2.497.442.544 1.134.938 2.344.938 1.573 0 2.292-.337 2.657-.751.384-.435.558-1.15.558-2.361 0-1.14-.243-1.847-.705-2.319-.477-.488-1.319-.862-2.824-1.025-1.487-.161-2.192.138-2.533.529-.269.307-.437.808-.438 1.578v.021c0 .265.021.562.063.893Zm-1.626 0c.042-.331.063-.628.063-.894v-.02c-.001-.77-.169-1.271-.438-1.578-.341-.391-1.046-.69-2.533-.529-1.505.163-2.347.537-2.824 1.025-.462.472-.705 1.179-.705 2.319 0 1.211.175 1.926.558 2.361.365.414 1.084.751 2.657.751 1.21 0 1.902-.394 2.344-.938.475-.584.742-1.44.878-2.497Z"/></svg> GitHub Copilot</span>
+          <span class="agent-chip"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81"/></svg> Gemini CLI</span>
+          <span class="agent-chip"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg> Codex</span>
+          <span class="agent-chip"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M22 24H2V0h20zM17 4.8H7v14.4h10z"/></svg> opencode</span>
         </div>
         <p style="margin-top:18px; color:var(--text-mute); font-size:13.5px;">Agents run as local processes using their own auth; k8sight just gives them a home next to your cluster.</p>
       </div>
@@ -683,28 +699,28 @@
     </div>
     <div class="cloud-grid">
       <div class="cloud-card reveal">
-        <div class="logo-badge"><svg viewBox="0 0 24 24" fill="#FF9900"><path d="m14.67 8.505-2.875 3.335 3.128 3.648h-1.168l-2.808-3.277v3.368h-.842V8.421h.842v2.947l2.603-2.863Zm7.225 6.751-3.369-2.021V8.421a.42.42 0 0 0-.209-.364l-4.843-2.825V1.159l8.42 4.976Zm.635-9.724L13.267.06a.422.422 0 0 0-.635.362v5.053c0 .15.08.288.208.363l4.844 2.826v4.81a.42.42 0 0 0 .205.362l4.21 2.526a.42.42 0 0 0 .638-.361V5.895a.42.42 0 0 0-.207-.363ZM11.977 23.1l-9.872-5.248V6.135l8.421-4.976v4.084L6.09 8.066a.422.422 0 0 0-.195.355v7.158a.42.42 0 0 0 .226.373l5.665 2.948a.42.42 0 0 0 .387 0l5.496-2.84 3.382 2.03Zm10.135-5.356-4.21-2.526a.42.42 0 0 0-.411-.013l-5.51 2.847-5.244-2.729v-6.67l4.436-2.824a.422.422 0 0 0 .195-.355V.42a.421.421 0 0 0-.635-.362L1.47 5.532a.421.421 0 0 0-.207.363v12.21c0 .156.086.299.223.372l10.297 5.474a.421.421 0 0 0 .401-.004l9.915-5.473a.422.422 0 0 0 .013-.73Z"/></svg></div>
+        <div class="logo-badge"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="#FF9900"><path d="m14.67 8.505-2.875 3.335 3.128 3.648h-1.168l-2.808-3.277v3.368h-.842V8.421h.842v2.947l2.603-2.863Zm7.225 6.751-3.369-2.021V8.421a.42.42 0 0 0-.209-.364l-4.843-2.825V1.159l8.42 4.976Zm.635-9.724L13.267.06a.422.422 0 0 0-.635.362v5.053c0 .15.08.288.208.363l4.844 2.826v4.81a.42.42 0 0 0 .205.362l4.21 2.526a.42.42 0 0 0 .638-.361V5.895a.42.42 0 0 0-.207-.363ZM11.977 23.1l-9.872-5.248V6.135l8.421-4.976v4.084L6.09 8.066a.422.422 0 0 0-.195.355v7.158a.42.42 0 0 0 .226.373l5.665 2.948a.42.42 0 0 0 .387 0l5.496-2.84 3.382 2.03Zm10.135-5.356-4.21-2.526a.42.42 0 0 0-.411-.013l-5.51 2.847-5.244-2.729v-6.67l4.436-2.824a.422.422 0 0 0 .195-.355V.42a.421.421 0 0 0-.635-.362L1.47 5.532a.421.421 0 0 0-.207.363v12.21c0 .156.086.299.223.372l10.297 5.474a.421.421 0 0 0 .401-.004l9.915-5.473a.422.422 0 0 0 .013-.73Z"/></svg></div>
         <h3>Amazon EKS</h3>
         <p>List clusters across regions, generate a short-lived access token and merge the kubeconfig entry, using your existing AWS credentials.</p>
         <div class="tags"><span>SDK-based</span><span>token auth</span><span>multi-region</span></div>
       </div>
       <div class="cloud-card reveal">
-        <div class="logo-badge"><svg viewBox="0 0 24 24" fill="#0089D6"><path d="M22.379 23.343a1.62 1.62 0 0 0 1.536-2.14v.002L17.35 1.76A1.62 1.62 0 0 0 15.816.657H8.184A1.62 1.62 0 0 0 6.65 1.76L.086 21.204a1.62 1.62 0 0 0 1.536 2.139h4.741a1.62 1.62 0 0 0 1.535-1.103l.977-2.892 4.947 3.675c.28.208.618.32.966.32m-3.084-12.531 3.624 10.739a.54.54 0 0 1-.51.713v-.001h-.03a.54.54 0 0 1-.322-.106l-9.287-6.9h4.853m6.313 7.006c.116-.326.13-.694.007-1.058L9.79 1.76a1.722 1.722 0 0 0-.007-.02h6.034a.54.54 0 0 1 .512.366l6.562 19.445a.54.54 0 0 1-.338.684"/></svg></div>
+        <div class="logo-badge"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="#0089D6"><path d="M22.379 23.343a1.62 1.62 0 0 0 1.536-2.14v.002L17.35 1.76A1.62 1.62 0 0 0 15.816.657H8.184A1.62 1.62 0 0 0 6.65 1.76L.086 21.204a1.62 1.62 0 0 0 1.536 2.139h4.741a1.62 1.62 0 0 0 1.535-1.103l.977-2.892 4.947 3.675c.28.208.618.32.966.32m-3.084-12.531 3.624 10.739a.54.54 0 0 1-.51.713v-.001h-.03a.54.54 0 0 1-.322-.106l-9.287-6.9h4.853m6.313 7.006c.116-.326.13-.694.007-1.058L9.79 1.76a1.722 1.722 0 0 0-.007-.02h6.034a.54.54 0 0 1 .512.366l6.562 19.445a.54.54 0 0 1-.338.684"/></svg></div>
         <h3>Azure AKS</h3>
         <p>Discover clusters across subscriptions and pull user or admin credentials. Sign in through the browser (PKCE) or the Azure CLI (your choice, per add).</p>
         <div class="tags"><span>Browser login</span><span>or az CLI</span><span>CA-compliant</span></div>
       </div>
       <div class="cloud-card reveal">
-        <div class="logo-badge"><svg viewBox="0 0 24 24" fill="none" stroke="var(--brand-light)" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="7" cy="7" r="0"/></svg></div>
+        <div class="logo-badge"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="var(--brand-light)" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="7" cy="7" r="0"/></svg></div>
         <h3>Any kubeconfig</h3>
         <p>Already have contexts for GKE, on-prem or a local kind/minikube? k8sight reads them all straight from <code>~/.kube/config</code>, nothing to configure.</p>
         <div class="tags"><span>GKE</span><span>kind / minikube</span><span>on-prem</span></div>
       </div>
     </div>
     <div class="prereq reveal">
-      <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.7 1.5A4 4 0 0 0 6 19z"/></svg> EKS uses the AWS SDK, no <code>aws</code> CLI required</span>
-      <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><path d="M12 3l7 3v6c0 4-3 7-7 8-4-1-7-4-7-8V6z"/><path d="M9 12l2 2 4-4"/></svg> Azure browser login satisfies device compliance policies</span>
-      <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><path d="M6 2h8l5 5v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M14 2v6h5"/></svg> Credentials merged into your existing kubeconfig</span>
+      <span class="tag"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.7 1.5A4 4 0 0 0 6 19z"/></svg> EKS uses the AWS SDK, no <code>aws</code> CLI required</span>
+      <span class="tag"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><path d="M12 3l7 3v6c0 4-3 7-7 8-4-1-7-4-7-8V6z"/><path d="M9 12l2 2 4-4"/></svg> Azure browser login satisfies device compliance policies</span>
+      <span class="tag"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><path d="M6 2h8l5 5v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M14 2v6h5"/></svg> Credentials merged into your existing kubeconfig</span>
     </div>
   </div>
 </section>
@@ -730,39 +746,39 @@
     <div class="shot-wrap reveal" style="margin-bottom:52px;">
       <div class="shot-glow"></div>
       <div class="shot-frame">
-        <img class="shot-dark" src="assets/screenshot-argocd-dark.png" alt="k8sight Argo CD dashboard showing sync and health status, application summary cards, a needs-attention row, and recent sync activity" />
-        <img class="shot-light" src="assets/screenshot-argocd-light.png" alt="k8sight Argo CD dashboard in light theme showing sync and health status, application summary cards, a needs-attention row, and recent sync activity" />
+        <img class="shot-dark" src="assets/screenshot-argocd-dark.png" width="2946" height="1760" decoding="async" loading="lazy" alt="k8sight Argo CD dashboard showing sync and health status, application summary cards, a needs-attention row, and recent sync activity" />
+        <img class="shot-light" src="assets/screenshot-argocd-light.png" width="2946" height="1760" decoding="async" loading="lazy" alt="k8sight Argo CD dashboard in light theme showing sync and health status, application summary cards, a needs-attention row, and recent sync activity" />
       </div>
     </div>
 
     <div class="grid">
       <div class="card i-cyan reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></div>
         <h3>Applications dashboard</h3>
         <p>Every Application with live sync and health status, quick filters, and a <em>needs-attention</em> view that surfaces whatever is drifting or unhealthy.</p>
       </div>
       <div class="card i-purple reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M12 7.5v3.5M12 11H6.4a1 1 0 0 0-1 1v4.5M12 11h5.6a1 1 0 0 1 1 1v4.5"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M12 7.5v3.5M12 11H6.4a1 1 0 0 0-1 1v4.5M12 11h5.6a1 1 0 0 1 1 1v4.5"/></svg></div>
         <h3>Resource tree &amp; history</h3>
         <p>Open an app for its managed resource tree, sync parameters, and full sync/rollout history, each resource with its own sync and health badge.</p>
       </div>
       <div class="card i-green reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-8-5M3 12a9 9 0 0 1 9-9 9 9 0 0 1 8 5"/><path d="M20 4v5h-5M4 20v-5h5"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-8-5M3 12a9 9 0 0 1 9-9 9 9 0 0 1 8 5"/><path d="M20 4v5h-5M4 20v-5h5"/></svg></div>
         <h3>Sync, refresh &amp; prune</h3>
         <p>Trigger a Sync with <code>prune</code>, <code>dry-run</code>, apply-only, force or replace, or a soft/hard Refresh, right from the drawer.</p>
       </div>
       <div class="card i-amber reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 12l10 5 10-5M2 17l10 5 10-5"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 12l10 5 10-5M2 17l10 5 10-5"/></svg></div>
         <h3>App Sets, Projects &amp; repos</h3>
         <p>Browse ApplicationSets, AppProjects, connected Git/Helm repositories and destination clusters, the whole Argo CD picture.</p>
       </div>
       <div class="card reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M10 6h10M10 12h10M10 18h10"/><path d="M3.5 6 5 7.5 7.5 5M3.5 12 5 13.5 7.5 11M3.5 18 5 19.5 7.5 17"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M10 6h10M10 12h10M10 18h10"/><path d="M3.5 6 5 7.5 7.5 5M3.5 12 5 13.5 7.5 11M3.5 18 5 19.5 7.5 17"/></svg></div>
         <h3>Bulk operations</h3>
         <p>Select many Applications and sync or refresh them together, with an opt-in multi-select so you always choose exactly what runs.</p>
       </div>
       <div class="card i-red reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></div>
         <h3>AI-assisted triage</h3>
         <p>One click hands an app&rsquo;s sync/health condition and failing resources to the assistant for a root-cause read <span style="color:var(--text-mute)">(needs your own LLM subscription)</span>.</p>
       </div>
@@ -790,48 +806,48 @@
     <div class="shot-wrap reveal" style="margin-bottom:52px;">
       <div class="shot-glow"></div>
       <div class="shot-frame">
-        <img class="shot-dark" src="assets/screenshot-security-dark.png" alt="k8sight Security Center showing donut summaries for scan status, results, vulnerabilities by severity and exposed secrets, with a per-image table of CVE counts from a built-in Trivy scan" />
-        <img class="shot-light" src="assets/screenshot-security-light.png" alt="k8sight Security Center in light theme showing donut summaries for scan status, results, vulnerabilities by severity and exposed secrets, with a per-image table of CVE counts from a built-in Trivy scan" />
+        <img class="shot-dark" src="assets/screenshot-security-dark.png" width="2946" height="1760" decoding="async" loading="lazy" alt="k8sight Security Center showing donut summaries for scan status, results, vulnerabilities by severity and exposed secrets, with a per-image table of CVE counts from a built-in Trivy scan" />
+        <img class="shot-light" src="assets/screenshot-security-light.png" width="2946" height="1760" decoding="async" loading="lazy" alt="k8sight Security Center in light theme showing donut summaries for scan status, results, vulnerabilities by severity and exposed secrets, with a per-image table of CVE counts from a built-in Trivy scan" />
       </div>
     </div>
 
     <div class="grid">
       <div class="card i-red reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z"/><path d="M12 9v4M12 16h.01"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z"/><path d="M12 9v4M12 16h.01"/></svg></div>
         <h3>Image vulnerabilities</h3>
         <p>Every image grouped with its CVEs by severity (Critical, High, Medium, Low), with fixed-in versions, affected packages, and a drawer that filters the list.</p>
       </div>
       <div class="card i-amber reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
         <h3>Configuration audit</h3>
         <p>Resource configs checked against security best practices, so risky manifests show up before they cause an incident, each finding with its severity and the rule it tripped.</p>
       </div>
       <div class="card i-purple reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="8" cy="15" r="4"/><path d="M10.85 12.15 19 4l2 2M18 7l1.5 1.5"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="8" cy="15" r="4"/><path d="M10.85 12.15 19 4l2 2M18 7l1.5 1.5"/></svg></div>
         <h3>RBAC risk analysis</h3>
         <p>Roles and cluster-roles checked for over-broad permissions, with the exact subjects and rules that grant them.</p>
       </div>
       <div class="card i-cyan reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg></div>
         <h3>Zero-install scanning</h3>
         <p>No Trivy Operator? k8sight bundles the Trivy binary (auto-downloading if needed) and scans your running images in the background, nothing to deploy into the cluster.</p>
       </div>
       <div class="card reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
         <h3>Exposed secrets</h3>
         <p>Finds credentials and tokens baked into image layers, so a key left in a base image gets caught.</p>
       </div>
       <div class="card i-green reveal">
-        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M12 12l5-3M12 3v9"/></svg></div>
+        <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M12 12l5-3M12 3v9"/></svg></div>
         <h3>Overview &amp; history</h3>
         <p>Donut summaries across images, configs and roles. Results are saved locally, so the last scan is still there when you reopen the app.</p>
       </div>
     </div>
 
     <div class="prereq reveal">
-      <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z"/></svg> Works with your existing Trivy&nbsp;Operator reports</span>
-      <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg> Or a bundled scanner, nothing to install in-cluster</span>
-      <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><path d="M5 12h14M12 5v14"/></svg> Scans run in the background; keep working while they finish</span>
+      <span class="tag"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z"/></svg> Works with your existing Trivy&nbsp;Operator reports</span>
+      <span class="tag"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg> Or a bundled scanner, nothing to install in-cluster</span>
+      <span class="tag"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><path d="M5 12h14M12 5v14"/></svg> Scans run in the background; keep working while they finish</span>
     </div>
   </div>
 </section>
@@ -848,7 +864,7 @@
       <!-- MAC -->
       <div class="dl-card reveal">
         <div class="head">
-          <div class="ico"><svg viewBox="0 0 24 24"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg></div>
+          <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg></div>
           <div>
             <h3>macOS</h3>
             <div class="meta">Apple Silicon · .dmg</div>
@@ -856,7 +872,7 @@
         </div>
         <p>A native <code>k8sight.app</code> that starts the server and opens the UI in its own window, with your shell <code>PATH</code> repaired automatically.</p>
         <a class="btn btn-primary" data-os="the macOS .dmg" href="https://github.com/praveenraghav01/k8sight/releases/latest/download/k8sight-macos.dmg">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
           Download .dmg
         </a>
         <ol class="steps">
@@ -869,7 +885,7 @@
       <!-- WINDOWS -->
       <div class="dl-card reveal">
         <div class="head">
-          <div class="ico"><svg viewBox="0 0 24 24"><path d="M0,0H11.377V11.372H0ZM12.623,0H24V11.372H12.623ZM0,12.623H11.377V24H0Zm12.623,0H24V24H12.623"/></svg></div>
+          <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M0,0H11.377V11.372H0ZM12.623,0H24V11.372H12.623ZM0,12.623H11.377V24H0Zm12.623,0H24V24H12.623"/></svg></div>
           <div>
             <h3>Windows</h3>
             <div class="meta">x64 · NSIS installer (.exe)</div>
@@ -877,7 +893,7 @@
         </div>
         <p>A standard per-user installer with a Start-menu shortcut. Bundles Node so only <code>kubectl</code> needs to be on your PATH.</p>
         <a class="btn btn-primary" data-os="the Windows installer" href="https://github.com/praveenraghav01/k8sight/releases/latest/download/k8sight-windows.exe">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
           Download .exe
         </a>
         <ol class="steps">
@@ -890,7 +906,7 @@
       <!-- LINUX -->
       <div class="dl-card reveal">
         <div class="head">
-          <div class="ico"><svg viewBox="0 0 24 24"><path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a.424.424 0 00-.11.135c-.26.268-.45.6-.663.839-.199.199-.485.267-.797.4-.313.136-.658.269-.864.68-.09.189-.136.394-.132.602 0 .199.027.4.055.536.058.399.116.728.04.97-.249.68-.28 1.145-.106 1.484.174.334.535.47.94.601.81.2 1.91.135 2.774.6.926.466 1.866.67 2.616.47.526-.116.97-.464 1.208-.946.587-.003 1.23-.269 2.26-.334.699-.058 1.574.267 2.577.2.025.134.063.198.114.333l.003.003c.391.778 1.113 1.132 1.884 1.071.771-.06 1.592-.536 2.257-1.306.631-.765 1.683-1.084 2.378-1.503.348-.199.629-.469.649-.853.023-.4-.2-.811-.714-1.376v-.097l-.003-.003c-.17-.2-.25-.535-.338-.926-.085-.401-.182-.786-.492-1.046h-.003c-.059-.054-.123-.067-.188-.135a.357.357 0 00-.19-.064c.431-1.278.264-2.55-.173-3.694-.533-1.41-1.465-2.638-2.175-3.483-.796-1.005-1.576-1.957-1.56-3.368.026-2.152.236-6.133-3.544-6.139zm.529 3.405h.013c.213 0 .396.062.584.198.19.135.33.332.438.533.105.259.158.459.166.724 0-.02.006-.04.006-.06v.105a.086.086 0 01-.004-.021l-.004-.024a1.807 1.807 0 01-.15.706.953.953 0 01-.213.335.71.71 0 00-.088-.042c-.104-.045-.198-.064-.284-.133a1.312 1.312 0 00-.22-.066c.05-.06.146-.133.183-.198.053-.128.082-.264.088-.402v-.02a1.21 1.21 0 00-.061-.4c-.045-.134-.101-.2-.183-.333-.084-.066-.167-.132-.267-.132h-.016c-.093 0-.176.03-.262.132a.8.8 0 00-.205.334 1.18 1.18 0 00-.09.4v.019c.002.089.008.179.02.267-.193-.067-.438-.135-.607-.202a1.635 1.635 0 01-.018-.2v-.02a1.772 1.772 0 01.15-.768c.082-.22.232-.406.43-.533a.985.985 0 01.594-.2zm-2.962.059h.036c.142 0 .27.048.399.135.146.129.264.288.344.465.09.199.14.4.153.667v.004c.007.134.006.2-.002.266v.08c-.03.007-.056.018-.083.024-.152.055-.274.135-.393.2.012-.09.013-.18.003-.267v-.015c-.012-.133-.04-.2-.082-.333a.613.613 0 00-.166-.267.248.248 0 00-.183-.064h-.021c-.071.006-.13.04-.186.132a.552.552 0 00-.12.27.944.944 0 00-.023.33v.015c.012.135.037.2.08.334.046.134.098.2.166.268.01.009.02.018.034.024-.07.057-.117.07-.176.136a.304.304 0 01-.131.068 2.62 2.62 0 01-.275-.402 1.772 1.772 0 01-.155-.667 1.759 1.759 0 01.08-.668 1.43 1.43 0 01.283-.535c.128-.133.26-.2.418-.2zm1.37 1.706c.332 0 .733.065 1.216.399.293.2.523.269 1.052.468h.003c.255.136.405.266.478.399v-.131a.571.571 0 01.016.47c-.123.31-.516.643-1.063.842v.002c-.268.135-.501.333-.775.465-.276.135-.588.292-1.012.267a1.139 1.139 0 01-.448-.067 3.566 3.566 0 01-.322-.198c-.195-.135-.363-.332-.612-.465v-.005h-.005c-.4-.246-.616-.512-.686-.71-.07-.268-.005-.47.193-.6.224-.135.38-.271.483-.336.104-.074.143-.102.176-.131h.002v-.003c.169-.202.436-.47.839-.601.139-.036.294-.065.466-.065zm2.8 2.142c.358 1.417 1.196 3.475 1.735 4.473.286.534.855 1.659 1.102 3.024.156-.005.33.018.513.064.646-1.671-.546-3.467-1.089-3.966-.22-.2-.232-.335-.123-.335.59.534 1.365 1.572 1.646 2.757.13.535.16 1.104.021 1.67.067.028.135.06.205.067 1.032.534 1.413.938 1.23 1.537v-.043c-.06-.003-.12 0-.18 0h-.016c.151-.467-.182-.825-1.065-1.224-.915-.4-1.646-.336-1.77.465-.008.043-.013.066-.018.135-.068.023-.139.053-.209.064-.43.268-.662.669-.793 1.187-.13.533-.17 1.156-.205 1.869v.003c-.02.334-.17.838-.319 1.35-1.5 1.072-3.58 1.538-5.348.334a2.645 2.645 0 00-.402-.533 1.45 1.45 0 00-.275-.333c.182 0 .338-.03.465-.067a.615.615 0 00.314-.334c.108-.267 0-.697-.345-1.163-.345-.467-.931-.995-1.788-1.521-.63-.4-.986-.87-1.15-1.396-.165-.534-.143-1.085-.015-1.645.245-1.07.873-2.11 1.274-2.763.107-.065.037.135-.408.974-.396.751-1.14 2.497-.122 3.854a8.123 8.123 0 01.647-2.876c.564-1.278 1.743-3.504 1.836-5.268.048.036.217.135.289.202.218.133.38.333.59.465.21.201.477.335.876.335.039.003.075.006.11.006.412 0 .73-.134.997-.268.29-.134.52-.334.74-.4h.005c.467-.135.835-.402 1.044-.7zm2.185 8.958c.037.6.343 1.245.882 1.377.588.134 1.434-.333 1.791-.765l.211-.01c.315-.007.577.01.847.268l.003.003c.208.199.305.53.391.876.085.4.154.78.409 1.066.486.527.645.906.636 1.14l.003-.007v.018l-.003-.012c-.015.262-.185.396-.498.595-.63.401-1.746.712-2.457 1.57-.618.737-1.37 1.14-2.036 1.191-.664.053-1.237-.2-1.574-.898l-.005-.003c-.21-.4-.12-1.025.056-1.69.176-.668.428-1.344.463-1.897.037-.714.076-1.335.195-1.814.12-.465.308-.797.641-.984l.045-.022zm-10.814.049h.01c.053 0 .105.005.157.014.376.055.706.333 1.023.752l.91 1.664.003.003c.243.533.754 1.064 1.189 1.637.434.598.77 1.131.729 1.57v.006c-.057.744-.48 1.148-1.125 1.294-.645.135-1.52.002-2.395-.464-.968-.536-2.118-.469-2.857-.602-.369-.066-.61-.2-.723-.4-.11-.2-.113-.602.123-1.23v-.004l.002-.003c.117-.334.03-.752-.027-1.118-.055-.401-.083-.71.043-.94.16-.334.396-.4.69-.533.294-.135.64-.202.915-.47h.002v-.002c.256-.268.445-.601.668-.838.19-.201.38-.336.663-.336zm7.159-9.074c-.435.201-.945.535-1.488.535-.542 0-.97-.267-1.28-.466-.154-.134-.28-.268-.373-.335-.164-.134-.144-.333-.074-.333.109.016.129.134.199.2.096.066.215.2.36.333.292.2.68.467 1.167.467.485 0 1.053-.267 1.398-.466.195-.135.445-.334.648-.467.156-.136.149-.267.279-.267.128.016.034.134-.147.332a8.097 8.097 0 01-.69.468zm-1.082-1.583V5.64c-.006-.02.013-.042.029-.05.074-.043.18-.027.26.004.063 0 .16.067.15.135-.006.049-.085.066-.135.066-.055 0-.092-.043-.141-.068-.052-.018-.146-.008-.163-.065zm-.551 0c-.02.058-.113.049-.166.066-.047.025-.086.068-.14.068-.05 0-.13-.02-.136-.068-.01-.066.088-.133.15-.133.08-.031.184-.047.259-.005.019.009.036.03.03.05v.02h.003z"/></svg></div>
+          <div class="ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a.424.424 0 00-.11.135c-.26.268-.45.6-.663.839-.199.199-.485.267-.797.4-.313.136-.658.269-.864.68-.09.189-.136.394-.132.602 0 .199.027.4.055.536.058.399.116.728.04.97-.249.68-.28 1.145-.106 1.484.174.334.535.47.94.601.81.2 1.91.135 2.774.6.926.466 1.866.67 2.616.47.526-.116.97-.464 1.208-.946.587-.003 1.23-.269 2.26-.334.699-.058 1.574.267 2.577.2.025.134.063.198.114.333l.003.003c.391.778 1.113 1.132 1.884 1.071.771-.06 1.592-.536 2.257-1.306.631-.765 1.683-1.084 2.378-1.503.348-.199.629-.469.649-.853.023-.4-.2-.811-.714-1.376v-.097l-.003-.003c-.17-.2-.25-.535-.338-.926-.085-.401-.182-.786-.492-1.046h-.003c-.059-.054-.123-.067-.188-.135a.357.357 0 00-.19-.064c.431-1.278.264-2.55-.173-3.694-.533-1.41-1.465-2.638-2.175-3.483-.796-1.005-1.576-1.957-1.56-3.368.026-2.152.236-6.133-3.544-6.139zm.529 3.405h.013c.213 0 .396.062.584.198.19.135.33.332.438.533.105.259.158.459.166.724 0-.02.006-.04.006-.06v.105a.086.086 0 01-.004-.021l-.004-.024a1.807 1.807 0 01-.15.706.953.953 0 01-.213.335.71.71 0 00-.088-.042c-.104-.045-.198-.064-.284-.133a1.312 1.312 0 00-.22-.066c.05-.06.146-.133.183-.198.053-.128.082-.264.088-.402v-.02a1.21 1.21 0 00-.061-.4c-.045-.134-.101-.2-.183-.333-.084-.066-.167-.132-.267-.132h-.016c-.093 0-.176.03-.262.132a.8.8 0 00-.205.334 1.18 1.18 0 00-.09.4v.019c.002.089.008.179.02.267-.193-.067-.438-.135-.607-.202a1.635 1.635 0 01-.018-.2v-.02a1.772 1.772 0 01.15-.768c.082-.22.232-.406.43-.533a.985.985 0 01.594-.2zm-2.962.059h.036c.142 0 .27.048.399.135.146.129.264.288.344.465.09.199.14.4.153.667v.004c.007.134.006.2-.002.266v.08c-.03.007-.056.018-.083.024-.152.055-.274.135-.393.2.012-.09.013-.18.003-.267v-.015c-.012-.133-.04-.2-.082-.333a.613.613 0 00-.166-.267.248.248 0 00-.183-.064h-.021c-.071.006-.13.04-.186.132a.552.552 0 00-.12.27.944.944 0 00-.023.33v.015c.012.135.037.2.08.334.046.134.098.2.166.268.01.009.02.018.034.024-.07.057-.117.07-.176.136a.304.304 0 01-.131.068 2.62 2.62 0 01-.275-.402 1.772 1.772 0 01-.155-.667 1.759 1.759 0 01.08-.668 1.43 1.43 0 01.283-.535c.128-.133.26-.2.418-.2zm1.37 1.706c.332 0 .733.065 1.216.399.293.2.523.269 1.052.468h.003c.255.136.405.266.478.399v-.131a.571.571 0 01.016.47c-.123.31-.516.643-1.063.842v.002c-.268.135-.501.333-.775.465-.276.135-.588.292-1.012.267a1.139 1.139 0 01-.448-.067 3.566 3.566 0 01-.322-.198c-.195-.135-.363-.332-.612-.465v-.005h-.005c-.4-.246-.616-.512-.686-.71-.07-.268-.005-.47.193-.6.224-.135.38-.271.483-.336.104-.074.143-.102.176-.131h.002v-.003c.169-.202.436-.47.839-.601.139-.036.294-.065.466-.065zm2.8 2.142c.358 1.417 1.196 3.475 1.735 4.473.286.534.855 1.659 1.102 3.024.156-.005.33.018.513.064.646-1.671-.546-3.467-1.089-3.966-.22-.2-.232-.335-.123-.335.59.534 1.365 1.572 1.646 2.757.13.535.16 1.104.021 1.67.067.028.135.06.205.067 1.032.534 1.413.938 1.23 1.537v-.043c-.06-.003-.12 0-.18 0h-.016c.151-.467-.182-.825-1.065-1.224-.915-.4-1.646-.336-1.77.465-.008.043-.013.066-.018.135-.068.023-.139.053-.209.064-.43.268-.662.669-.793 1.187-.13.533-.17 1.156-.205 1.869v.003c-.02.334-.17.838-.319 1.35-1.5 1.072-3.58 1.538-5.348.334a2.645 2.645 0 00-.402-.533 1.45 1.45 0 00-.275-.333c.182 0 .338-.03.465-.067a.615.615 0 00.314-.334c.108-.267 0-.697-.345-1.163-.345-.467-.931-.995-1.788-1.521-.63-.4-.986-.87-1.15-1.396-.165-.534-.143-1.085-.015-1.645.245-1.07.873-2.11 1.274-2.763.107-.065.037.135-.408.974-.396.751-1.14 2.497-.122 3.854a8.123 8.123 0 01.647-2.876c.564-1.278 1.743-3.504 1.836-5.268.048.036.217.135.289.202.218.133.38.333.59.465.21.201.477.335.876.335.039.003.075.006.11.006.412 0 .73-.134.997-.268.29-.134.52-.334.74-.4h.005c.467-.135.835-.402 1.044-.7zm2.185 8.958c.037.6.343 1.245.882 1.377.588.134 1.434-.333 1.791-.765l.211-.01c.315-.007.577.01.847.268l.003.003c.208.199.305.53.391.876.085.4.154.78.409 1.066.486.527.645.906.636 1.14l.003-.007v.018l-.003-.012c-.015.262-.185.396-.498.595-.63.401-1.746.712-2.457 1.57-.618.737-1.37 1.14-2.036 1.191-.664.053-1.237-.2-1.574-.898l-.005-.003c-.21-.4-.12-1.025.056-1.69.176-.668.428-1.344.463-1.897.037-.714.076-1.335.195-1.814.12-.465.308-.797.641-.984l.045-.022zm-10.814.049h.01c.053 0 .105.005.157.014.376.055.706.333 1.023.752l.91 1.664.003.003c.243.533.754 1.064 1.189 1.637.434.598.77 1.131.729 1.57v.006c-.057.744-.48 1.148-1.125 1.294-.645.135-1.52.002-2.395-.464-.968-.536-2.118-.469-2.857-.602-.369-.066-.61-.2-.723-.4-.11-.2-.113-.602.123-1.23v-.004l.002-.003c.117-.334.03-.752-.027-1.118-.055-.401-.083-.71.043-.94.16-.334.396-.4.69-.533.294-.135.64-.202.915-.47h.002v-.002c.256-.268.445-.601.668-.838.19-.201.38-.336.663-.336zm7.159-9.074c-.435.201-.945.535-1.488.535-.542 0-.97-.267-1.28-.466-.154-.134-.28-.268-.373-.335-.164-.134-.144-.333-.074-.333.109.016.129.134.199.2.096.066.215.2.36.333.292.2.68.467 1.167.467.485 0 1.053-.267 1.398-.466.195-.135.445-.334.648-.467.156-.136.149-.267.279-.267.128.016.034.134-.147.332a8.097 8.097 0 01-.69.468zm-1.082-1.583V5.64c-.006-.02.013-.042.029-.05.074-.043.18-.027.26.004.063 0 .16.067.15.135-.006.049-.085.066-.135.066-.055 0-.092-.043-.141-.068-.052-.018-.146-.008-.163-.065zm-.551 0c-.02.058-.113.049-.166.066-.047.025-.086.068-.14.068-.05 0-.13-.02-.136-.068-.01-.066.088-.133.15-.133.08-.031.184-.047.259-.005.019.009.036.03.03.05v.02h.003z"/></svg></div>
           <div>
             <h3>Linux</h3>
             <div class="meta">x64 · AppImage &amp; .deb</div>
@@ -898,7 +914,7 @@
         </div>
         <p>A portable <code>.AppImage</code> that runs anywhere, or a <code>.deb</code> for Debian &amp; Ubuntu with a desktop entry.</p>
         <a class="btn btn-primary" data-os="the Linux AppImage" href="https://github.com/praveenraghav01/k8sight/releases/latest/download/k8sight-linux.AppImage">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
           Download .AppImage
         </a>
         <p style="text-align:center; margin:10px 0 0; min-height:0; font-size:12.5px;"><a style="color:var(--brand-light); text-decoration:underline; text-underline-offset:2px;" href="https://github.com/praveenraghav01/k8sight/releases/latest/download/k8sight-linux.deb">or download the .deb</a></p>
@@ -911,10 +927,10 @@
     </div>
 
     <div class="prereq reveal">
-      <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg> Requires <code>kubectl</code> on your PATH</span>
-      <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg> Helm releases read via the API, no <code>helm</code> CLI needed</span>
-      <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><path d="M6 2h8l5 5v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M14 2v6h5"/></svg> A working <code>kubeconfig</code></span>
-      <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><path d="M3 3v18h18"/><path d="M8 17v-5M13 17V8M18 17v-9"/></svg> metrics-server for live CPU/memory</span>
+      <span class="tag"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg> Requires <code>kubectl</code> on your PATH</span>
+      <span class="tag"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg> Helm releases read via the API, no <code>helm</code> CLI needed</span>
+      <span class="tag"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><path d="M6 2h8l5 5v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M14 2v6h5"/></svg> A working <code>kubeconfig</code></span>
+      <span class="tag"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex:none"><path d="M3 3v18h18"/><path d="M8 17v-5M13 17V8M18 17v-9"/></svg> metrics-server for live CPU/memory</span>
     </div>
     <p style="text-align:center; margin-top:26px; color:var(--text-mute); font-size:13.5px;">
       Looking for a specific version or checksums? See <a style="color:var(--brand-light); text-decoration:underline; text-underline-offset:2px;" href="https://github.com/praveenraghav01/k8sight/releases" target="_blank" rel="noopener">all releases on GitHub</a>.
@@ -929,7 +945,7 @@
     <p>Install k8sight on macOS, Windows or Linux. You'll be exploring workloads in under a minute.</p>
     <div class="cta-row">
       <a class="btn btn-primary" href="#download">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
         Download k8sight
       </a>
       <a class="btn btn-ghost" href="https://github.com/praveenraghav01/k8sight" target="_blank" rel="noopener">View on GitHub</a>
@@ -940,7 +956,7 @@
 <footer>
   <div class="wrap">
     <a class="brand" href="#top">
-      <img class="logo" src="assets/icon.svg" alt="" />
+      <img class="logo" src="assets/icon.svg" width="26" height="26" alt="" />
       <span>k8sight<small>© 2026 · MIT-style open source</small></span>
     </a>
     <div class="links">
@@ -963,11 +979,11 @@
 <div class="dl-modal-scrim" id="dlModal" hidden>
   <div class="dl-modal" role="dialog" aria-modal="true" aria-labelledby="dlTitle">
     <button class="dl-close" id="dlClose" aria-label="Close">&times;</button>
-    <div class="dl-emoji"><svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 10h2.5a2.5 2.5 0 0 1 0 5H17"/><path d="M7 2.5c-.5.8-.5 1.5 0 2.3M11 2.5c-.5.8-.5 1.5 0 2.3M15 2.5c-.5.8-.5 1.5 0 2.3"/></svg></div>
+    <div class="dl-emoji"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 10h2.5a2.5 2.5 0 0 1 0 5H17"/><path d="M7 2.5c-.5.8-.5 1.5 0 2.3M11 2.5c-.5.8-.5 1.5 0 2.3M15 2.5c-.5.8-.5 1.5 0 2.3"/></svg></div>
     <h3 id="dlTitle">Thanks for trying k8sight!</h3>
     <p>It&rsquo;s free and open-source. If it saves you time, a coffee helps keep it going. No pressure, your download is on its way.</p>
     <a class="bmc" href="https://www.buymeacoffee.com/praveenraghav01" target="_blank" rel="noopener">
-      <img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=praveenraghav01&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" alt="Buy me a coffee" />
+      <img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=praveenraghav01&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" loading="lazy" decoding="async" alt="Buy me a coffee" />
     </a>
     <div class="dl-count">Starting <span id="dlOs">your download</span> in <b id="dlSecs">10</b> s&hellip;</div>
     <a class="dl-now" id="dlNow" href="#">Download now</a>
@@ -1009,7 +1025,12 @@
     }
 
     document.querySelectorAll('#download .dl-card a.btn-primary').forEach((a) => {
-      a.addEventListener('click', (e) => { e.preventDefault(); start(a.getAttribute('href'), a.dataset.os); });
+      a.addEventListener('click', (e) => {
+        // Let the browser handle modifier / non-left clicks (new tab, download, etc.)
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        e.preventDefault();
+        start(a.getAttribute('href'), a.dataset.os);
+      });
     });
     // "Download now" is a real anchor — just stop the timer and let it navigate.
     nowLink.addEventListener('click', () => clearInterval(timer));
