@@ -13,11 +13,17 @@
 const { app, BrowserWindow, shell, dialog, Menu, utilityProcess } = require('electron');
 const path = require('path');
 const os = require('os');
+const fs = require('fs');
 const http = require('http');
 const { spawn, execFileSync } = require('child_process');
 
+// electron-updater is optional at runtime (only wired for packaged Win/Linux).
+let autoUpdater = null;
+try { ({ autoUpdater } = require('electron-updater')); } catch { /* not available */ }
+
 const BACKEND_PORT = 3001;
 const SERVER_URL = `http://127.0.0.1:${BACKEND_PORT}`;
+const RELEASES_URL = 'https://github.com/praveenraghav01/k8sight/releases/latest';
 
 let serverProcess = null;
 let mainWindow = null;
@@ -237,6 +243,11 @@ if (!gotLock) {
     Menu.setApplicationMenu(buildMenu());
     boot();
 
+    // Background update check shortly after launch (packaged Win/Linux only).
+    if (canAutoUpdate() && autoCheckEnabled()) {
+      setTimeout(() => checkForUpdates(false), 5000);
+    }
+
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) boot();
     });
@@ -253,6 +264,79 @@ app.on('before-quit', () => {
   stopServer();
 });
 
+// --- Auto-update (electron-updater) ---------------------------------------
+// Works for packaged Windows (NSIS) and Linux (AppImage) builds. macOS auto-
+// update needs a Developer ID signature (Squirrel.Mac rejects ad-hoc builds),
+// so there we just point the user at the Releases page.
+function updaterPrefsPath() { return path.join(app.getPath('userData'), 'updater-prefs.json'); }
+function autoCheckEnabled() {
+  try { return JSON.parse(fs.readFileSync(updaterPrefsPath(), 'utf8')).autoCheck !== false; }
+  catch { return true; } // default on
+}
+function setAutoCheck(on) {
+  try { fs.writeFileSync(updaterPrefsPath(), JSON.stringify({ autoCheck: !!on })); } catch { /* ignore */ }
+}
+function canAutoUpdate() {
+  return !!autoUpdater && app.isPackaged && (process.platform === 'win32' || process.platform === 'linux');
+}
+
+let updaterWired = false;
+let manualCheck = false;
+function wireUpdater() {
+  if (!autoUpdater || updaterWired) return;
+  updaterWired = true;
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.on('update-not-available', () => {
+    if (!manualCheck) return;
+    manualCheck = false;
+    dialog.showMessageBox({ type: 'info', title: 'k8sight', message: "You're up to date", detail: `k8sight ${app.getVersion()} is the latest version.` });
+  });
+  autoUpdater.on('error', (err) => {
+    if (!manualCheck) return;
+    manualCheck = false;
+    dialog.showErrorBox('Update check failed', String(err && err.message ? err.message : err));
+  });
+  autoUpdater.on('update-downloaded', async (info) => {
+    manualCheck = false;
+    const { response } = await dialog.showMessageBox({
+      type: 'info', buttons: ['Restart now', 'Later'], defaultId: 0, cancelId: 1,
+      title: 'k8sight', message: `k8sight ${info.version} is ready to install`,
+      detail: 'Restart the app to finish updating.',
+    });
+    if (response === 0) { app.isQuitting = true; autoUpdater.quitAndInstall(); }
+  });
+}
+
+function checkForUpdates(manual) {
+  if (!canAutoUpdate()) {
+    // Unsupported (macOS ad-hoc, or a dev/unpacked run): open the Releases page
+    // so a manual check still does something useful.
+    if (manual) shell.openExternal(RELEASES_URL);
+    return;
+  }
+  wireUpdater();
+  manualCheck = !!manual;
+  autoUpdater.checkForUpdates().catch((err) => {
+    if (!manual) return;
+    manualCheck = false;
+    dialog.showErrorBox('Update check failed', String(err && err.message ? err.message : err));
+  });
+}
+
+function updateMenuItems() {
+  return [
+    { label: 'Check for Updates…', click: () => checkForUpdates(true) },
+    {
+      label: 'Automatically check for updates',
+      type: 'checkbox',
+      checked: autoCheckEnabled(),
+      enabled: canAutoUpdate(),
+      click: (item) => setAutoCheck(item.checked),
+    },
+  ];
+}
+
 function buildMenu() {
   const isMac = process.platform === 'darwin';
   const template = [
@@ -261,6 +345,8 @@ function buildMenu() {
           label: app.name,
           submenu: [
             { role: 'about' },
+            { type: 'separator' },
+            ...updateMenuItems(),
             { type: 'separator' },
             { role: 'hide' },
             { role: 'hideOthers' },
@@ -287,6 +373,16 @@ function buildMenu() {
     {
       label: 'Window',
       submenu: [{ role: 'minimize' }, { role: 'zoom' }, { role: 'close' }],
+    },
+    {
+      label: 'Help',
+      role: 'help',
+      submenu: [
+        ...(isMac ? [] : updateMenuItems()),
+        ...(isMac ? [] : [{ type: 'separator' }]),
+        { label: 'k8sight on GitHub', click: () => shell.openExternal('https://github.com/praveenraghav01/k8sight') },
+        { label: 'Releases', click: () => shell.openExternal(RELEASES_URL) },
+      ],
     },
   ];
   return Menu.buildFromTemplate(template);
