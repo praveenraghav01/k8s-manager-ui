@@ -31,7 +31,6 @@
   },
   "dependencies": {
     "@aws-crypto/sha256-js": "^5.2.0",
-    "@aws-sdk/client-ec2": "^3.1127.0",
     "@aws-sdk/client-eks": "^3.1127.0",
     "@aws-sdk/client-sso": "^3.1127.0",
     "@aws-sdk/client-sso-oidc": "^3.1127.0",
@@ -71,7 +70,12 @@
       "lib/**/*",
       "VERSION",
       "package.json",
-      "client/dist/**/*"
+      "client/dist/**/*",
+      "!**/*.d.ts",
+      "!**/*.map",
+      "!**/*.md",
+      "!**/*.markdown",
+      "!**/{test,tests,__tests__,__mocks__,example,examples,docs,doc,.github,.vscode,.idea}/**"
     ],
     "extraResources": [
       {
@@ -127,8 +131,10 @@
     },
     "deb": {
       "fpm": [
-        "--replaces", "k8s-manager-ui",
-        "--conflicts", "k8s-manager-ui"
+        "--replaces",
+        "k8s-manager-ui",
+        "--conflicts",
+        "k8s-manager-ui"
       ]
     }
   }

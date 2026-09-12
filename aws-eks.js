@@ -9,7 +9,6 @@ import os from 'os';
 import yaml from 'js-yaml';
 import { fileURLToPath } from 'url';
 import { EKSClient, ListClustersCommand, DescribeClusterCommand } from '@aws-sdk/client-eks';
-import { EC2Client, DescribeRegionsCommand } from '@aws-sdk/client-ec2';
 import { STSClient, GetCallerIdentityCommand, AssumeRoleCommand } from '@aws-sdk/client-sts';
 import { SSOOIDCClient, RegisterClientCommand, StartDeviceAuthorizationCommand, CreateTokenCommand } from '@aws-sdk/client-sso-oidc';
 import { SSOClient, ListAccountsCommand, ListAccountRolesCommand, GetRoleCredentialsCommand } from '@aws-sdk/client-sso';
@@ -18,7 +17,23 @@ import { loadSharedConfigFiles } from '@smithy/shared-ini-file-loader';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const EKS_TOKEN_HELPER = path.join(__dirname, 'eks-token.js');
 
-const FALLBACK_REGIONS = ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2', 'ca-central-1', 'eu-west-1', 'eu-west-2', 'eu-west-3', 'eu-central-1', 'eu-north-1', 'ap-south-1', 'ap-southeast-1', 'ap-southeast-2', 'ap-northeast-1', 'ap-northeast-2', 'sa-east-1'];
+// Static AWS region list. We deliberately do NOT call EC2 DescribeRegions —
+// that pulls in @aws-sdk/client-ec2 (~26 MB / 3k+ files), which bloated the
+// installer just to list regions. Listing EKS clusters in a region with none is
+// a cheap no-op (and unavailable/opt-out regions just error and are skipped), so
+// searching a broad static list is fine.
+const AWS_REGIONS = [
+  'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2',
+  'ca-central-1', 'ca-west-1',
+  'eu-west-1', 'eu-west-2', 'eu-west-3', 'eu-central-1', 'eu-central-2',
+  'eu-north-1', 'eu-south-1', 'eu-south-2',
+  'ap-south-1', 'ap-south-2',
+  'ap-southeast-1', 'ap-southeast-2', 'ap-southeast-3', 'ap-southeast-4',
+  'ap-northeast-1', 'ap-northeast-2', 'ap-northeast-3',
+  'ap-east-1',
+  'sa-east-1',
+  'me-south-1', 'me-central-1', 'af-south-1', 'il-central-1',
+];
 const awsDir = () => path.join(process.env.HOME || os.homedir(), '.aws');
 const kubeconfigPath = () => process.env.KUBECONFIG || path.join(process.env.HOME || os.homedir(), '.kube', 'config');
 
@@ -62,18 +77,13 @@ export async function validateCredentials(credentials, region) {
 }
 
 // ---- region + cluster discovery -----------------------------------------
-async function regionsFor(credentials, region) {
-  try {
-    const ec2 = new EC2Client({ region: region || 'us-east-1', credentials });
-    const out = await ec2.send(new DescribeRegionsCommand({}));
-    const names = (out.Regions || []).map((r) => r.RegionName).filter(Boolean);
-    if (names.length) return names;
-  } catch { /* fall through */ }
-  return FALLBACK_REGIONS;
+function regionsFor(region) {
+  // Ensure the caller's own region is searched even if it's not in the list.
+  return region && !AWS_REGIONS.includes(region) ? [region, ...AWS_REGIONS] : AWS_REGIONS;
 }
 
 export async function discoverClusters({ credentials, region, account, accountName }) {
-  const regions = await regionsFor(credentials, region);
+  const regions = regionsFor(region);
   const perRegion = await Promise.all(regions.map(async (r) => {
     try {
       const eks = new EKSClient({ region: r, credentials });
